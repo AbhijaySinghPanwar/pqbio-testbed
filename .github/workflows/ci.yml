@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-typecheck-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # ml/liboqs extras are intentionally excluded: liboqs needs a from-source
+          # CMake build (slow in CI) and pqbio/pqc falls back to a pure-Python FIPS
+          # 203/204 reference implementation when liboqs is not importable (see
+          # pqbio/pqc/kem.py, pqbio/pqc/sign.py), so core+dev is enough for
+          # lint/typecheck/unit tests to be meaningful. Add a liboqs-specific job here
+          # once Module E's server needs to be exercised against the real backend.
+          pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: ruff check pqbio scripts tests
+
+      - name: Format check (black)
+        run: black --check pqbio scripts tests
+
+      - name: Typecheck (mypy --strict on pqc/, binding/, server/)
+        run: mypy pqbio
+
+      - name: Unit tests
+        run: pytest -q --cov --cov-report=term-missing

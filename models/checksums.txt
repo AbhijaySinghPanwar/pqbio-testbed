@@ -1,0 +1,7 @@
+# Model weight checksums
+#
+# Format: <sha256>  <relative-path-under-models/>
+#
+# Populated by scripts/train_detector.py and verified at load time.
+# Model binaries themselves (models/*.pt) are gitignored; this file is tracked
+# so weight provenance survives even though the weights do not.

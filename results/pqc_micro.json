@@ -1,0 +1,134 @@
+{
+  "config_hash_sha256": "78b21c8b462aa4af5820d04ac8a562342cce2cae4a5fdc47d67bf4ee77d325b0",
+  "generated_at_utc": "2026-08-30T16:11:45.048576+00:00",
+  "git_commit": "unknown (not a git repository at benchmark time)",
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "iterations_per_operation": 1000,
+  "kem": {
+    "classical": {
+      "artefact_sizes_bytes": {
+        "ct": 32,
+        "pk": 32,
+        "sk": 32,
+        "ss": 32
+      },
+      "backend": "x25519",
+      "decaps": {
+        "iterations": 1000,
+        "max_ms": 0.83710000035353,
+        "mean_ms": 0.0716186000045127,
+        "min_ms": 0.06179999945743475,
+        "p95_ms": 0.09041500070452456
+      },
+      "encaps": {
+        "iterations": 1000,
+        "max_ms": 1.521300000604242,
+        "mean_ms": 0.07634399997914443,
+        "min_ms": 0.06509999911941122,
+        "p95_ms": 0.0920200001928606
+      },
+      "keygen": {
+        "iterations": 1000,
+        "max_ms": 18.36640000146872,
+        "mean_ms": 0.057153700008711894,
+        "min_ms": 0.03569999898900278,
+        "p95_ms": 0.043604999154922545
+      }
+    },
+    "pq": {
+      "artefact_sizes_bytes": {
+        "ct": 1088,
+        "pk": 1184,
+        "sk": 2400,
+        "ss": 32
+      },
+      "backend": "kyber-py-fallback",
+      "decaps": {
+        "iterations": 1000,
+        "max_ms": 15.136800000618678,
+        "mean_ms": 4.980277899972862,
+        "min_ms": 3.9605000001756707,
+        "p95_ms": 5.62207999992097
+      },
+      "encaps": {
+        "iterations": 1000,
+        "max_ms": 8.992399998533074,
+        "mean_ms": 3.7501124999616877,
+        "min_ms": 2.9407000001810957,
+        "p95_ms": 4.377399999339104
+      },
+      "keygen": {
+        "iterations": 1000,
+        "max_ms": 4.428800000823685,
+        "mean_ms": 2.7422241999738617,
+        "min_ms": 2.1790999999211635,
+        "p95_ms": 3.139240000018617
+      }
+    }
+  },
+  "signer": {
+    "classical": {
+      "artefact_sizes_bytes": {
+        "pk": 32,
+        "sig": 64,
+        "sk": 32
+      },
+      "backend": "ed25519",
+      "keygen": {
+        "iterations": 1000,
+        "max_ms": 2.07829999999376,
+        "mean_ms": 0.039674999978160486,
+        "min_ms": 0.02990000029967632,
+        "p95_ms": 0.043905001348321086
+      },
+      "sign": {
+        "iterations": 1000,
+        "max_ms": 3.1792000008863397,
+        "mean_ms": 0.0685793000011472,
+        "min_ms": 0.051700000767596066,
+        "p95_ms": 0.07559999903605785
+      },
+      "verify": {
+        "iterations": 1000,
+        "max_ms": 0.22150000040710438,
+        "mean_ms": 0.09703840000838682,
+        "min_ms": 0.08829999933368526,
+        "p95_ms": 0.10691500083339632
+      }
+    },
+    "pq": {
+      "artefact_sizes_bytes": {
+        "pk": 1952,
+        "sig": 3309,
+        "sk": 4032
+      },
+      "backend": "dilithium-py-fallback",
+      "keygen": {
+        "iterations": 1000,
+        "max_ms": 18.48229999995965,
+        "mean_ms": 8.880662500008839,
+        "min_ms": 7.246600000144099,
+        "p95_ms": 9.586420000778162
+      },
+      "sign": {
+        "iterations": 1000,
+        "max_ms": 312.8422000008868,
+        "mean_ms": 51.65407239999695,
+        "min_ms": 16.11589999993157,
+        "p95_ms": 122.60921500073886
+      },
+      "verify": {
+        "iterations": 1000,
+        "max_ms": 32.95169999910286,
+        "mean_ms": 8.467282200042973,
+        "min_ms": 7.521599998653983,
+        "p95_ms": 9.805525001593196
+      }
+    }
+  }
+}
