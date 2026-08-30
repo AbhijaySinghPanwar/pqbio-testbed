@@ -24,6 +24,11 @@ dependencies = [
     # built (no C toolchain on PATH).
     "kyber-py>=1.0",
     "dilithium-py>=1.0",
+    # Module B (pqbio/capture/) — camera/replay frame sources, JPEG encoding, and the
+    # illumination-challenge chromaticity measurement all import cv2/numpy directly at
+    # module load, so these are core, not the optional "ml" extra below.
+    "opencv-python>=4.9",
+    "numpy>=1.26",
 ]
 
 [project.optional-dependencies]
@@ -39,11 +44,9 @@ ml = [
     "timm>=0.9",
     "insightface>=0.7",
     "onnxruntime>=1.17",
-    "opencv-python>=4.9",
     "scikit-image>=0.22",
     "imagehash>=4.3",
     "scikit-learn>=1.4",
-    "numpy>=1.26",
     "scipy>=1.12",
     "lightgbm>=4.3",
     "matplotlib>=3.8",

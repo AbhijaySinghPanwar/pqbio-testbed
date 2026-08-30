@@ -6,9 +6,11 @@ a quickstart, not a substitute for it.
 
 ## Status
 
-Early scaffold. Only **Module A — the PQC layer** (`pqbio/pqc/`) is implemented; every
-other package under `pqbio/` is a placeholder. See [`CLAUDE.md`](CLAUDE.md) "current
-state" for the up-to-date module-by-module status.
+Early scaffold. **Module A — the PQC layer** (`pqbio/pqc/`) and **Module B — the capture
+client** (`pqbio/capture/`) are implemented; every other package under `pqbio/` is a
+placeholder. See [`CLAUDE.md`](CLAUDE.md) "current state" for the up-to-date
+module-by-module status, including what's untested (no webcam/display in this
+environment) versus fully verified.
 
 ## Setup
 
@@ -38,6 +40,7 @@ make lint        # ruff + black --check
 make typecheck    # mypy --strict on pqc/, binding/, server/
 make test         # pytest
 python scripts/bench_pqc.py   # Module A crypto micro-benchmark -> results/pqc_micro.json
+python -m pqbio.capture --source replay --clip PATH --out bundle.cbor   # Module B CLI
 ```
 
 `make bench`, `make report`, and `make demo` are stubs until Module F and Module E land

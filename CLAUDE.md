@@ -13,13 +13,25 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   handshake.py, keystore.py). Two modes only — `classical` and `pq` — matching
   PROJECT_SPEC.md §5.1 exactly (an earlier draft of the spec also asked for a `hybrid`
   mode; that was built, then removed when the spec was trimmed down to
-  "requirements-only" — don't reintroduce it without checking the spec again first).
-  See "PQC backend" below — running on the documented `kyber-py`/`dilithium-py`
-  fallback, not liboqs, in this environment.
-- **Placeholder only (docstring naming owner + purpose, no logic):** `pqbio/capture/`,
-  `pqbio/binding/`, `pqbio/detect/`, `pqbio/server/`, `pqbio/bench/`, and all of
-  `scripts/` except `scripts/bench_pqc.py` (implemented, Module A's micro-benchmark).
-- Do not start Module B/C/D/E/F without explicit instruction — see PROJECT_SPEC.md §0
+  "requirements-only" — don't reintroduce it without checking the spec again first,
+  see §14 Amendments). KATs verified against real NIST ACVP vectors
+  (`tests/vectors/`), not just self-consistency. Running on the documented
+  `kyber-py`/`dilithium-py` fallback, not liboqs, in this environment — see "PQC
+  backend" below. `pqbio/bench/overhead.py` has only its fallback-backend guard
+  implemented (`guard_against_fallback_backend()`); the C0-C3 ablation itself isn't
+  built.
+- **Implemented: Module B — `pqbio/capture/`** (camera.py, replay_source.py,
+  challenge.py, bundler.py, `__main__.py` for the CLI). `CameraSource` is untested
+  against a real webcam (none attached in this environment) — everything else
+  (`ReplaySource`, the chromaticity-measurement half of the illumination challenge,
+  bundling/signing/tamper-detection, the CLI) is tested, including one true
+  subprocess end-to-end run. `render_challenge_fullscreen` needs a display and has
+  never been run. Face-region extraction is a fixed centre-crop, not a real detector —
+  see the `TODO(Module D)` in `challenge.py`'s `estimate_face_box_centre_crop`.
+- **Placeholder only (docstring naming owner + purpose, no logic):** `pqbio/binding/`,
+  `pqbio/detect/`, `pqbio/server/`, `pqbio/bench/` (except `overhead.py`'s guard), and
+  all of `scripts/` except `scripts/bench_pqc.py`.
+- Do not start Module C/D/E/F without explicit instruction — see PROJECT_SPEC.md §0
   and §10 for the intended build order.
 
 ## PQC backend (read before touching pqbio/pqc/)
