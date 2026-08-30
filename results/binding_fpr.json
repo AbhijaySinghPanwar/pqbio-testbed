@@ -1,0 +1,59 @@
+{
+  "caveat": "No licensed face dataset is available yet (PROJECT_SPEC.md \u00a76). Subjects and captures are synthetically generated (deterministic face-like base pattern per subject, jittered per capture: rotation, translation, scale, brightness/contrast, sensor noise, JPEG quality). This measurement is a plausibility check on the configured Hamming threshold, not a validated false-positive rate \u2014 re-measure on real data once datasets land.",
+  "config_hash_sha256": "78b21c8b462aa4af5820d04ac8a562342cce2cae4a5fdc47d67bf4ee77d325b0",
+  "configured_threshold": 6,
+  "configured_threshold_within_subject_fpr": 0.1274074074074074,
+  "cross_subject_distance": {
+    "mean": 24.06896551724138,
+    "min": 4,
+    "p50": 26.0
+  },
+  "generated_at_utc": "2026-08-30T16:58:27.704671+00:00",
+  "git_commit": "e534be1745226b125d8e20a32540f5c937eda9da",
+  "method": "synthetic",
+  "n_captures_per_subject": 10,
+  "n_cross_subject_pairs": 435,
+  "n_subjects": 30,
+  "n_within_subject_pairs": 1350,
+  "per_threshold": {
+    "10": {
+      "cross_subject_flag_rate": 0.0367816091954023,
+      "within_subject_fpr": 0.25333333333333335
+    },
+    "12": {
+      "cross_subject_flag_rate": 0.07586206896551724,
+      "within_subject_fpr": 0.31555555555555553
+    },
+    "16": {
+      "cross_subject_flag_rate": 0.17701149425287357,
+      "within_subject_fpr": 0.45037037037037037
+    },
+    "2": {
+      "cross_subject_flag_rate": 0.0,
+      "within_subject_fpr": 0.022222222222222223
+    },
+    "20": {
+      "cross_subject_flag_rate": 0.31494252873563217,
+      "within_subject_fpr": 0.5866666666666667
+    },
+    "4": {
+      "cross_subject_flag_rate": 0.0022988505747126436,
+      "within_subject_fpr": 0.061481481481481484
+    },
+    "6": {
+      "cross_subject_flag_rate": 0.0022988505747126436,
+      "within_subject_fpr": 0.1274074074074074
+    },
+    "8": {
+      "cross_subject_flag_rate": 0.016091954022988506,
+      "within_subject_fpr": 0.18
+    }
+  },
+  "within_subject_distance": {
+    "max": 38,
+    "mean": 18.42962962962963,
+    "min": 0,
+    "p50": 18.0,
+    "p95": 32.0
+  }
+}

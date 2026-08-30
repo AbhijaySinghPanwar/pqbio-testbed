@@ -688,3 +688,48 @@ naming the active backend whenever `KEM_BACKEND`/`SIG_BACKEND` is a `*-fallback`
 **Unblock condition:** both backends report `"liboqs"` (see the first amendment above)
 — the guard is a pure function of those two globals and needs no other change once
 that's true.
+
+### 2026-08-30 — Module B's "live webcam" DoD item verified on synthetic frames only
+
+§5.2's DoD asks for the illumination challenge's response trace to be "measurable on a
+real webcam"; no camera or display is attached in this environment. `CameraSource` and
+`render_challenge_fullscreen` are implemented but have never run against real hardware.
+`measure_chromaticity_trace` was instead verified on synthetic frames with a known,
+injected colour sequence (exact recovery — see `tests/unit/test_capture_challenge.py`).
+**Unblock condition:** run `python -m pqbio.capture --source camera` on a machine with a
+webcam and confirm frames arrive and the trace looks sane; ideally also exercise
+`render_challenge_fullscreen` against a real display at the same time, since that half
+has no coverage at all yet (needs a display, not just a camera).
+
+### 2026-08-30 — pHash reuse threshold (§5.3): measured tension, default kept
+
+`scripts/measure_phash_fpr.py` generated 30 synthetic subjects × 10 jittered captures
+each (1350 within-subject pairs) and measured, per Hamming-distance threshold:
+
+| Threshold | Within-subject FPR (synthetic) | Cross-subject flag rate |
+|---|---|---|
+| 2 | 2.2% | 0.0% |
+| 4 | 6.2% | 0.2% |
+| **6 (spec default)** | **12.7%** | **0.2%** |
+| 8 | 18.0% | 1.6% |
+
+Separately, `tests/unit/test_phash_index.py::test_reuse_check_catches_reencoded_and_rescaled_resubmission`
+measured the actual Hamming distance for a re-encode (quality 95→35) at **4** and a
+rescale round-trip (0.7×, back up) at **0**. So threshold 4 would still catch both cases
+measured here, at roughly half the synthetic FPR of threshold 6 — but with *zero*
+margin on the re-encode case (a slightly more aggressive real re-encode could exceed 4
+and slip through undetected).
+
+**Decision: keep the spec default of 6, not 4.** Two reasons: (a) missing a re-encoded
+replay is a false negative on an anti-evidence-reuse control — the more costly failure
+mode versus a usability false positive, which routes to `CHALLENGE` (step up with a
+fresh nonce) rather than an outright reject once Module D's policy engine exists, not a
+hard failure; (b) the synthetic within-subject FPR almost certainly *overstates* the
+real one — "captures" here are a geometric+photometric jitter of one identical base
+image (rotation, translation, brightness, noise), not independent real capture sessions
+with genuinely different expression, pose, and lighting, so real distinct captures of
+the same person are expected to differ more than this model produces, not less.
+
+This is a plausibility check, not a validated FPR — `config/default.yaml` is
+**unchanged**. Re-run `scripts/measure_phash_fpr.py` once real datasets land (§6) and
+revisit both the threshold and this reasoning against real numbers.

@@ -29,6 +29,9 @@ dependencies = [
     # module load, so these are core, not the optional "ml" extra below.
     "opencv-python>=4.9",
     "numpy>=1.26",
+    # Module C (pqbio/binding/phash_index.py) — the seen-evidence perceptual-hash
+    # index imports this directly at module load; also core for the same reason.
+    "imagehash>=4.3",
 ]
 
 [project.optional-dependencies]
@@ -45,7 +48,6 @@ ml = [
     "insightface>=0.7",
     "onnxruntime>=1.17",
     "scikit-image>=0.22",
-    "imagehash>=4.3",
     "scikit-learn>=1.4",
     "scipy>=1.12",
     "lightgbm>=4.3",

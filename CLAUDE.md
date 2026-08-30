@@ -28,10 +28,21 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   subprocess end-to-end run. `render_challenge_fullscreen` needs a display and has
   never been run. Face-region extraction is a fixed centre-crop, not a real detector —
   see the `TODO(Module D)` in `challenge.py`'s `estimate_face_box_centre_crop`.
-- **Placeholder only (docstring naming owner + purpose, no logic):** `pqbio/binding/`,
-  `pqbio/detect/`, `pqbio/server/`, `pqbio/bench/` (except `overhead.py`'s guard), and
-  all of `scripts/` except `scripts/bench_pqc.py`.
-- Do not start Module C/D/E/F without explicit instruction — see PROJECT_SPEC.md §0
+- **Implemented: Module C — `pqbio/binding/`** (nonce.py, phash_index.py, verify.py).
+  All six B1-B6 checks plus the separate pHash reuse check, each with positive and
+  negative tests; nonce single-use consumption verified atomic under a real 100-thread
+  race (`tests/unit/test_nonce_store.py`); reuse check verified against exact,
+  re-encoded, and rescaled resubmission, and to survive a process restart
+  (BK-tree rebuilt from SQLite). `phash_hamming_max` (config, default 6) was measured
+  against synthetic data (`results/binding_fpr.json`) — kept at 6 despite a non-trivial
+  synthetic false-positive rate; see §14 Amendments for the full reasoning before
+  touching that value. B6's frame-to-challenge-step timing alignment is an even-split
+  approximation (Module B doesn't interleave live render+capture yet) — see
+  `verify.py`'s `_expand_expected_trace`.
+- **Placeholder only (docstring naming owner + purpose, no logic):** `pqbio/detect/`,
+  `pqbio/server/`, `pqbio/bench/` (except `overhead.py`'s guard), and all of `scripts/`
+  except `scripts/bench_pqc.py` and `scripts/measure_phash_fpr.py`.
+- Do not start Module D/E/F without explicit instruction — see PROJECT_SPEC.md §0
   and §10 for the intended build order.
 
 ## PQC backend (read before touching pqbio/pqc/)
