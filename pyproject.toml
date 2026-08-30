@@ -30,7 +30,9 @@ dependencies = [
 # Primary PQC backend per §4. Requires cmake, ninja, and a C compiler on PATH — its
 # install script clones and CMake-builds liboqs automatically. Not installed by default
 # because this dev environment lacks a usable C++ toolchain (see pqbio/pqc/kem.py).
-pqc-liboqs = ["liboqs-python>=0.10"]
+# Pinned exactly (not >=): this is the version verified during scaffolding (round-trip
+# and artefact-size checks against a probe install) — bump deliberately, not implicitly.
+pqc-liboqs = ["liboqs-python==0.16.0"]
 
 ml = [
     "torch>=2.2",

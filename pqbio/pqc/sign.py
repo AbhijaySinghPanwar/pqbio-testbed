@@ -123,3 +123,58 @@ def get_signer(mode: SigMode) -> Signer:
 def constant_time_eq(a: bytes, b: bytes) -> bool:
     """hmac.compare_digest wrapper — use for every secret/MAC comparison (§11)."""
     return hmac.compare_digest(a, b)
+
+
+# ----------------------------------------------------------------------------------
+# ML-DSA-65 KAT support (NOT part of the frozen Signer Protocol above).
+#
+# NIST ACVP's keyGen vectors supply a raw seed for the internal deterministic keygen
+# rather than the public random-seeded keygen(); its sigGen vectors (the ones vendored
+# here) are deterministic/non-hedged mode, which the production `sign()` deliberately
+# does not use (hedged signing is the safer default against fault attacks). These are
+# test-only helpers used by tests/unit/test_pqc_kat.py — never call them outside a KAT
+# context.
+# ----------------------------------------------------------------------------------
+
+
+def ml_dsa_65_keygen_from_seed(seed: bytes) -> tuple[bytes, bytes]:
+    """Deterministic keygen from the raw 32-byte seed. KAT support only."""
+    if _OQS_AVAILABLE:
+        raise NotImplementedError(
+            "liboqs KAT keygen-from-seed is not wired up. liboqs's own KAT harness "
+            "works by overriding its global DRBG, not a per-call seed parameter, so "
+            "this needs a different implementation than the dilithium-py path below. "
+            "Implement that hook here before relying on this for a liboqs-backed KAT "
+            "run — it was never exercised because liboqs was unavailable in the "
+            "environment this was written in."
+        )
+    return cast(tuple[bytes, bytes], _ML_DSA_65.key_derive(seed))
+
+
+def ml_dsa_65_sign_deterministic(sk: bytes, msg: bytes, ctx: bytes = b"") -> bytes:
+    """Deterministic (non-hedged) signing with an explicit context string, matching
+    ACVP's sigGen vector format. KAT support only — production code uses `sign()`
+    (hedged/randomized) via the `Signer` Protocol instead.
+    """
+    if _OQS_AVAILABLE:
+        raise NotImplementedError(
+            "liboqs KAT deterministic-sign is not wired up — same reason as "
+            "ml_dsa_65_keygen_from_seed above."
+        )
+    return cast(bytes, _ML_DSA_65.sign(sk, msg, ctx=ctx, deterministic=True))
+
+
+def ml_dsa_65_verify_with_context(pk: bytes, msg: bytes, sig: bytes, ctx: bytes = b"") -> bool:
+    """Verify with an explicit context string. KAT support only: the frozen
+    `Signer.verify(msg, sig, pk)` has no `ctx` parameter (it always verifies against
+    ctx=b""), so it cannot check ACVP sigGen vectors signed with a non-empty context —
+    that's a property of the frozen interface, not a bug in it (PROJECT_SPEC.md's
+    Signer Protocol is defined without a context argument). Production verification
+    always uses ctx=b"" via `MLDSA65().verify()`.
+    """
+    if _OQS_AVAILABLE:
+        raise NotImplementedError(
+            "liboqs KAT verify-with-context is not wired up — same reason as "
+            "ml_dsa_65_keygen_from_seed above."
+        )
+    return bool(_ML_DSA_65.verify(pk, msg, sig, ctx=ctx))

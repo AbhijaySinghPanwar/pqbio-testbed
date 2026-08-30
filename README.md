@@ -45,7 +45,7 @@ python scripts/bench_pqc.py   # Module A crypto micro-benchmark -> results/pqc_m
 
 ## Docker
 
-`docker-compose.yml` (server + redis) and `docker/Dockerfile.server` are written per
+`docker-compose.yml` (server) and `docker/Dockerfile.server` are written per
 spec but not build-verified in this environment (no Docker engine available when this
 scaffold was created). Verify `docker compose up --build` on a machine with Docker
 before relying on it.

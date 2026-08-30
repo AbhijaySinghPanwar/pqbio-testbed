@@ -137,3 +137,44 @@ def get_kem(mode: KemMode) -> KEM:
     if mode == "pq":
         return MLKEM768()
     raise ValueError(f"unknown KEM mode: {mode!r}")
+
+
+# ----------------------------------------------------------------------------------
+# ML-KEM-768 KAT support (NOT part of the frozen KEM Protocol above).
+#
+# NIST ACVP's keyGen/encapsulation vectors supply the raw internal randomness (the
+# (d, z) seed pair for keygen; the message m for encapsulation) rather than a PRNG
+# seed for the public keygen()/encapsulate() entry points, so verifying them requires
+# calling each backend's *internal* deterministic primitive. These are test-only
+# helpers used by tests/unit/test_pqc_kat.py — never call them outside a KAT context.
+# ----------------------------------------------------------------------------------
+
+
+def ml_kem_768_keygen_from_seed(d: bytes, z: bytes) -> tuple[bytes, bytes]:
+    """Deterministic keygen from the raw (d, z) seed pair. KAT support only."""
+    if _OQS_AVAILABLE:
+        raise NotImplementedError(
+            "liboqs KAT keygen-from-seed is not wired up. liboqs's own KAT harness "
+            "works by overriding its global DRBG (see the OQS_randombytes_custom_"
+            "algorithm C API / oqs.rand in liboqs-python), not by a per-call seed "
+            "parameter, so this needs a different implementation than the kyber-py "
+            "path below. Implement that hook here before relying on this for a "
+            "liboqs-backed KAT run — it was never exercised because liboqs was "
+            "unavailable in the environment this was written in."
+        )
+    return cast(tuple[bytes, bytes], _ML_KEM_768.key_derive(d + z))
+
+
+def ml_kem_768_encapsulate_with_randomness(ek: bytes, m: bytes) -> tuple[bytes, bytes]:
+    """Deterministic encapsulation from explicit randomness `m`. Returns (ct, ss).
+    KAT support only.
+    """
+    if _OQS_AVAILABLE:
+        raise NotImplementedError(
+            "liboqs KAT encapsulate-with-randomness is not wired up — same reason as "
+            "ml_kem_768_keygen_from_seed above."
+        )
+    # Private by convention (leading underscore), not by enforcement: this is the
+    # library's own internal-randomness entry point, which is exactly what a KAT needs.
+    k, c = cast(tuple[bytes, bytes], _ML_KEM_768._encaps_internal(ek, m))
+    return c, k

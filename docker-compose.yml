@@ -1,29 +1,19 @@
 # NOTE: not run-verified in the environment this scaffold was written in — no Docker
 # engine is available there. See CLAUDE.md "current state": pqbio/server/app.py is still
 # a placeholder (Module E), so `server` will build but has no real endpoints yet.
+#
+# State (nonce cache, keystore, pHash index, audit log) is SQLite per PROJECT_SPEC.md
+# §4 — no separate cache/queue service. If a future revision needs one, add it back as
+# its own service rather than reintroducing Redis without checking the spec first (it
+# was deliberately removed — see PROJECT_SPEC.md's Amendments section).
 
 services:
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   server:
     build:
       context: .
       dockerfile: docker/Dockerfile.server
-    depends_on:
-      redis:
-        condition: service_healthy
     env_file:
       - .env
-    environment:
-      PQBIO_REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
     volumes:

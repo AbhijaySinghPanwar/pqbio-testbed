@@ -2,7 +2,7 @@
 
 In-memory and thread-safe for Module A's purposes (signature verification needs
 somewhere to look up an enrolled device's public key). Module E's `server/store.py`
-will back this with SQLite/Redis persistence once the server module is built; this
+will back this with SQLite persistence once the server module is built; this
 class's method signatures are the contract that backing store will need to satisfy.
 """
 

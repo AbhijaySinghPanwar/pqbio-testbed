@@ -626,3 +626,65 @@ Friday integration demo every week. The system must be demoable end-to-end from 
 - [ ] Trade-off analysis with a recommendation per deployment scenario.
 - [ ] Limitations written honestly (§12).
 - [ ] README lets a third party reproduce every result, including dataset acquisition.
+
+---
+
+## 14. Amendments
+
+Deviations from this spec discovered during implementation, recorded here rather than
+silently worked around, so they survive into the final report (§0: "if something here
+proves unnecessary during implementation, raise it and cut it" — this section is the
+paper trail for that).
+
+### 2026-08-30 — liboqs unavailable; kyber-py/dilithium-py is the live backend
+
+§4 names `liboqs-python` as the primary PQC backend. The development host had no usable
+C++ toolchain (no `cmake`/`ninja` on PATH, no MSVC "Desktop development with C++"
+workload, only a 32-bit MinGW.org gcc 6.3 from 2016), and `liboqs-python`'s installer
+builds liboqs from source via CMake — so `import oqs` failed. `pqbio/pqc/kem.py` and
+`pqbio/pqc/sign.py` fall back at runtime to `kyber-py`/`dilithium-py` (pure-Python FIPS
+203/204 reference implementations) as the **live** backend, not a mock: `KEM_BACKEND` /
+`SIG_BACKEND` record which is active, a `RuntimeWarning` fires on import, and every
+persisted result (`results/pqc_micro.json`, this file's own amendments) names the
+backend. Correctness was verified against real NIST ACVP vectors, not just artefact
+sizes (see the 2026-08-30 KAT amendment below). **Reversal:** install a C++ toolchain
+(or use `docker/Dockerfile.server`, which builds liboqs from a clean Debian base) and
+`pip install -e ".[pqc-liboqs]"` — both modules detect `oqs` at import time and prefer
+it automatically, no code changes needed.
+
+### 2026-08-30 — hybrid crypto mode built, then removed
+
+An earlier draft of this spec specified three crypto modes (`classical`, `pq`,
+`hybrid` — X25519‖ML-KEM-768 and Ed25519‖ML-DSA-65 dual-signing). `HybridKEM` and
+`HybridSigner` were implemented and tested against that draft. The spec was then
+trimmed to "requirements-only" scope and now specifies exactly two modes (§5.1:
+`mode ∈ {"classical", "pq"}`); the hybrid classes and their tests were deleted to match.
+Do not reintroduce a hybrid mode without checking this spec is current first — it was
+deliberately cut, not forgotten.
+
+### 2026-08-30 — KAT requirement: self-KAT substituted, then resolved with real vectors
+
+§5.1's DoD asks for known-answer tests against ML-KEM-768/ML-DSA-65. Neither liboqs's
+own KAT suite (needs the liboqs C source, unavailable per the amendment above) nor a
+manual fetch of NIST's ACVP vectors was available on the first pass, so
+`tests/unit/test_pqc_kat.py` initially pinned SHA-256 hashes of the fallback backend's
+own deterministic output — a *self*-KAT, which proves output stability, not
+correctness; a bug shared by kyber-py/dilithium-py would have locked itself in and
+reported green forever. **Resolved:** real vectors were fetched from
+[usnistgov/ACVP-Server](https://github.com/usnistgov/ACVP-Server) and vendored into
+`tests/vectors/` (source URLs and SHA-256 of both the original and vendored files in
+`tests/vectors/README.md`); `test_pqc_kat.py` now verifies keyGen, encapsulation,
+decapsulation, sigGen, and verify against them, and passes. DoD item 1 is PASS.
+
+### 2026-08-30 — overhead ablation (§8.3) blocked while a fallback backend is active
+
+`results/pqc_micro.json` shows ML-DSA-65 `sign` at ~52ms mean under the
+dilithium-py fallback — pure-Python rejection-sampling cost, not a property of
+ML-DSA-65 (liboqs is expected to be roughly two orders of magnitude faster).
+Running the C1/C2/C3 configurations on the fallback would misattribute that cost to
+"PQ overhead" and invert §8.3's PQ-vs-AI split. `pqbio/bench/overhead.py` now guards
+against this: `guard_against_fallback_backend()` raises `FallbackBackendActiveError`
+naming the active backend whenever `KEM_BACKEND`/`SIG_BACKEND` is a `*-fallback` value.
+**Unblock condition:** both backends report `"liboqs"` (see the first amendment above)
+— the guard is a pure function of those two globals and needs no other change once
+that's true.

@@ -1,70 +1,170 @@
-"""Known-answer tests for the active PQC backend (Module A DoD item 1).
+"""Known-answer tests for ML-KEM-768 and ML-DSA-65 (Module A DoD item 1), verified
+against real NIST ACVP vectors — see tests/vectors/README.md for provenance, exact
+source URLs, and SHA-256 of both the original upstream files and what's vendored here.
 
-**Spec amendment, raised explicitly rather than silently resolved.** PROJECT_SPEC.md
-§5.1 DoD asks for "known-answer tests pass for ML-KEM-768 and ML-DSA-65." The obvious
-sources for those — NIST's own FIPS 203/204 test vectors, or liboqs' own KATs — both
-require artefacts this environment does not have: liboqs' KATs live in the liboqs C
-source tree (liboqs itself is unbuildable here — see pqbio/pqc/kem.py), and the
-official NIST ACVP JSON vectors were not fetched into this repo. What this file
-provides instead is an honest substitute with a different
-guarantee: a *self-KAT*, pinning the SHA-256 digest of deterministic-seed output from
-the currently active fallback backend (kyber-py / dilithium-py). It catches regressions
-in this backend or its pinned dependency version; it does NOT establish that the
-backend agrees with any other FIPS 203/204 implementation. Recommended follow-up:
-install a C toolchain, switch to `liboqs` (`pip install -e ".[pqc-liboqs]"`), and either
-run liboqs' own KAT suite or fetch the NIST ACVP vectors and replace this file.
+This replaces an earlier "self-KAT" that only pinned the active backend's own
+deterministic output: that proves output stability, not correctness — a bug in
+kyber-py/dilithium-py would have locked itself in and reported green forever. These
+tests instead check the active backend against an independent authority.
 
-If liboqs *is* the active backend (a future environment), these fixed-hash assertions
-will legitimately fail, because liboqs and kyber-py/dilithium-py are different
-implementations and are not required to be bit-for-bit identical for randomized
-components (they are for the deterministic key_derive/deterministic-sign paths tested
-here, since both must implement the same FIPS spec algorithm deterministically given
-the same seed — but this file only pins the fallback's own output, not liboqs').
+Goes through pqbio.pqc.kem / pqbio.pqc.sign's public KAT-support functions
+(`ml_kem_768_keygen_from_seed`, `ml_kem_768_encapsulate_with_randomness`,
+`ml_dsa_65_keygen_from_seed`, `ml_dsa_65_sign_deterministic`,
+`ml_dsa_65_verify_with_context`) rather than importing kyber-py/dilithium-py directly,
+so this file is NOT coupled to the fallback backend: decapsulation, and verification of
+the one empty-context vector, go through the frozen `MLKEM768`/`MLDSA65` classes
+unchanged, and the KAT-support functions already dispatch on which backend is active.
+When liboqs becomes available, `KEM_BACKEND`/`SIG_BACKEND` flip to `"liboqs"` and this
+file runs against it with zero edits — *except* that the KAT-support functions currently
+raise `NotImplementedError` on the liboqs path (see their docstrings in kem.py/sign.py):
+liboqs's own KAT mechanism reseeds its global DRBG rather than taking a per-call seed,
+which is a different-enough mechanism that it needs its own implementation, never
+exercised here because liboqs was unavailable in this environment. That
+`NotImplementedError` is the fail-closed signal that the liboqs hook still needs
+writing — not a silent skip.
 """
 
 from __future__ import annotations
 
-import hashlib
+import json
+from pathlib import Path
+from typing import Any
 
-import pytest
-
-from pqbio.pqc.kem import KEM_BACKEND
-from pqbio.pqc.sign import SIG_BACKEND
-
-pytestmark = pytest.mark.skipif(
-    KEM_BACKEND != "kyber-py-fallback" or SIG_BACKEND != "dilithium-py-fallback",
-    reason="self-KAT pins are specific to the kyber-py/dilithium-py fallback backend",
+from pqbio.pqc.kem import (
+    MLKEM768,
+    ml_kem_768_encapsulate_with_randomness,
+    ml_kem_768_keygen_from_seed,
+)
+from pqbio.pqc.sign import (
+    MLDSA65,
+    ml_dsa_65_keygen_from_seed,
+    ml_dsa_65_sign_deterministic,
+    ml_dsa_65_verify_with_context,
 )
 
-
-def sha256_hex(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+VECTORS_DIR = Path(__file__).resolve().parent.parent / "vectors"
 
 
-def test_ml_kem_768_deterministic_keygen_self_kat() -> None:
-    from kyber_py.ml_kem import ML_KEM_768
-
-    seed = bytes(range(64))  # ML-KEM key_derive takes a 64-byte seed (d ‖ z)
-    ek, dk = ML_KEM_768.key_derive(seed)
-
-    assert len(ek) == 1184
-    assert len(dk) == 2400
-    assert sha256_hex(ek) == "0b7934c83125c788995e2ba6bd761e33046b3e40571be53e023309a29f398cc9"
-    assert sha256_hex(dk) == "dac268bde6a8dd238e9887117d6b664e7a7a9350ad6b7c08a948e504809572a5"
+def _load(name: str) -> dict[str, Any]:
+    with (VECTORS_DIR / name).open(encoding="utf-8") as f:
+        return json.load(f)
 
 
-def test_ml_dsa_65_deterministic_sign_self_kat() -> None:
-    from dilithium_py.ml_dsa import ML_DSA_65
+def _h(hex_str: str) -> bytes:
+    return bytes.fromhex(hex_str)
 
-    seed = bytes(range(32))
-    pk, sk = ML_DSA_65.key_derive(seed)
-    assert len(pk) == 1952
-    assert len(sk) == 4032
-    assert sha256_hex(pk) == "d666806e11cee19a7c989f7445f90dd419cf4d2d51db8c0fdb4c0f0a542238c9"
-    assert sha256_hex(sk) == "9f1e24f47795fe50040384e3d6183988047170fa2d866406b70fe0a3f8216063"
 
-    msg = b"pq-bio-auth KAT fixture message"
-    sig = ML_DSA_65.sign(sk, msg, deterministic=True)
-    assert len(sig) == 3309
-    assert sha256_hex(sig) == "e4e42fca374f55c1c5a22e99175af72eb7685236153049d50548bd2297fb6dce"
-    assert ML_DSA_65.verify(pk, msg, sig) is True
+# --------------------------------------------------------------------------------------
+# ML-KEM-768 keyGen
+# --------------------------------------------------------------------------------------
+
+
+def test_ml_kem_768_keygen_acvp_vectors() -> None:
+    vectors = _load("ML-KEM-768-keyGen.json")
+    assert vectors["parameterSet"] == "ML-KEM-768"
+    cases = vectors["tests"]
+    assert len(cases) == 25
+
+    for case in cases:
+        ek, dk = ml_kem_768_keygen_from_seed(_h(case["d"]), _h(case["z"]))
+        assert ek == _h(case["ek"]), f"tcId {case['tcId']}: ek mismatch"
+        assert dk == _h(case["dk"]), f"tcId {case['tcId']}: dk mismatch"
+
+
+# --------------------------------------------------------------------------------------
+# ML-KEM-768 encapsulation / decapsulation
+# --------------------------------------------------------------------------------------
+
+
+def test_ml_kem_768_encapsulation_acvp_vectors() -> None:
+    vectors = _load("ML-KEM-768-encapDecap.json")
+    assert vectors["parameterSet"] == "ML-KEM-768"
+    cases = vectors["encapsulation"]["tests"]
+    assert len(cases) == 25
+
+    for case in cases:
+        ct, ss = ml_kem_768_encapsulate_with_randomness(_h(case["ek"]), _h(case["m"]))
+        assert ct == _h(case["c"]), f"tcId {case['tcId']}: ciphertext mismatch"
+        assert ss == _h(case["k"]), f"tcId {case['tcId']}: shared secret mismatch"
+
+
+def test_ml_kem_768_decapsulation_acvp_vectors() -> None:
+    """Goes through the frozen MLKEM768().decapsulate() unchanged — decapsulation is
+    already deterministic given (dk, c), no internal-randomness hook needed, so this
+    part of the KAT already exercises exactly the production code path.
+    """
+    vectors = _load("ML-KEM-768-encapDecap.json")
+    cases = vectors["decapsulation"]["tests"]
+    assert len(cases) == 10
+
+    kem = MLKEM768()
+    for case in cases:
+        ss = kem.decapsulate(_h(case["c"]), _h(case["dk"]))
+        assert ss == _h(case["k"]), f"tcId {case['tcId']}: shared secret mismatch"
+
+
+# --------------------------------------------------------------------------------------
+# ML-DSA-65 keyGen
+# --------------------------------------------------------------------------------------
+
+
+def test_ml_dsa_65_keygen_acvp_vectors() -> None:
+    vectors = _load("ML-DSA-65-keyGen.json")
+    assert vectors["parameterSet"] == "ML-DSA-65"
+    cases = vectors["tests"]
+    assert len(cases) == 25
+
+    for case in cases:
+        pk, sk = ml_dsa_65_keygen_from_seed(_h(case["seed"]))
+        assert pk == _h(case["pk"]), f"tcId {case['tcId']}: pk mismatch"
+        assert sk == _h(case["sk"]), f"tcId {case['tcId']}: sk mismatch"
+
+
+# --------------------------------------------------------------------------------------
+# ML-DSA-65 sigGen (deterministic/external/pure variant) + verify
+# --------------------------------------------------------------------------------------
+
+
+def test_ml_dsa_65_siggen_acvp_vectors() -> None:
+    vectors = _load("ML-DSA-65-sigGen.json")
+    assert vectors["parameterSet"] == "ML-DSA-65"
+    assert vectors["deterministic"] is True
+    cases = vectors["tests"]
+    assert len(cases) == 15
+
+    for case in cases:
+        sig = ml_dsa_65_sign_deterministic(
+            _h(case["sk"]), _h(case["message"]), ctx=_h(case["context"])
+        )
+        assert sig == _h(case["signature"]), f"tcId {case['tcId']}: signature mismatch"
+
+
+def test_ml_dsa_65_verify_accepts_acvp_signatures() -> None:
+    """Most sigGen vectors carry a non-empty `context`, which the frozen
+    `Signer.verify(msg, sig, pk)` has no parameter for (PROJECT_SPEC.md's Signer
+    Protocol doesn't take one — it always verifies against ctx=b""), so this uses the
+    context-aware KAT helper rather than the frozen interface. See
+    test_ml_dsa_65_frozen_verify_accepts_empty_context_acvp_signature below for the one
+    vector where the frozen interface's ctx=b"" default is directly checkable.
+    """
+    vectors = _load("ML-DSA-65-sigGen.json")
+    cases = vectors["tests"]
+
+    for case in cases:
+        ok = ml_dsa_65_verify_with_context(
+            _h(case["pk"]), _h(case["message"]), _h(case["signature"]), ctx=_h(case["context"])
+        )
+        assert ok is True, f"tcId {case['tcId']}: verify rejected a valid ACVP signature"
+
+
+def test_ml_dsa_65_frozen_verify_accepts_empty_context_acvp_signature() -> None:
+    """The one sigGen vector with an empty context (tcId 44) is exactly what the frozen
+    `MLDSA65().verify(msg, sig, pk)` interface can check directly, with zero KAT-support
+    scaffolding — confirms its ctx=b"" default agrees with the vector's ctx=b"" case.
+    """
+    vectors = _load("ML-DSA-65-sigGen.json")
+    case = next(c for c in vectors["tests"] if c["context"] == "")
+
+    signer = MLDSA65()
+    ok = signer.verify(_h(case["message"]), _h(case["signature"]), _h(case["pk"]))
+    assert ok is True, f"tcId {case['tcId']}: frozen verify() rejected a valid ACVP signature"

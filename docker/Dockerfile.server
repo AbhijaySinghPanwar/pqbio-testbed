@@ -1,15 +1,21 @@
-# NOTE: not build-verified in the environment this scaffold was written in — no Docker
-# engine is available there (see CLAUDE.md "current state"). Verify this builds and that
-# the liboqs import check below passes the first time it runs in CI or on a dev machine
-# with Docker. `pqbio/server/app.py` is still a placeholder (Module E), so the container
-# will build and the liboqs check will pass, but `uvicorn pqbio.server.app:app` will not
-# yet serve real endpoints.
+# NOTE: not build-verified — no Docker engine is available in the environment this was
+# written in (verified: `docker` is not on PATH at all, not just failing to run). See
+# CLAUDE.md "current state". `pqbio/server/app.py` is still a placeholder (Module E), so
+# the container will build and the liboqs check below will pass, but
+# `uvicorn pqbio.server.app:app` will not yet serve real endpoints.
+#
+# Once Docker is available, verify with:
+#   docker build -f docker/Dockerfile.server -t pqbio-liboqs .
+#   docker run --rm pqbio-liboqs python -m pytest -q
+#   docker run --rm pqbio-liboqs python scripts/bench_pqc.py --out /tmp/pqc_micro_liboqs.json
+# and check that pqbio.pqc.kem.KEM_BACKEND / pqbio.pqc.sign.SIG_BACKEND report "liboqs",
+# not "*-fallback", inside the container.
 
 FROM python:3.11-slim AS base
 
 # liboqs build dependencies: cmake, ninja, a C toolchain, and git. liboqs-python's own
 # installer clones and CMake-builds liboqs itself, pinned to the commit matching the
-# liboqs-python wheel version below — see
+# liboqs-python wheel version (see the pqc-liboqs extra in pyproject.toml) — see
 # https://github.com/open-quantum-safe/liboqs-python.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential cmake ninja-build git ca-certificates \
@@ -20,12 +26,10 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY pqbio ./pqbio
 
-# Project deps first for better layer caching, then the primary PQC backend. Pin the
-# liboqs-python version so the auto-built liboqs commit is reproducible across rebuilds
-# (this is the version verified against FIPS 203/204 artefact sizes during scaffolding;
-# see pqbio/pqc/kem.py and pqbio/pqc/sign.py docstrings).
-RUN pip install --no-cache-dir -e ".[dev]" \
-    && pip install --no-cache-dir "liboqs-python==0.16.0"
+# dev + the primary PQC backend in one step; the liboqs-python version is pinned in
+# pyproject.toml's pqc-liboqs extra (verified against FIPS 203/204 artefact sizes
+# during scaffolding — see pqbio/pqc/kem.py and pqbio/pqc/sign.py docstrings).
+RUN pip install --no-cache-dir -e ".[dev,pqc-liboqs]"
 
 # Fail the image build rather than silently falling back to the pure-Python reference
 # implementation inside a container that has every tool needed to build the real thing.
@@ -33,6 +37,7 @@ RUN python -c "import oqs; k = oqs.KeyEncapsulation('ML-KEM-768'); print('liboqs
 
 COPY config ./config
 COPY scripts ./scripts
+COPY tests ./tests
 
 EXPOSE 8000
 
