@@ -8,8 +8,8 @@
     "min": 4,
     "p50": 26.0
   },
-  "generated_at_utc": "2026-08-30T16:58:27.704671+00:00",
-  "git_commit": "e534be1745226b125d8e20a32540f5c937eda9da",
+  "generated_at_utc": "2026-08-30T17:04:48.087251+00:00",
+  "git_commit": "481f23675e31e188caad26f5ca4bdf814d9f77d8",
   "method": "synthetic",
   "n_captures_per_subject": 10,
   "n_cross_subject_pairs": 435,
