@@ -75,12 +75,27 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   the accept path in the first draft), a Windows SQLite connection leak found by the
   test suite (fixed across `nonce.py`/`phash_index.py`/`store.py`), and why the signed
   receipt cannot report its own signing latency (the audit log does instead).
-- **Placeholder only (docstring naming owner + purpose, no logic):**
-  `pqbio/bench/` (except `overhead.py`'s guard), and all of `scripts/` except
-  `bench_pqc.py`, `measure_phash_fpr.py`, `measure_phash_robustness.py`,
-  `measure_phash_burst_calibration.py`, `fetch_face_models.py`, and
-  `make_injection_corpus.py`.
-- Do not start Module F, or `pad.py`/`morph.py`/`deepfake.py`/`replay.py`, without
+- **Implemented: Module F — `pqbio/bench/`** (accuracy.py, latency.py, loadgen.py,
+  resources.py, overhead.py, report.py) **and `scripts/run_full_eval.py`** (`make
+  bench`/`make report`). Every §8 metric has a real implementation; most §8.1 accuracy
+  cells are `pqbio.bench._common.blocked(...)` (four detectors, three datasets absent —
+  never a blank or a zero, see `results/BLOCKERS.md`, regenerated every run). §8.2
+  latency/throughput/CPU/RSS are real, measured against the actual Module E app
+  in-process over HTTP (`pqbio.bench._common.AsyncBenchClient`), concurrency swept to
+  64. §8.3's C0 runs for real; C1/C2/C3 sit behind `overhead.py`'s pre-existing
+  fallback-backend guard (unchanged) and report BLOCKED, not a number, on this
+  environment's pure-Python PQC. `report.py` renders `results/report.md` (T1-T8, F1-F4)
+  and `results/BLOCKERS.md` from JSON only — never hand-assembled. See §14's Module F
+  amendment for a real concurrency-related bug this found and fixed in the bench
+  harness itself (not Module E): sequential per-device setup at high concurrency let
+  early-prepared sessions' 30s challenge TTL expire before their `verify()` call ran,
+  surfacing as a spurious 409; fixed by parallelising setup and reporting expiry as a
+  named outcome rather than crashing the sweep.
+- **Placeholder only (docstring naming owner + purpose, no logic):** the remaining
+  scripts under `scripts/` — `download_datasets.py`, `prepare_datasets.py`,
+  `train_detector.py` — pending the same dataset licensing §6 blocks everywhere else.
+- All six modules (A-F) are now implemented. Do not start `pad.py`/`morph.py`/
+  `deepfake.py`/`replay.py`, or any dataset-dependent work, without
   explicit instruction — see PROJECT_SPEC.md §0 and §10 for the intended build order.
 
 ## PQC backend (read before touching pqbio/pqc/)

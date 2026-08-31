@@ -1,0 +1,170 @@
+{
+  "KEM_BACKEND": "kyber-py-fallback",
+  "SIG_BACKEND": "dilithium-py-fallback",
+  "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
+  "cpu_rss": {
+    "cpu_count_logical": 16,
+    "cpu_percent_mean": 886.6192011549567,
+    "cpu_percent_peak": 1848.1,
+    "interval_s": 0.1,
+    "n_samples": 2078,
+    "rss_peak_bytes": 759943168,
+    "rss_steady_state_bytes": 748470272
+  },
+  "dataset_versions": {
+    "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
+    "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
+    "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
+    "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
+  },
+  "generated_at_utc": "2026-08-31T13:27:07.286327+00:00",
+  "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+  "gpu": {
+    "blocked": true,
+    "blocker": "no GPU / NVML unavailable in this environment: NVML Shared Library Not Found"
+  },
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "seed": null,
+  "workload_result": {
+    "KEM_BACKEND": "kyber-py-fallback",
+    "SIG_BACKEND": "dilithium-py-fallback",
+    "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
+    "dataset_versions": {
+      "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
+      "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
+      "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
+      "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
+    },
+    "decision_outcomes": {
+      "ACCEPT": 39,
+      "REJECT": 1
+    },
+    "end_to_end_client_observed": {
+      "max_ms": 2776.429300000018,
+      "mean_ms": 2176.0917274995336,
+      "min_ms": 1204.1051000014704,
+      "n": 40,
+      "p50_ms": 2394.5868500013603,
+      "p95_ms": 2647.248929996931,
+      "p99_ms": 2748.3673569998427
+    },
+    "fallback_ml_dsa_signing_cost": {
+      "backend": "dilithium-py-fallback",
+      "iterations": 100,
+      "max_ms": 304.37329999767826,
+      "mean_ms": 80.23351800002274,
+      "min_ms": 27.895100000023376,
+      "p95_ms": 187.9760100027852,
+      "source": "results/pqc_micro.json"
+    },
+    "generated_at_utc": "2026-08-31T13:27:07.199041+00:00",
+    "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+    "hardware": {
+      "platform": "Windows-10-10.0.26200-SP0",
+      "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+      "python_implementation": "CPython",
+      "python_version": "3.11.9"
+    },
+    "n_frames_per_bundle": 8,
+    "n_requests": 40,
+    "note": "end_to_end_client_observed times the POST /v1/verify call only (\u00a78.2); stage_breakdown is read from the audit log after the run, not the signed receipt, because the receipt cannot report its own signing duration -- see pqbio/server/pipeline.py's module docstring.",
+    "seed": null,
+    "stage_breakdown": {
+      "advance_counter": {
+        "max_ms": 8.29140000132611,
+        "mean_ms": 5.377614999906655,
+        "min_ms": 0.0,
+        "n": 40,
+        "p50_ms": 5.398500001319917,
+        "p95_ms": 7.258969999566034,
+        "p99_ms": 7.9226160010512094
+      },
+      "binding_fail_fast": {
+        "max_ms": 94.56050000153482,
+        "mean_ms": 55.23605250000401,
+        "min_ms": 23.33589999761898,
+        "n": 40,
+        "p50_ms": 61.82170000101905,
+        "p95_ms": 71.05160000119213,
+        "p99_ms": 85.99964900087797
+      },
+      "cheap_signals": {
+        "max_ms": 292.2822000000451,
+        "mean_ms": 47.83257999979469,
+        "min_ms": 11.976099998719292,
+        "n": 40,
+        "p50_ms": 31.566200001179823,
+        "p95_ms": 275.382874999741,
+        "p99_ms": 289.60301700051787
+      },
+      "crypto": {
+        "max_ms": 69.27710000309162,
+        "mean_ms": 53.87946249975357,
+        "min_ms": 23.187699996924493,
+        "n": 40,
+        "p50_ms": 62.416300001132186,
+        "p95_ms": 68.6022950001643,
+        "p99_ms": 69.07909700217715
+      },
+      "evidence_reuse": {
+        "max_ms": 40.54609999730019,
+        "mean_ms": 26.967592499840976,
+        "min_ms": 11.038699998607626,
+        "n": 40,
+        "p50_ms": 28.699449998384807,
+        "p95_ms": 35.960804999376705,
+        "p99_ms": 38.88235999875178
+      },
+      "fusion": {
+        "max_ms": 0.38809999750810675,
+        "mean_ms": 0.2475949998370197,
+        "min_ms": 0.19780000002356246,
+        "n": 40,
+        "p50_ms": 0.23515000066254288,
+        "p95_ms": 0.3283049996753107,
+        "p99_ms": 0.36555799753841706
+      },
+      "heavy_models": {
+        "max_ms": 776.7174000000523,
+        "mean_ms": 598.112572500213,
+        "min_ms": 0.0,
+        "n": 40,
+        "p50_ms": 732.3343000007299,
+        "p95_ms": 767.1911400017052,
+        "p99_ms": 774.0413370001625
+      },
+      "quality_face": {
+        "max_ms": 1397.033700002794,
+        "mean_ms": 1187.8413599996748,
+        "min_ms": 619.5545000009588,
+        "n": 40,
+        "p50_ms": 1298.6754499997915,
+        "p95_ms": 1375.9749249995366,
+        "p99_ms": 1392.2006640013933
+      },
+      "record_evidence": {
+        "max_ms": 38.664899999275804,
+        "mean_ms": 30.131074999553675,
+        "min_ms": 0.0,
+        "n": 40,
+        "p50_ms": 32.8680999991775,
+        "p95_ms": 36.38973999895825,
+        "p99_ms": 37.86976799881813
+      },
+      "sign_audit": {
+        "max_ms": 489.3210000009276,
+        "mean_ms": 124.30315499996141,
+        "min_ms": 23.82759999818518,
+        "n": 40,
+        "p50_ms": 75.07990000158316,
+        "p95_ms": 316.68338999952516,
+        "p99_ms": 451.5225900010773
+      }
+    }
+  }
+}

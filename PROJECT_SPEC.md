@@ -27,13 +27,13 @@ Starting prompt:
 | O1 Testbed combining PQC with AI biometric verification | §2 architecture, Modules A/B/E — A/B/C/E implemented; D3/D4 (morph/deepfake) absent, no detector to plug in (§14) |
 | O2 Integrate ML-KEM and ML-DSA | Module A (§5.1) |
 | O3 Detect presentation, morphing, deepfake, replay, injection | Module D (§5.4) |
-| O4 Measure accuracy, latency, throughput, CPU, memory | Module F (§5.6), §8 |
-| O5 Security–performance trade-off analysis | §8.3, §8.4 |
+| O4 Measure accuracy, latency, throughput, CPU, memory | Module F (§5.6), §8 — harness implemented and produces every metric via `make bench`; most §8.1 accuracy cells are BLOCKED (four detectors/three datasets absent, `results/BLOCKERS.md`), §8.2 performance numbers (latency, throughput, CPU/RSS) are real, measured |
+| O5 Security–performance trade-off analysis | §8.3, §8.4 — C0 (framework floor) real; C1/C2/C3 (crypto/AI overhead) BLOCKED behind the fallback-backend guard until liboqs is installed; §8.4's T8 is latency/crypto-cost-only pending real ACER data |
 | D1 Working reproducible prototype | §13 — real enroll→challenge→handshake→verify→signed-receipt flow now runs end-to-end through Module E (§13's `make demo`/`docker-compose` packaging still open, Module F) |
 | D2 Attack-detection component on suitable datasets | §5.4, §6 |
 | D3 Transaction binding and freshness mechanism | Module C (§5.3) |
-| D4 Security + performance evaluation incl. PQ overhead | §8 |
-| D5 Practical analysis and recommendation | §8.4 |
+| D4 Security + performance evaluation incl. PQ overhead | §8 — `make bench` produces the full evaluation; PQ overhead itself (C2-C1) is BLOCKED until liboqs replaces the pure-Python fallback (§14) |
+| D5 Practical analysis and recommendation | §8.4 — provisional (latency/crypto-cost only); a real accuracy-informed recommendation needs the detector/dataset gaps in `results/BLOCKERS.md` closed first |
 
 ---
 
@@ -994,3 +994,94 @@ amendment above).
 204 passed / 1 documented skip project-wide, `ruff`/`black`/`mypy --strict` clean on
 `pqc/`, `binding/`, `server/`. Concurrency and receipt-verification DoD items measured
 directly (see those test files), not asserted from documentation.
+
+### 2026-08-31 — Module F: benchmark harness implemented (`pqbio/bench/`)
+
+`accuracy.py`, `latency.py`, `loadgen.py`, `resources.py`, `overhead.py`, `report.py`,
+plus `scripts/run_full_eval.py` and working `make bench`/`make report` targets. Every
+§8 metric has a real implementation; `make bench` runs to completion in one command
+and produces `results/report.md` (T1-T8, F1-F4) and `results/BLOCKERS.md` entirely from
+`results/*.json`, never hand-assembled.
+
+**Accuracy metrics (accuracy.py) were unit-tested against synthetic, analytically-known
+score distributions before touching any real detector's output** — 25 tests
+(`tests/unit/test_bench_accuracy.py`), each with a hand-computed expected value (e.g.
+90 genuine at score 0.0 / 10 at 1.0 against 99 attack at 1.0 / 1 at 0.0 gives an exact
+TDR@FAR=1% of 0.90 by construction). All 25 passed on the first run. Real numbers exist
+only for the injection detector (the one detector that exists) on its synthetic corpus
+— APCER/BPCER/ACER all 0.0, AUC 1.0, EER 0.0 on the 7-genuine/7-attack held-out split;
+every other T1/T2/T4 cell, MMPMR, and the 6-class confusion matrix's four non-injection
+rows/columns are `pqbio.bench._common.blocked(...)`, not a blank or a zero, per the
+build instruction.
+
+**Two real bugs found and fixed while building this, both in the bench harness itself,
+not in Module E:**
+
+1. `psutil.Process.cpu_percent(percpu=True)` doesn't exist — `percpu` is a module-level
+   `psutil.cpu_percent()` argument (whole-system, per-core), not a per-process one.
+   `resources.py`'s `ResourceSampler` now uses the plain per-process `cpu_percent()`
+   (a single float that can exceed 100% on a multi-core process, e.g. 350% = 3.5
+   cores), which is the number that actually answers "how much of the machine is our
+   workload using."
+2. **A genuine concurrency race in `loadgen.py`, not Module E**, caught by running the
+   real sweep, not by inspection. First symptom: intermittent `409` on `/v1/verify` at
+   concurrency=8+. Root cause: a session's challenge has a 30s TTL
+   (`binding.challenge_ttl_s`); the first draft of `_prepare_requests` set up every
+   device (enroll → challenge → handshake → build bundle) **sequentially**, so at high
+   concurrency the earliest-prepared sessions could age past their TTL before their
+   (also queued-up) `verify()` call ever ran — a spurious expiry with nothing to do
+   with event-loop blocking. Fixed by parallelising setup (`asyncio.gather` instead of
+   a `for` loop). At concurrency=64 even *parallel* setup can still lose the race —
+   64 simultaneous ML-DSA-bearing HTTP calls queuing behind `server.workers`'s 4
+   executor threads can themselves take long enough that a session expires during
+   handshake. Rather than papering over this, `_prepare_one`/the verify loop now catch
+   the `409` explicitly, count it (`setup_failed_before_verify` /
+   `expired_before_verify`), and let the sweep complete — turning a crash into a
+   reported finding.
+
+**The real concurrency sweep (`results/loadgen.json`, concurrency 1→64, 6-frame
+bundles) produced two distinct, honest findings, not one:**
+
+- **Event loop: not blocked.** p99 latency grew 11.26x (1232ms → 13878ms) while
+  concurrency grew 32x (1→32) — far below proportional. Throughput rose from 0.81 to
+  2.29 verifications/sec over the same range, with a knee at concurrency=8 (the
+  marginal throughput gain from 8→16 drops to 4.2%, below the 10% threshold) —
+  consistent with Module E's event loop staying responsive under load and
+  `server.workers=4` (config) being the real limiting resource past the knee, not a
+  blocked coroutine.
+- **A separate, real scalability ceiling at concurrency=64**, under this environment's
+  pure-Python PQC fallback specifically: every one of the 64 simultaneous sessions
+  either failed setup (29) or expired before its `verify()` call ran (35) — **zero**
+  completions. This is not the event-loop-blocking question §8.2 asks about; it is
+  this environment's crypto backend being too slow, relative to the 30s challenge TTL,
+  to sustain 64-way concurrent session establishment at all. Expected to close
+  substantially once liboqs replaces the fallback (ML-DSA sign alone is ~52ms fallback
+  vs. an expected ~2 orders of magnitude faster under liboqs — `results/pqc_micro.json`).
+
+**Overhead ablation (§8.3): C0 real, C1/C2/C3 correctly BLOCKED.** C0 (bare
+`GET /v1/health`, no crypto, no AI) measures ~1.2ms mean — the ASGI/FastAPI dispatch
+floor. C1/C2/C3 all refuse via `overhead.py`'s pre-existing fallback-backend guard
+(unchanged this session) and report `blocked(...)`, not a number; `pq_overhead_ms`,
+`ai_overhead_ms`, and their ratio are likewise blocked, derived quantities that can't
+exist without their inputs. **All four paths are fully implemented** — C1/C2 measure
+crypto+binding cost directly via Module A/C function calls (deliberately skipping real
+face detection so "AI: none" is actually AI-free, not just unscored — see
+`overhead.py`'s module docstring), C3 reuses `latency.py`'s real HTTP driver — verified
+correct by bypassing the guard in a test (`tests/integration/test_bench_overhead.py`);
+installing liboqs is the only remaining step, no code changes needed.
+
+**Reproducibility (§5.6 DoD) verified directly, not assumed:** the injection
+detector's `train_and_evaluate` with a fixed seed produces bit-identical
+`test_accuracy`/`test_auc`/per-sample `test_scores` across two independent runs
+(`tests/integration/test_bench_reproducibility.py`), and that reproducibility survives
+`accuracy.py`'s own EER/AUC/TDR sweeps too, not just the raw detector output. Timing
+variance is bounded, not eliminated: two independent 5-request latency runs must stay
+within 3x of each other's mean — generous on purpose, since wall-clock latency in a
+shared/virtualised environment is never bit-reproducible the way accuracy numbers are.
+
+**Result:** 61 new tests across `tests/unit/` and `tests/integration/`
+(`test_bench_accuracy.py`, `test_bench_common.py`, `test_bench_report.py`,
+`test_bench_loadgen.py`, `test_bench_overhead.py`, `test_bench_reproducibility.py`),
+265 passed / 1 documented skip project-wide, `ruff`/`black` clean repo-wide, `mypy`
+clean on `pqbio/bench/` and `mypy --strict` clean on `pqc/`/`binding/`/`server/`.
+`results/BLOCKERS.md` (32 blocked entries) is the honest scope statement for weeks 6-8.

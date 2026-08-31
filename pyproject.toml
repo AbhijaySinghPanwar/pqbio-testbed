@@ -104,7 +104,7 @@ strict = true
 [[tool.mypy.overrides]]
 module = [
     "kyber_py.*", "dilithium_py.*", "oqs.*", "cbor2.*", "insightface.*", "imagehash.*",
-    "scipy.*", "sklearn.*", "lightgbm.*",
+    "scipy.*", "sklearn.*", "lightgbm.*", "skimage.*", "psutil.*", "pynvml.*",
 ]
 ignore_missing_imports = true
 

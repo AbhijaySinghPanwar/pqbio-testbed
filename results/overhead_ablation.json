@@ -1,0 +1,65 @@
+{
+  "C0": {
+    "ai": "none",
+    "config": "C0",
+    "crypto": "none",
+    "isolates": "framework/transport floor",
+    "latency": {
+      "max_ms": 8.282299997517839,
+      "mean_ms": 1.2362799999391427,
+      "min_ms": 0.8826000012049917,
+      "n": 50,
+      "p50_ms": 0.9582500006217742,
+      "p95_ms": 2.3830899986933214,
+      "p99_ms": 5.472247998841328
+    },
+    "n_iterations": 50
+  },
+  "C1": {
+    "blocked": true,
+    "blocker": "Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' \u2014 a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing \u2014 see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e \".[pqc-liboqs]\"` so both backends report 'liboqs', then re-run.",
+    "config": "C1"
+  },
+  "C2": {
+    "blocked": true,
+    "blocker": "Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' \u2014 a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing \u2014 see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e \".[pqc-liboqs]\"` so both backends report 'liboqs', then re-run.",
+    "config": "C2"
+  },
+  "C3": {
+    "blocked": true,
+    "blocker": "Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' \u2014 a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing \u2014 see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e \".[pqc-liboqs]\"` so both backends report 'liboqs', then re-run.",
+    "config": "C3"
+  },
+  "KEM_BACKEND": "kyber-py-fallback",
+  "SIG_BACKEND": "dilithium-py-fallback",
+  "ai_overhead_ms": {
+    "blocked": true,
+    "blocker": "requires C2 and C3, both blocked by the fallback backend"
+  },
+  "ai_to_pq_overhead_ratio": {
+    "blocked": true,
+    "blocker": "requires pq_overhead_ms and ai_overhead_ms, both blocked"
+  },
+  "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
+  "dataset_versions": {
+    "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
+    "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
+    "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
+    "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
+  },
+  "generated_at_utc": "2026-08-31T13:27:07.892679+00:00",
+  "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "n_iterations": 50,
+  "note": "pq_overhead_ms = C2.mean - C1.mean (marginal PQ cost over conventional crypto); ai_overhead_ms = C3.mean - C2.mean (marginal AI/detection cost over PQ-crypto-only). \u00a78.3: state these explicitly, do not write the conclusion before the harness prints it.",
+  "pq_overhead_ms": {
+    "blocked": true,
+    "blocker": "requires C1 and C2, both blocked by the fallback backend"
+  },
+  "seed": null
+}

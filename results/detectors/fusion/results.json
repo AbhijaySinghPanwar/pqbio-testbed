@@ -1,7 +1,7 @@
 {
-  "git_commit": "a79147c9d1980c4843841781351ed03dc4414a5e",
-  "config_hash_sha256": "78b21c8b462aa4af5820d04ac8a562342cce2cae4a5fdc47d67bf4ee77d325b0",
-  "generated_at_utc": "2026-08-31T07:34:27.031519+00:00",
+  "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+  "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
+  "generated_at_utc": "2026-08-31T13:16:33.498813+00:00",
   "scope_note": "Only match/injection/binding/quality signals exist this session \u2014 pad/morph/deepfake/replay are dataset-blocked and not built. Both strategies are compared on the injection corpus only (provenance detection), not full system ACER. See pqbio/detect/fusion.py's module docstring.",
   "n_samples": 50,
   "rule_accuracy": 1.0,

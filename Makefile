@@ -24,13 +24,10 @@ test:
 	$(VENV_PY) -m pytest -q
 
 bench:
-	@echo "make bench: not implemented yet (Module F — see PROJECT_SPEC.md §5.6)." >&2
-	@echo "For the Module A PQC micro-benchmark, run: $(VENV_PY) scripts/bench_pqc.py" >&2
-	@exit 1
+	$(VENV_PY) scripts/run_full_eval.py
 
 report:
-	@echo "make report: not implemented yet (Module F — see PROJECT_SPEC.md §5.6)." >&2
-	@exit 1
+	$(VENV_PY) -m pqbio.bench.report
 
 demo:
 	@echo "make demo: not implemented yet (requires Module B-E — see PROJECT_SPEC.md §13)." >&2

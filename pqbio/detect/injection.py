@@ -411,6 +411,13 @@ def train_and_evaluate(
         result["test_false_positive_rate_bona_fide"] = (
             float(np.mean(test_decisions[y_test == 0])) if np.any(y_test == 0) else None
         )
+        # Raw per-sample test scores, not just the aggregated metrics above -- Module F
+        # (pqbio/bench/accuracy.py) needs genuine/attack score arrays to compute EER,
+        # TDR@FAR, and DET-curve data, none of which reduce to a single accuracy number.
+        result["test_scores"] = {
+            "bona_fide": test_pred[y_test == 0].tolist(),
+            "injection_tier1": test_pred[y_test == 1].tolist(),
+        }
     else:
         result["test_accuracy"] = None
 

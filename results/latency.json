@@ -1,0 +1,136 @@
+{
+  "KEM_BACKEND": "kyber-py-fallback",
+  "SIG_BACKEND": "dilithium-py-fallback",
+  "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
+  "dataset_versions": {
+    "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
+    "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
+    "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
+    "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
+  },
+  "decision_outcomes": {
+    "ACCEPT": 40
+  },
+  "end_to_end_client_observed": {
+    "max_ms": 2702.367800000502,
+    "mean_ms": 2314.577499999541,
+    "min_ms": 1100.3842999998596,
+    "n": 40,
+    "p50_ms": 2424.732749999748,
+    "p95_ms": 2556.1219699984576,
+    "p99_ms": 2645.851886000237
+  },
+  "fallback_ml_dsa_signing_cost": {
+    "backend": "dilithium-py-fallback",
+    "iterations": 100,
+    "max_ms": 304.37329999767826,
+    "mean_ms": 80.23351800002274,
+    "min_ms": 27.895100000023376,
+    "p95_ms": 187.9760100027852,
+    "source": "results/pqc_micro.json"
+  },
+  "generated_at_utc": "2026-08-31T13:20:33.589560+00:00",
+  "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "n_frames_per_bundle": 8,
+  "n_requests": 40,
+  "note": "end_to_end_client_observed times the POST /v1/verify call only (\u00a78.2); stage_breakdown is read from the audit log after the run, not the signed receipt, because the receipt cannot report its own signing duration -- see pqbio/server/pipeline.py's module docstring.",
+  "seed": null,
+  "stage_breakdown": {
+    "advance_counter": {
+      "max_ms": 42.70069999984116,
+      "mean_ms": 6.334497499665304,
+      "min_ms": 2.8696000008494593,
+      "n": 40,
+      "p50_ms": 5.48365000031481,
+      "p95_ms": 6.946665001305517,
+      "p99_ms": 28.949026998961905
+    },
+    "binding_fail_fast": {
+      "max_ms": 74.15830000172718,
+      "mean_ms": 60.596555000029184,
+      "min_ms": 19.066400000156136,
+      "n": 40,
+      "p50_ms": 65.23550000019895,
+      "p95_ms": 73.82984999858309,
+      "p99_ms": 74.1202360013267
+    },
+    "cheap_signals": {
+      "max_ms": 105.90159999992466,
+      "mean_ms": 34.35103749980044,
+      "min_ms": 7.87059999856865,
+      "n": 40,
+      "p50_ms": 32.11390000069514,
+      "p95_ms": 99.546140001803,
+      "p99_ms": 103.80562299891608
+    },
+    "crypto": {
+      "max_ms": 72.23000000158208,
+      "mean_ms": 56.81226249980682,
+      "min_ms": 18.85980000224663,
+      "n": 40,
+      "p50_ms": 61.59624999963853,
+      "p95_ms": 67.23361999993357,
+      "p99_ms": 71.22929900076997
+    },
+    "evidence_reuse": {
+      "max_ms": 109.33199999999488,
+      "mean_ms": 29.74008999981379,
+      "min_ms": 8.025800001632888,
+      "n": 40,
+      "p50_ms": 29.149649997634697,
+      "p95_ms": 34.26867499838407,
+      "p99_ms": 81.70954799934403
+    },
+    "fusion": {
+      "max_ms": 0.29319999885046855,
+      "mean_ms": 0.23077999994711718,
+      "min_ms": 0.17319999824394472,
+      "n": 40,
+      "p50_ms": 0.22739999985788018,
+      "p95_ms": 0.2725649983403855,
+      "p99_ms": 0.2885979992788634
+    },
+    "heavy_models": {
+      "max_ms": 768.8729000001331,
+      "mean_ms": 687.0646050001596,
+      "min_ms": 177.53770000126678,
+      "n": 40,
+      "p50_ms": 734.9018499990052,
+      "p95_ms": 762.7903200011133,
+      "p99_ms": 768.7505179989967
+    },
+    "quality_face": {
+      "max_ms": 1411.1257000004116,
+      "mean_ms": 1225.0657725001474,
+      "min_ms": 479.8249000014039,
+      "n": 40,
+      "p50_ms": 1291.9374500015692,
+      "p95_ms": 1369.8209150006733,
+      "p99_ms": 1401.1227850007708
+    },
+    "record_evidence": {
+      "max_ms": 61.148200002207886,
+      "mean_ms": 33.266672500121786,
+      "min_ms": 14.989899998909095,
+      "n": 40,
+      "p50_ms": 33.726699999533594,
+      "p95_ms": 36.655859999700624,
+      "p99_ms": 51.655912001770034
+    },
+    "sign_audit": {
+      "max_ms": 382.99929999993765,
+      "mean_ms": 125.8664525002132,
+      "min_ms": 28.519600000436185,
+      "n": 40,
+      "p50_ms": 103.97980000016105,
+      "p95_ms": 265.3061199976946,
+      "p99_ms": 339.9178720001509
+    }
+  }
+}
