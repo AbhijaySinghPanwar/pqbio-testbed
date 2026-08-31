@@ -15,8 +15,10 @@ Trained and evaluated on the corpus from `scripts/make_injection_corpus.py` — 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import json
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -29,7 +31,7 @@ from PIL import Image
 from scipy import stats
 
 from pqbio.binding.verify import compute_challenge_correlation
-from pqbio.config import settings
+from pqbio.config import DEFAULT_CONFIG_PATH, settings
 from pqbio.detect.base import Detector, DetectorResult
 from pqbio.detect.face import PreparedEvidence, prepared_evidence_bundle_only
 from pqbio.schemas import EvidenceBundle, canonical_cbor_decode
@@ -37,6 +39,21 @@ from pqbio.schemas import EvidenceBundle, canonical_cbor_decode
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 MODELS_DIR = REPO_ROOT / "models"
 DEFAULT_MODEL_PATH = MODELS_DIR / "injection_gbm.txt"
+
+
+def _git_commit() -> str:
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, stderr=subprocess.DEVNULL
+        )
+        return out.decode().strip()
+    except Exception:
+        return "unknown (not a git repository at run time)"
+
+
+def _config_hash() -> str:
+    return hashlib.sha256(DEFAULT_CONFIG_PATH.read_bytes()).hexdigest()
+
 
 # Substring match against DeviceMeta.camera_device_name (case-insensitive) — signal 1.
 VIRTUAL_CAM_NAME_SUBSTRINGS = [
@@ -322,6 +339,8 @@ def train_and_evaluate(
 
     threshold = settings.detect.thresholds.injection
     result: dict[str, Any] = {
+        "git_commit": _git_commit(),
+        "config_hash_sha256": _config_hash(),
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "method": "synthetic corpus (scripts/make_injection_corpus.py)",
         "caveat": (

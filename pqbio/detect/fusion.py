@@ -36,7 +36,9 @@ four detectors and real datasets (§6) to mean anything.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -45,10 +47,25 @@ from typing import Any, Literal
 
 import numpy as np
 
-from pqbio.config import settings
+from pqbio.config import DEFAULT_CONFIG_PATH, settings
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_CASCADE_MODEL_PATH = REPO_ROOT / "models" / "fusion_cascade_lr.json"
+
+
+def _git_commit() -> str:
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, stderr=subprocess.DEVNULL
+        )
+        return out.decode().strip()
+    except Exception:
+        return "unknown (not a git repository at run time)"
+
+
+def _config_hash() -> str:
+    return hashlib.sha256(DEFAULT_CONFIG_PATH.read_bytes()).hexdigest()
+
 
 Decision = Literal["ACCEPT", "REJECT", "CHALLENGE"]
 
@@ -359,6 +376,8 @@ def compare_strategies_on_corpus(
         return correct / len(rows) if rows else 0.0
 
     result = {
+        "git_commit": _git_commit(),
+        "config_hash_sha256": _config_hash(),
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "scope_note": (
             "Only match/injection/binding/quality signals exist this session — "
