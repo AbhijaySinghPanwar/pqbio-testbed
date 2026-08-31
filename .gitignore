@@ -1,9 +1,19 @@
-# Data & models (gitignored per PROJECT_SPEC.md §3 — manifests and results ARE tracked)
+# Data & models (gitignored per PROJECT_SPEC.md §3 — manifests, results, and
+# models/checksums.txt ARE tracked; the weight binaries themselves are not)
 data/raw/
 data/processed/
 models/*.pt
 models/*.onnx
 models/*.pth
+# InsightFace's own download cache (buffalo_l.zip + extracted *.onnx nested under
+# models/insightface/) — the plain `models/*.onnx` pattern above doesn't cross the
+# directory boundary, so this needs its own line.
+models/insightface/
+# Trained detector model dumps (regenerable from scripts/make_injection_corpus.py +
+# pqbio.detect.injection's / pqbio.detect.fusion's training paths) — named explicitly
+# since checksums.txt is also a models/*.txt file and must stay tracked.
+models/injection_gbm.txt
+models/fusion_cascade_lr.json
 
 # Secrets / env
 .env

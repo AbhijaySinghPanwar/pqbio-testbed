@@ -19,7 +19,7 @@ from pqbio.binding.phash_index import PhashIndex
 from pqbio.binding.verify import check_evidence_reuse, verify_binding
 from pqbio.capture import CapturedFrame
 from pqbio.capture.bundler import assemble_bundle, sign_bundle
-from pqbio.capture.challenge import estimate_face_box_centre_crop, measure_chromaticity_trace
+from pqbio.capture.challenge import estimate_face_box, measure_chromaticity_trace
 from pqbio.config import settings
 from pqbio.pqc.keystore import KeyStore
 from pqbio.pqc.sign import get_signer
@@ -91,7 +91,7 @@ class Harness:
                 )
             )
 
-        face_box = estimate_face_box_centre_crop(images[0].shape)
+        face_box = estimate_face_box(images[0])
         trace = measure_chromaticity_trace(images, face_box)
 
         from pqbio.schemas import ChallengeSignal, DeviceMeta

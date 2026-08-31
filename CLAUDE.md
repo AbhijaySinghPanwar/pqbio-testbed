@@ -26,24 +26,42 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   (`ReplaySource`, the chromaticity-measurement half of the illumination challenge,
   bundling/signing/tamper-detection, the CLI) is tested, including one true
   subprocess end-to-end run. `render_challenge_fullscreen` needs a display and has
-  never been run. Face-region extraction is a fixed centre-crop, not a real detector —
-  see the `TODO(Module D)` in `challenge.py`'s `estimate_face_box_centre_crop`.
+  never been run. `challenge.py`'s `estimate_face_box` now calls Module D's real SCRFD
+  detector (the old fixed-centre-crop placeholder is deleted), falling back to a
+  geometric centre crop only when detection finds nothing.
 - **Implemented: Module C — `pqbio/binding/`** (nonce.py, phash_index.py, verify.py).
   All six B1-B6 checks plus the separate pHash reuse check, each with positive and
   negative tests; nonce single-use consumption verified atomic under a real 100-thread
   race (`tests/unit/test_nonce_store.py`); reuse check verified against exact,
   re-encoded, and rescaled resubmission, and to survive a process restart
   (BK-tree rebuilt from SQLite). `phash_hamming_max` (config, default 6) was measured
-  against synthetic data (`results/binding_fpr.json`) — kept at 6 despite a non-trivial
-  synthetic false-positive rate; see §14 Amendments for the full reasoning before
-  touching that value. B6's frame-to-challenge-step timing alignment is an even-split
+  against synthetic data (`results/binding_fpr.json`, `results/phash_robustness.json`)
+  — kept at 6 despite a non-trivial synthetic false-positive rate and a demonstrated
+  robustness gap against aggressive JPEG re-encoding; see §14 Amendments for the full
+  reasoning and the recorded (not implemented) N-of-burst mitigation before touching
+  that value. B6's frame-to-challenge-step timing alignment is an even-split
   approximation (Module B doesn't interleave live render+capture yet) — see
   `verify.py`'s `_expand_expected_trace`.
-- **Placeholder only (docstring naming owner + purpose, no logic):** `pqbio/detect/`,
-  `pqbio/server/`, `pqbio/bench/` (except `overhead.py`'s guard), and all of `scripts/`
-  except `scripts/bench_pqc.py` and `scripts/measure_phash_fpr.py`.
-- Do not start Module D/E/F without explicit instruction — see PROJECT_SPEC.md §0
-  and §10 for the intended build order.
+- **Implemented: parts of Module D — `pqbio/detect/`** (base.py, face.py, match.py,
+  injection.py, fusion.py) **and its injection corpus**
+  (`scripts/make_injection_corpus.py`). `pad.py`/`morph.py`/`deepfake.py`/`replay.py`
+  are dataset-blocked (§6) and were deliberately left **absent, not stubbed** — do not
+  add placeholder files for them without checking datasets have actually landed.
+  SCRFD + ArcFace `buffalo_l` fetched once (`scripts/fetch_face_models.py`) and
+  verified end-to-end against a real photo (`skimage.data.astronaut()` — no licensed
+  face dataset exists yet, see §14). `fusion.py`'s input is missing 4 of 6 spec'd
+  detector slots (represented as `None`, never defaulted to benign) — see its module
+  docstring before trusting any fused number. Injection detector hits 100%
+  train/test accuracy on the synthetic corpus; §14 explains why that's expected and
+  not a production claim. Tier 2 (virtual camera) injection is blocked in this
+  environment (no OBS, no admin rights) — tier 1 only, reason recorded in every
+  manifest.
+- **Placeholder only (docstring naming owner + purpose, no logic):** `pqbio/server/`,
+  `pqbio/bench/` (except `overhead.py`'s guard), and all of `scripts/` except
+  `bench_pqc.py`, `measure_phash_fpr.py`, `measure_phash_robustness.py`,
+  `fetch_face_models.py`, and `make_injection_corpus.py`.
+- Do not start Module E/F, or `pad.py`/`morph.py`/`deepfake.py`/`replay.py`, without
+  explicit instruction — see PROJECT_SPEC.md §0 and §10 for the intended build order.
 
 ## PQC backend (read before touching pqbio/pqc/)
 

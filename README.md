@@ -7,11 +7,14 @@ a quickstart, not a substitute for it.
 ## Status
 
 Early scaffold. **Module A — the PQC layer** (`pqbio/pqc/`), **Module B — the capture
-client** (`pqbio/capture/`), and **Module C — transaction binding & freshness**
-(`pqbio/binding/`) are implemented; every other package under `pqbio/` is a
-placeholder. See [`CLAUDE.md`](CLAUDE.md) "current state" for the up-to-date
-module-by-module status, including what's untested (no webcam/display in this
-environment) versus fully verified.
+client** (`pqbio/capture/`), **Module C — transaction binding & freshness**
+(`pqbio/binding/`), and the non-dataset-blocked parts of **Module D — attack detection**
+(`pqbio/detect/base.py`, `face.py`, `match.py`, `injection.py`, `fusion.py`) are
+implemented. `pqbio/detect/pad.py`/`morph.py`/`deepfake.py`/`replay.py` need licensed
+datasets that haven't landed and are deliberately absent, not stubbed; `pqbio/server/`
+and `pqbio/bench/` (besides one guard) remain placeholders. See [`CLAUDE.md`](CLAUDE.md)
+"current state" for the up-to-date module-by-module status, including what's untested
+(no webcam/display in this environment) versus fully verified.
 
 ## Setup
 
@@ -34,6 +37,15 @@ Without it, `pqbio.pqc` transparently falls back to a pure-Python FIPS 203/204
 reference implementation (`kyber-py` / `dilithium-py`) — see `pqbio/pqc/kem.py` and
 `pqbio/pqc/sign.py` for exactly what that means and how to switch backends.
 
+Module D's face detection/matching needs the `insightface`/`onnxruntime`/`lightgbm`/
+`scikit-learn`/`scipy` extras (currently in the optional `ml` group) and a one-time
+model fetch:
+
+```bash
+pip install -e ".[dev,ml]"
+python scripts/fetch_face_models.py   # fetches SCRFD + ArcFace buffalo_l, records checksums
+```
+
 ## Running things
 
 ```bash
@@ -42,7 +54,11 @@ make typecheck    # mypy --strict on pqc/, binding/, server/
 make test         # pytest
 python scripts/bench_pqc.py   # Module A crypto micro-benchmark -> results/pqc_micro.json
 python -m pqbio.capture --source replay --clip PATH --out bundle.cbor   # Module B CLI
-python scripts/measure_phash_fpr.py   # Module C reuse-check FPR -> results/binding_fpr.json
+python scripts/measure_phash_fpr.py          # Module C reuse-check FPR -> results/binding_fpr.json
+python scripts/measure_phash_robustness.py   # Module C reuse-check robustness sweep -> results/phash_robustness.json
+python scripts/make_injection_corpus.py      # Module D injection corpus -> data/manifests/, data/processed/
+python -m pqbio.detect.injection --train data/manifests/injection_corpus_manifest.json   # train + evaluate D5
+python -m pqbio.detect.fusion                # train cascade + compare both D6 strategies on the corpus
 ```
 
 `make bench`, `make report`, and `make demo` are stubs until Module F and Module E land

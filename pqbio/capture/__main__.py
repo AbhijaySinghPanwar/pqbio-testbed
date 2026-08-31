@@ -20,7 +20,7 @@ from uuid import UUID, uuid4
 from pqbio.capture import FrameSource
 from pqbio.capture.bundler import assemble_bundle, sign_bundle
 from pqbio.capture.camera import CameraSource
-from pqbio.capture.challenge import estimate_face_box_centre_crop, measure_chromaticity_trace
+from pqbio.capture.challenge import estimate_face_box, measure_chromaticity_trace
 from pqbio.capture.replay_source import ReplaySource
 from pqbio.config import settings
 from pqbio.pqc.sign import get_signer
@@ -90,7 +90,7 @@ def main() -> None:
     )
     captured_frames, device_meta = source.capture(settings.capture.n_frames, settings.capture.fps)
 
-    face_box = estimate_face_box_centre_crop(captured_frames[0].image.shape)
+    face_box = estimate_face_box(captured_frames[0].image)
     illumination_trace = measure_chromaticity_trace([f.image for f in captured_frames], face_box)
     challenge_signal = ChallengeSignal(illumination_trace=illumination_trace)
 

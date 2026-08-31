@@ -168,15 +168,26 @@ def _pearson_r(a: list[float], b: list[float]) -> float:
     return float(np.corrcoef(arr_a, arr_b)[0, 1])
 
 
+def compute_challenge_correlation(bundle: EvidenceBundle) -> float:
+    """The raw Pearson r between the bundle's measured challenge signal and the
+    expectation derived from its nonce — the number `check_b6_challenge_correlation`
+    thresholds, and also D5's "challenge-illumination correlation" injection feature
+    (pqbio/detect/injection.py): a pre-recorded/injected stream cannot satisfy a fresh
+    challenge either, so this one computation feeds both. Returns 0.0 (never raises) if
+    the trace lengths mismatch or either sequence is constant — see `_pearson_r`.
+    """
+    expected_indices = expected_illumination_sequence(bundle.challenge_echo.nonce)
+    expected_trace = _expand_expected_trace(expected_indices, len(bundle.frame_meta))
+    measured_trace = bundle.challenge_signal.illumination_trace
+    return _pearson_r(measured_trace, expected_trace)
+
+
 def check_b6_challenge_correlation(bundle: EvidenceBundle) -> CheckResult:
     """B6: the measured challenge signal correlates with the expectation derived from
     the nonce, at or above `illumination_corr_min` (config, default Pearson r >= 0.70).
     """
     try:
-        expected_indices = expected_illumination_sequence(bundle.challenge_echo.nonce)
-        expected_trace = _expand_expected_trace(expected_indices, len(bundle.frame_meta))
-        measured_trace = bundle.challenge_signal.illumination_trace
-        r = _pearson_r(measured_trace, expected_trace)
+        r = compute_challenge_correlation(bundle)
         passed = r >= settings.binding.illumination_corr_min
     except Exception:
         passed = False

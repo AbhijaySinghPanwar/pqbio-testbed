@@ -2,6 +2,11 @@
 #
 # Format: <sha256>  <relative-path-under-models/>
 #
-# Populated by scripts/train_detector.py and verified at load time.
-# Model binaries themselves (models/*.pt) are gitignored; this file is tracked
-# so weight provenance survives even though the weights do not.
+# Populated by scripts/fetch_face_models.py (face models) and
+# scripts/make_injection_corpus.py's training path (injection_gbm.txt, gitignored
+# — the model binary isn't committed, only its provenance would be if it were).
+# Model binaries themselves (models/*.onnx, models/*.pt) are gitignored; this file
+# is tracked so weight provenance survives even though the weights do not.
+
+5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91  insightface/models/buffalo_l/det_10g.onnx
+4c06341c33c2ca1f86781dab0e829f88ad5b64be9fba56e56bc9ebdefc619e43  insightface/models/buffalo_l/w600k_r50.onnx

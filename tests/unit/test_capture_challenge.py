@@ -14,7 +14,7 @@ import numpy as np
 from pqbio.capture.challenge import (
     PALETTE_BGR,
     derive_illumination_sequence,
-    estimate_face_box_centre_crop,
+    estimate_face_box,
     measure_chromaticity_trace,
 )
 
@@ -44,7 +44,7 @@ def test_measure_chromaticity_trace_recovers_injected_colour_sequence() -> None:
     injected_sequence = [0, 1, 2, 3, 0, 2]  # red, green, blue, white, red, blue
     frames = [np.full(frame_shape, PALETTE_BGR[idx], dtype=np.uint8) for idx in injected_sequence]
 
-    face_box = estimate_face_box_centre_crop(frame_shape)
+    face_box = estimate_face_box(frames[0])  # solid colour: SCRFD finds nothing, falls back
     trace = measure_chromaticity_trace(frames, face_box)
 
     assert len(trace) == 3 * len(frames)  # flattened [R,G,B] per frame, see module docstring
@@ -72,8 +72,29 @@ def test_measure_chromaticity_trace_distinguishes_face_box_region() -> None:
     assert abs(b - 0.0) < 1e-6
 
 
-def test_estimate_face_box_centre_crop_stays_within_frame() -> None:
+def test_estimate_face_box_fallback_stays_within_frame() -> None:
+    """No face in a solid-colour frame -> falls back to the geometric centre crop,
+    which must stay within bounds.
+    """
     frame_shape = (720, 1280, 3)
-    x, y, w, h = estimate_face_box_centre_crop(frame_shape)
+    frame = np.full(frame_shape, 128, dtype=np.uint8)
+    x, y, w, h = estimate_face_box(frame)
     assert 0 <= x < x + w <= frame_shape[1]
     assert 0 <= y < y + h <= frame_shape[0]
+
+
+def test_estimate_face_box_uses_real_detection_when_a_face_is_present() -> None:
+    """A real photographed face must be detected for real (SCRFD box roughly
+    (180, 58, 89, 120) for this image — see tests/unit/_face_fixtures.py), not fall
+    back to the geometric centre crop (which would be roughly (320, 85, 256, 256)).
+    """
+    from _face_fixtures import _astronaut_bgr
+
+    frame = _astronaut_bgr()
+    x, y, w, h = estimate_face_box(frame)
+    assert 150 <= x <= 210
+    assert 30 <= y <= 90
+    assert 60 <= w <= 120
+    assert 90 <= h <= 150
+    assert 0 <= x < x + w <= frame.shape[1]
+    assert 0 <= y < y + h <= frame.shape[0]

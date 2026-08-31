@@ -12,8 +12,8 @@ without either — that's what ReplaySource and tests/capture/test_challenge.py 
 module's convention is 3 consecutive values per frame — [R0,G0,B0, R1,G1,B1, ...],
 each channel's mean pixel value normalised to [0, 1] within the face region.
 Correlating this trace against the expected sequence (binding check B6, §5.3) is
-Module C's job (pqbio/binding/verify.py, not yet implemented) — this module only
-derives, renders, and records.
+Module C's job (`pqbio.binding.verify.check_b6_challenge_correlation`) — this module
+only derives, renders, and records.
 """
 
 from __future__ import annotations
@@ -89,20 +89,25 @@ def measure_chromaticity_trace(frames: list[npt.NDArray[Any]], face_box: FaceBox
     return trace
 
 
-def estimate_face_box_centre_crop(frame_shape: tuple[int, int, int]) -> FaceBox:
-    """Fixed centre-crop face-box placeholder (PROJECT_SPEC.md §5.2: "use a minimal
-    OpenCV Haar or a fixed centre-crop behind a clearly marked seam").
-
-    Haar was tried first and dropped: the installed opencv-python build (5.0.0) no
-    longer ships `haarcascade_frontalface_default.xml` under `cv2.data.haarcascades`
-    (verified empty in this environment, not assumed) — vendoring a duplicate cascade
-    file just for a placeholder wasn't worth it, and a fixed crop is more honest about
-    being a placeholder than a barely-tuned Haar detector would be.
-
-    TODO(Module D): replace every call site of this function with pqbio.detect.face's
-    real face detector once Module D exists (§5.4, D0 — SCRFD detection + 5-point
-    alignment). Do not extend this function; delete it.
+def estimate_face_box(frame: npt.NDArray[Any]) -> FaceBox:
+    """Real face-box detection via `pqbio.detect.face`'s SCRFD model (§5.4 D0) — this
+    replaced a permanent fixed-centre-crop placeholder now that Module D exists (see
+    PROJECT_SPEC.md's Module D section). Falls back to a geometric centre crop only
+    when SCRFD finds no face at all: a frame that genuinely has none, or this project's
+    own synthetic test/corpus clips (stylised ellipse patterns SCRFD was never going to
+    recognise as a face — see scripts/make_injection_corpus.py). The fallback exists
+    purely for graceful degradation on those synthetic frames, never as the primary
+    path against real capture.
     """
+    from pqbio.detect.face import detect_face_box
+
+    box, _det_score = detect_face_box(frame)
+    if box is not None:
+        return box
+    return _centre_crop_fallback(frame.shape)
+
+
+def _centre_crop_fallback(frame_shape: tuple[int, int, int]) -> FaceBox:
     h, w = frame_shape[0], frame_shape[1]
     box_w, box_h = w // 2, h // 2
     x = (w - box_w) // 2

@@ -733,3 +733,121 @@ the same person are expected to differ more than this model produces, not less.
 This is a plausibility check, not a validated FPR — `config/default.yaml` is
 **unchanged**. Re-run `scripts/measure_phash_fpr.py` once real datasets land (§6) and
 revisit both the threshold and this reasoning against real numbers.
+
+### 2026-08-30 — pHash robustness sweep widened: threshold 6 does not have uniform margin
+
+`scripts/measure_phash_robustness.py` widened the sweep beyond the two cases spot-checked
+during Module C (one re-encode, one rescale): JPEG quality 95→20 in steps of 5, rescale
+round-trips at 0.5x/0.7x/1.3x, and a 5% centre crop, across 5 synthetic base images (105
+cases total). Result, by transform:
+
+| Transform | Max distance | All within threshold 6? |
+|---|---|---|
+| Rescale round-trip (0.5x/0.7x/1.3x) | 4 | Yes |
+| 5% centre crop | 4 | Yes |
+| **JPEG re-quality (95→20)** | **10** | **No — 5 of 80 cases exceed 6** |
+
+**Threshold 6 does not have uniform margin.** Rescaling and centre-cropping stay well
+within it (max distance 4 across both), but aggressive JPEG re-compression — quality
+≤30, a visibly degraded but plausible attacker choice — pushed distance to 8–10 in 5 of
+80 cases, exceeding the threshold. Full data: `results/phash_robustness.json`.
+
+This does not itself change the threshold decision above (raising it further would
+worsen the already non-trivial FPR without addressing why quality ≤30 drifts unevenly;
+see the mitigation noted immediately below), but it means the reuse check has a real,
+demonstrated gap against a sufficiently aggressive re-encode, not just a theoretical one.
+
+### 2026-08-30 — known mitigation for both findings above, not implemented
+
+Both the FPR and robustness findings share a root cause: pHash is computed on a face
+*crop*, so it is partly measuring identity/structure, not purely media provenance — two
+distinct captures of the same person share enough low-frequency structure to sometimes
+collide, while one adversarially-recompressed frame can drift enough to escape. Neither
+is fixable by moving the single Hamming threshold alone (tightening it worsens the
+robustness gap above; loosening it worsens the FPR already measured).
+
+**Mitigation, recorded here as a known direction, deliberately not implemented this
+session:** require **N of the burst's frames** (e.g. a majority of the default 30) to
+each land within the threshold against the same accepted bundle, rather than flagging
+reuse on *any single frame* match. A resubmission of genuinely reused media should trip
+this on most/all of its frames; a genuinely distinct capture of the same person
+colliding on one or two frames by chance should not. This changes `PhashIndex.check_reuse`
+and `check_evidence_reuse`'s pass/fail aggregation, not the per-frame Hamming distance
+or the threshold itself — do not implement without also re-running both measurement
+scripts against the new aggregation rule to confirm it actually improves the trade-off.
+
+### 2026-08-31 — Module D: face/match/injection/fusion built, pad/morph/deepfake/replay deliberately absent
+
+Per explicit instruction, this session implements only the parts of Module D (§5.4) that
+are not dataset-blocked: `base.py`, `face.py` (D0 detection/alignment/quality),
+`match.py` (D0 identity match), `injection.py` (D5), `fusion.py` (D6), plus the injection
+corpus (§7) they depend on. `pad.py`, `morph.py`, `deepfake.py`, `replay.py` need
+licensed datasets (§6, none obtained) and were **not stubbed — left entirely absent**,
+as instructed, not merely deferred with a placeholder file.
+
+**Face models.** SCRFD + ArcFace `buffalo_l` fetched once via `scripts/fetch_face_models.py`
+into `models/insightface/` (real network fetch, ~280MB); the pack's other three
+components (landmark_3d68, 2d106det, genderage — gender/age/2D-landmark models this
+project doesn't use) were deleted after download rather than kept unused, so
+`models/checksums.txt` only records the two files actually loaded. `face.py` verifies
+both against that checksum file before every load and never touches the network itself.
+Verified end-to-end against a real photographed face (see the next amendment) — this is
+not a mock integration.
+
+**No licensed face dataset exists yet (§6), so `tests/unit/_face_fixtures.py` uses
+`skimage.data.astronaut()`** — a single well-known, public-domain-status NASA photo
+bundled with scikit-image specifically as a standard CV test image — as the one real
+photographed face available to verify SCRFD/ArcFace actually work, rather than mocking
+the model calls. This is a smoke-test fixture (one image, hand-picked crop/scale
+coordinates to exercise both the quality-pass and quality-fail paths), not a dataset;
+it proves the integration works, not detector accuracy. Real accuracy numbers need §6's
+licensed datasets.
+
+**Yaw estimation is a documented geometric approximation**, not a calibrated pose
+estimator (see `face.py`'s `_estimate_yaw_deg` docstring for the exact reasoning): a
+real 3D pose solve would need another model download (insightface's `landmark_3d68`,
+143MB) not judged worth it for a coarse quality-gate threshold. Recalibrate or replace
+once real face data is available to check it against.
+
+**pHash's face-detection seam is now wired, not a placeholder.**
+`pqbio/capture/challenge.py`'s `estimate_face_box_centre_crop` (a permanent fixed-crop
+placeholder, §5.2) is deleted; `estimate_face_box` now calls `pqbio.detect.face`'s real
+SCRFD detector, falling back to the same geometric centre-crop *only* when detection
+finds nothing (a frame with no face, or this project's own synthetic test/corpus clips,
+which are stylised ellipse patterns SCRFD was never going to recognise as a face). The
+fallback is graceful degradation, not the primary path, and is exercised by real failed
+detection attempts in tests, not skipped.
+
+**Fusion (D6) is scoped to the signals that exist.** §5.4's full fusion input is
+`[match, pad, morph, deepfake, replay, injection, quality, binding_flags, n_frames]`;
+this session only has match/injection/quality/binding. `fusion.py`'s `FusionInput`
+represents every missing detector as `None` ("not run"), never `0.0` ("verified
+benign"), and every `FusionResult` carries `missing_signals` naming exactly what's
+absent. Both strategies (rule, cascade) are implemented and compared, but only against
+the one labelled dataset available — the injection corpus — so the numbers in
+`results/detectors/fusion/results.json` describe provenance-attack separation, not
+system-wide ACER. See `fusion.py`'s module docstring for the full scope note; it is not
+hidden in this file alone.
+
+**Injection detector reaches 100% train/test accuracy on the synthetic corpus** (25
+genuine/tier-1 pairs, subject-disjoint 70/30 split — see
+`results/detectors/injection/results.json`). This is expected, not a sign the detector
+is production-ready: tier-1's defining trait (frames read back-to-back with no capture
+pacing) produces inter-frame timing on the order of 0.3ms versus genuine's ~66ms-paced
+capture — a huge, unambiguous gap for `timing_std_dt_ns` alone to separate, before the
+other five signals even contribute. §7's two-tier corpus has no "sophisticated attacker
+who fakes realistic timing" case (that would be a tier 3, which an earlier draft of this
+spec had and the current one deliberately trimmed — see the hybrid-mode amendment above
+for the same kind of trim) — so this 100% figure bounds how well D5 separates *this*
+corpus, not how it would fare against a more careful real attacker. Re-evaluate once
+real injection attempts (or a harder synthetic construction) are available.
+
+**Tier 2 (virtual camera) is blocked in this environment**, per instruction: no OBS
+Studio / OBS Virtual Camera install found, no v4l2loopback (this is Windows), and the
+session lacks Administrator rights (verified via `WindowsPrincipal.IsInRole`) needed to
+install one — OBS's virtual camera is a signed kernel-mode DirectShow filter requiring
+elevated install. `scripts/make_injection_corpus.py` builds tier 1 only and records
+`tier2_status: "blocked"` with this reason in every manifest it writes (see
+`BLOCKED_TIER2_REASON`), rather than simulating a virtual camera in software and
+mislabelling it tier 2. **Unblock condition:** run on a machine with OBS Studio (Virtual
+Camera feature enabled) or Linux with v4l2loopback loaded, then re-run with `--tier2`.
