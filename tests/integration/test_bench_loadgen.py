@@ -49,20 +49,59 @@ class TestFindKnee:
 
 
 class TestDegradationFinding:
-    def test_flags_linear_degradation(self):
+    """The verdict is computed over the *unsaturated* region only (lowest level up to
+    peak throughput). Past saturation, p99 rising in proportion to offered concurrency
+    is ordinary queueing, not a blocked event loop -- so every fixture here has to
+    carry `throughput_per_s`, and where the peak sits decides which levels are read.
+    """
+
+    def test_flags_linear_degradation_below_saturation(self):
+        # throughput still climbing at the top level -> the whole sweep is unsaturated,
+        # so p99 growing exactly in proportion is a real red flag
         levels = [
-            {"concurrency": 1, "latency": {"p99_ms": 100.0}},
-            {"concurrency": 64, "latency": {"p99_ms": 6400.0}},  # exactly proportional
+            {"concurrency": 1, "throughput_per_s": 1.0, "latency": {"p99_ms": 100.0}},
+            {"concurrency": 64, "throughput_per_s": 64.0, "latency": {"p99_ms": 6400.0}},
         ]
         finding = _degradation_finding(levels)
         assert finding["linear_degradation_detected"] is True
-        assert finding["p99_growth_ratio"] == 64.0
-        assert finding["concurrency_growth_ratio"] == 64.0
+        assert finding["unsaturated_p99_growth_ratio"] == 64.0
+        assert finding["unsaturated_concurrency_growth_ratio"] == 64.0
 
     def test_does_not_flag_flat_latency(self):
         levels = [
-            {"concurrency": 1, "latency": {"p99_ms": 100.0}},
-            {"concurrency": 64, "latency": {"p99_ms": 150.0}},  # far below proportional
+            {"concurrency": 1, "throughput_per_s": 1.0, "latency": {"p99_ms": 100.0}},
+            {"concurrency": 64, "throughput_per_s": 64.0, "latency": {"p99_ms": 150.0}},
         ]
         finding = _degradation_finding(levels)
         assert finding["linear_degradation_detected"] is False
+
+    def test_post_saturation_growth_is_excluded_from_the_verdict(self):
+        """The case that used to produce a false alarm: throughput peaks early, then
+        latency climbs steeply past the peak purely from queueing. The verdict must be
+        read from the sub-peak region only, and the post-peak rise must be named as
+        queueing rather than counted as evidence of blocking.
+        """
+        levels = [
+            {"concurrency": 1, "throughput_per_s": 2.0, "latency": {"p99_ms": 500.0}},
+            {"concurrency": 8, "throughput_per_s": 3.6, "latency": {"p99_ms": 900.0}},
+            {"concurrency": 64, "throughput_per_s": 3.1, "latency": {"p99_ms": 20000.0}},
+        ]
+        finding = _degradation_finding(levels)
+        assert finding["peak_throughput_concurrency"] == 8
+        # 1->8: p99 1.8x against 8x concurrency -> well below proportional
+        assert finding["linear_degradation_detected"] is False
+        # the 40x post-peak rise is described, but did not drive the verdict
+        assert finding["p99_growth_ratio_full_sweep"] == 40.0
+        assert "queueing against a saturated worker pool" in finding["finding"]
+
+    def test_finding_states_it_cannot_answer_the_event_loop_question_alone(self):
+        """A latency curve cannot separate a blocked event loop from CPU/worker
+        saturation, so the finding must say so and point at the direct test.
+        """
+        levels = [
+            {"concurrency": 1, "throughput_per_s": 2.0, "latency": {"p99_ms": 500.0}},
+            {"concurrency": 8, "throughput_per_s": 3.6, "latency": {"p99_ms": 900.0}},
+        ]
+        finding = _degradation_finding(levels)["finding"]
+        assert "cannot separate a blocked event loop" in finding
+        assert "test_event_loop_stays_responsive_while_verify_is_in_flight" in finding

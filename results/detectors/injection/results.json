@@ -1,7 +1,7 @@
 {
-  "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+  "git_commit": "unknown (not a git repository at run time)",
   "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
-  "generated_at_utc": "2026-08-31T13:16:32.638227+00:00",
+  "generated_at_utc": "2026-08-31T18:52:15.899384+00:00",
   "method": "synthetic corpus (scripts/make_injection_corpus.py)",
   "caveat": "Trained and evaluated on the self-generated synthetic injection corpus (no licensed dataset exists for injection attacks \u2014 \u00a76). Numbers here describe how well the six D5 signals separate this synthetic tier-1 construction from its genuine counterpart, not real-world detection rates.",
   "feature_names": [
@@ -19,15 +19,15 @@
     "attestation_present"
   ],
   "threshold": 0.4,
-  "n_train": 36,
-  "n_test": 14,
-  "n_train_devices": 18,
-  "n_test_devices": 7,
+  "n_train": 28,
+  "n_test": 12,
+  "n_train_devices": 14,
+  "n_test_devices": 6,
   "subject_disjoint": true,
   "train_accuracy": 1.0,
   "train_auc": 1.0,
   "test_accuracy": 1.0,
-  "test_auc": 0.9999999999999999,
+  "test_auc": 1.0,
   "test_confusion_matrix": {
     "labels": [
       "bona_fide",
@@ -35,12 +35,12 @@
     ],
     "matrix": [
       [
-        7,
+        6,
         0
       ],
       [
         0,
-        7
+        6
       ]
     ]
   },
@@ -48,16 +48,14 @@
   "test_false_positive_rate_bona_fide": 0.0,
   "test_scores": {
     "bona_fide": [
-      0.003251039534919764,
-      0.0032510395349197433,
-      0.0032510395349197464,
-      0.0032510395349197464,
-      0.0032510395349197464,
-      0.0032510395349197464,
-      0.0032510395349197433
+      0.0032510395349198244,
+      0.0032510395349198244,
+      0.0032510395349198244,
+      0.0032510395349197897,
+      0.0032510395349198244,
+      0.0032510395349197897
     ],
     "injection_tier1": [
-      0.9967489604650802,
       0.9967489604650802,
       0.9967489604650802,
       0.9967489604650802,

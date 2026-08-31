@@ -135,12 +135,20 @@ def _manifest_path_str(path: Path) -> str:
     --out-dir lives under the repo), falling back to an absolute path string when
     --out-dir points elsewhere (e.g. a test's tmp_path) so the manifest is still
     correct, just not repo-relative.
+
+    `.as_posix()`, not `str()`: on Windows, `str(Path(...))` uses backslash
+    separators, which get written verbatim into the committed JSON manifest and then
+    fail to resolve on Linux (a bare backslash isn't a path separator there — the
+    whole string is read as one filename). Discovered running the test suite inside
+    the liboqs Docker image (PROJECT_SPEC.md §14): every path this manifest was ever
+    generated with came from a Windows host. `.as_posix()` produces forward-slash
+    paths that resolve correctly on both.
     """
     resolved = path.resolve()
     try:
-        return str(resolved.relative_to(REPO_ROOT))
+        return resolved.relative_to(REPO_ROOT).as_posix()
     except ValueError:
-        return str(resolved)
+        return resolved.as_posix()
 
 
 def _instant_read_all_frames(clip_path: Path, n_frames: int) -> list[CapturedFrame]:

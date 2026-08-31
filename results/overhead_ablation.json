@@ -5,41 +5,163 @@
     "crypto": "none",
     "isolates": "framework/transport floor",
     "latency": {
-      "max_ms": 8.282299997517839,
-      "mean_ms": 1.2362799999391427,
-      "min_ms": 0.8826000012049917,
+      "max_ms": 16.866095000068526,
+      "mean_ms": 1.6752740999891103,
+      "min_ms": 1.0061829999585825,
       "n": 50,
-      "p50_ms": 0.9582500006217742,
-      "p95_ms": 2.3830899986933214,
-      "p99_ms": 5.472247998841328
+      "p50_ms": 1.3198555000144552,
+      "p95_ms": 1.9118036999657306,
+      "p99_ms": 9.825433470008392
     },
     "n_iterations": 50
   },
   "C1": {
-    "blocked": true,
-    "blocker": "Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' \u2014 a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing \u2014 see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e \".[pqc-liboqs]\"` so both backends report 'liboqs', then re-run.",
-    "config": "C1"
+    "ai": "none",
+    "config": "C1",
+    "crypto": "X25519 + Ed25519",
+    "isolates": "conventional crypto cost",
+    "latency": {
+      "max_ms": 17.789703999937956,
+      "mean_ms": 10.838919220000207,
+      "min_ms": 8.03882100001374,
+      "n": 50,
+      "p50_ms": 10.60463700002856,
+      "p95_ms": 14.65295090004019,
+      "p99_ms": 17.132634089936115
+    },
+    "n_iterations": 50
   },
   "C2": {
-    "blocked": true,
-    "blocker": "Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' \u2014 a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing \u2014 see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e \".[pqc-liboqs]\"` so both backends report 'liboqs', then re-run.",
-    "config": "C2"
+    "ai": "none",
+    "config": "C2",
+    "crypto": "ML-KEM-768 + ML-DSA-65",
+    "isolates": "marginal PQ cost",
+    "latency": {
+      "max_ms": 47.99384500006454,
+      "mean_ms": 11.720506400001796,
+      "min_ms": 8.025029000009454,
+      "n": 50,
+      "p50_ms": 10.640732000013031,
+      "p95_ms": 16.592025199980753,
+      "p99_ms": 33.34027397007043
+    },
+    "n_iterations": 50
   },
   "C3": {
-    "blocked": true,
-    "blocker": "Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' \u2014 a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing \u2014 see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e \".[pqc-liboqs]\"` so both backends report 'liboqs', then re-run.",
-    "config": "C3"
+    "ai": "full",
+    "config": "C3",
+    "crypto": "ML-KEM-768 + ML-DSA-65",
+    "isolates": "total system cost",
+    "latency": {
+      "max_ms": 1165.3531000000612,
+      "mean_ms": 715.5132473599929,
+      "min_ms": 425.6626070000493,
+      "n": 50,
+      "p50_ms": 799.6687935000182,
+      "p95_ms": 899.3854026000065,
+      "p99_ms": 1065.9727249199893
+    },
+    "n_iterations": 50,
+    "stage_breakdown": {
+      "advance_counter": {
+        "max_ms": 19.12991400001829,
+        "mean_ms": 6.230234779998227,
+        "min_ms": 0.0,
+        "n": 50,
+        "p50_ms": 6.213450000018383,
+        "p95_ms": 15.850635349977436,
+        "p99_ms": 19.10562371997912
+      },
+      "binding_fail_fast": {
+        "max_ms": 17.95151999999689,
+        "mean_ms": 7.849772540014328,
+        "min_ms": 5.45200500005194,
+        "n": 50,
+        "p50_ms": 6.988284000044587,
+        "p95_ms": 11.527329300031395,
+        "p99_ms": 16.877229790029556
+      },
+      "cheap_signals": {
+        "max_ms": 447.98313100000087,
+        "mean_ms": 20.11777463999806,
+        "min_ms": 7.520630000044548,
+        "n": 50,
+        "p50_ms": 11.235061499974108,
+        "p95_ms": 17.132891249934783,
+        "p99_ms": 238.68340987998664
+      },
+      "crypto": {
+        "max_ms": 5.087488999947709,
+        "mean_ms": 3.131530299988299,
+        "min_ms": 2.0888410000452495,
+        "n": 50,
+        "p50_ms": 3.086319999965781,
+        "p95_ms": 4.416607749982403,
+        "p99_ms": 4.857884799966995
+      },
+      "evidence_reuse": {
+        "max_ms": 14.349631000072804,
+        "mean_ms": 10.577465040009884,
+        "min_ms": 6.033660999946733,
+        "n": 50,
+        "p50_ms": 11.151760500013097,
+        "p95_ms": 12.34464649999154,
+        "p99_ms": 13.50387679001869
+      },
+      "fusion": {
+        "max_ms": 0.6181159999414376,
+        "mean_ms": 0.35654823998584106,
+        "min_ms": 0.11848099995859229,
+        "n": 50,
+        "p50_ms": 0.3630044999454185,
+        "p95_ms": 0.45498160002921395,
+        "p99_ms": 0.5625436299374085
+      },
+      "heavy_models": {
+        "max_ms": 337.6649559999123,
+        "mean_ms": 179.10649917999763,
+        "min_ms": 0.0,
+        "n": 50,
+        "p50_ms": 275.46156399995425,
+        "p95_ms": 318.2019770000238,
+        "p99_ms": 335.1710172099922
+      },
+      "quality_face": {
+        "max_ms": 543.4465160000173,
+        "mean_ms": 435.18390646000626,
+        "min_ms": 372.1436900000299,
+        "n": 50,
+        "p50_ms": 437.38769099996944,
+        "p95_ms": 473.24028050003335,
+        "p99_ms": 536.6520505600033
+      },
+      "record_evidence": {
+        "max_ms": 63.262470000040594,
+        "mean_ms": 20.899113200000556,
+        "min_ms": 0.0,
+        "n": 50,
+        "p50_ms": 24.591619500029083,
+        "p95_ms": 49.48553544996342,
+        "p99_ms": 63.241400000038084
+      },
+      "sign_audit": {
+        "max_ms": 10.593497999934698,
+        "mean_ms": 4.908591199998682,
+        "min_ms": 3.466788000082488,
+        "n": 50,
+        "p50_ms": 4.710813000031067,
+        "p95_ms": 5.96114994999084,
+        "p99_ms": 9.22823549994177
+      }
+    }
   },
-  "KEM_BACKEND": "kyber-py-fallback",
-  "SIG_BACKEND": "dilithium-py-fallback",
+  "KEM_BACKEND": "liboqs",
+  "SIG_BACKEND": "liboqs",
   "ai_overhead_ms": {
-    "blocked": true,
-    "blocker": "requires C2 and C3, both blocked by the fallback backend"
+    "absolute_ms": 703.7927409599911,
+    "percent_of_c2": 6004.798060260291
   },
-  "ai_to_pq_overhead_ratio": {
-    "blocked": true,
-    "blocker": "requires pq_overhead_ms and ai_overhead_ms, both blocked"
-  },
+  "ai_to_pq_overhead_ratio": 798.324609210768,
   "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
   "dataset_versions": {
     "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
@@ -47,19 +169,19 @@
     "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
     "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
   },
-  "generated_at_utc": "2026-08-31T13:27:07.892679+00:00",
-  "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+  "generated_at_utc": "2026-08-31T18:59:03.357912+00:00",
+  "git_commit": "95e4e6a2a6682a03a1548ecf7db71d90585c6ce0",
   "hardware": {
-    "platform": "Windows-10-10.0.26200-SP0",
-    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+    "processor": "x86_64",
     "python_implementation": "CPython",
-    "python_version": "3.11.9"
+    "python_version": "3.11.16"
   },
   "n_iterations": 50,
   "note": "pq_overhead_ms = C2.mean - C1.mean (marginal PQ cost over conventional crypto); ai_overhead_ms = C3.mean - C2.mean (marginal AI/detection cost over PQ-crypto-only). \u00a78.3: state these explicitly, do not write the conclusion before the harness prints it.",
   "pq_overhead_ms": {
-    "blocked": true,
-    "blocker": "requires C1 and C2, both blocked by the fallback backend"
+    "absolute_ms": 0.8815871800015884,
+    "percent_of_c1": 8.133534000095368
   },
   "seed": null
 }

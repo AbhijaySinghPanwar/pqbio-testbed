@@ -1,24 +1,31 @@
-# NOTE: not build-verified — no Docker engine is available in the environment this was
-# written in (verified: `docker` is not on PATH at all, not just failing to run). See
-# CLAUDE.md "current state". `pqbio/server/app.py` is still a placeholder (Module E), so
-# the container will build and the liboqs check below will pass, but
-# `uvicorn pqbio.server.app:app` will not yet serve real endpoints.
+# Build-verified 2026-09-01 (WSL2 Ubuntu 26.04 + Docker Engine, since no Docker was
+# available in the environment earlier sessions wrote this from — see CLAUDE.md
+# "current state" / PROJECT_SPEC.md §14's liboqs amendment for the resolution).
 #
-# Once Docker is available, verify with:
 #   docker build -f docker/Dockerfile.server -t pqbio-liboqs .
-#   docker run --rm pqbio-liboqs python -m pytest -q
+#   docker run --rm -v "$(pwd)/models:/app/models:ro" -v "$(pwd)/data:/app/data:ro" \
+#     pqbio-liboqs python -m pytest -q
 #   docker run --rm pqbio-liboqs python scripts/bench_pqc.py --out /tmp/pqc_micro_liboqs.json
-# and check that pqbio.pqc.kem.KEM_BACKEND / pqbio.pqc.sign.SIG_BACKEND report "liboqs",
-# not "*-fallback", inside the container.
+# KEM_BACKEND / SIG_BACKEND report "liboqs" inside this image, not "*-fallback" — the
+# build-time assertion below refuses to produce an image where that isn't true.
 
 FROM python:3.11-slim AS base
 
-# liboqs build dependencies: cmake, ninja, a C toolchain, and git. liboqs-python's own
-# installer clones and CMake-builds liboqs itself, pinned to the commit matching the
-# liboqs-python wheel version (see the pqc-liboqs extra in pyproject.toml) — see
-# https://github.com/open-quantum-safe/liboqs-python.
+# liboqs build dependencies: cmake, ninja, a C toolchain, git, and OpenSSL headers.
+# libssl-dev is easy to miss — liboqs's CMake build fails at configure time without it
+# ("Could NOT find OpenSSL"), discovered building this image, not assumed. liboqs-
+# python's own installer clones and CMake-builds liboqs itself, pinned to the commit
+# matching the liboqs-python wheel version (see the pqc-liboqs extra in
+# pyproject.toml) — see https://github.com/open-quantum-safe/liboqs-python.
+#
+# libgl1/libglib2.0-0/libxcb1/libxrender1/libxext6/libsm6: opencv-python's wheel links
+# against X11/GL shared libraries even in this headless container (`import cv2` failed
+# with "libxcb.so.1: cannot open shared object file" without them, discovered running
+# the test suite in this image) — the standard, well-known set opencv-python needs on
+# a Debian-slim base, not specific to this project.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential cmake ninja-build git ca-certificates \
+        build-essential cmake ninja-build git ca-certificates libssl-dev \
+        libgl1 libglib2.0-0 libxcb1 libxrender1 libxext6 libsm6 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -26,14 +33,45 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY pqbio ./pqbio
 
-# dev + the primary PQC backend in one step; the liboqs-python version is pinned in
-# pyproject.toml's pqc-liboqs extra (verified against FIPS 203/204 artefact sizes
-# during scaffolding — see pqbio/pqc/kem.py and pqbio/pqc/sign.py docstrings).
-RUN pip install --no-cache-dir -e ".[dev,pqc-liboqs]"
+# liboqs-python first, in its own layer. `pip install liboqs-python` only installs the
+# thin Python/ctypes wrapper — the actual liboqs C library is cloned from GitHub and
+# CMake/Ninja-built *lazily, on first `import oqs`* (discovered building this image:
+# the pip install itself is fast; the real ~5-8 minute build was silently deferred to
+# whatever RUN step first imports oqs). The explicit `import oqs` immediately below
+# forces that build to happen HERE, in its own cacheable layer, rather than in a later
+# layer where it would silently re-run on every retry of an unrelated, flakier step
+# (the ml install below, hundreds of MB over a sometimes-slow connection). Version
+# pinned exactly in pyproject.toml's pqc-liboqs extra (verified against FIPS 203/204
+# artefact sizes during scaffolding, and against real ACVP KAT vectors post-build
+# below — see pqbio/pqc/kem.py and pqbio/pqc/sign.py docstrings).
+RUN pip install --no-cache-dir --timeout 120 -e ".[pqc-liboqs]" \
+    && python -c "import oqs; print('liboqs C library built:', oqs.oqs_version())"
 
-# Fail the image build rather than silently falling back to the pure-Python reference
-# implementation inside a container that has every tool needed to build the real thing.
-RUN python -c "import oqs; k = oqs.KeyEncapsulation('ML-KEM-768'); print('liboqs OK:', k.details['name'])"
+# dev + ml (Module D/F need insightface/onnxruntime/lightgbm/scikit-learn/matplotlib/
+# psutil for the full test suite to even collect, not just crypto). --timeout is
+# generous, not infinite: a genuinely broken mirror should still fail loudly rather
+# than hang.
+RUN pip install --no-cache-dir --timeout 120 -e ".[dev,ml]"
+
+# Fail the image build rather than silently shipping the pure-Python reference
+# fallback inside a container that has every tool needed to build the real thing.
+# Checks the *enabled mechanism list* explicitly, not just that instantiating one
+# algorithm object succeeds — a liboqs build with ML-KEM-768/ML-DSA-65 individually
+# disabled (a real liboqs build-flag possibility) would otherwise pass a weaker check.
+# Cheap here: liboqs's .so was already built in the layer above, so this just imports
+# and checks — no rebuild.
+RUN python -c "\
+import sys; \
+import oqs; \
+kems = oqs.get_enabled_kem_mechanisms(); \
+sigs = oqs.get_enabled_sig_mechanisms(); \
+assert 'ML-KEM-768' in kems, f'ML-KEM-768 not enabled; got {kems}'; \
+assert 'ML-DSA-65' in sigs, f'ML-DSA-65 not enabled; got {sigs}'; \
+from pqbio.pqc.kem import KEM_BACKEND; \
+from pqbio.pqc.sign import SIG_BACKEND; \
+assert KEM_BACKEND == 'liboqs', f'KEM_BACKEND={KEM_BACKEND!r}, expected liboqs'; \
+assert SIG_BACKEND == 'liboqs', f'SIG_BACKEND={SIG_BACKEND!r}, expected liboqs'; \
+print('liboqs OK: ML-KEM-768 and ML-DSA-65 both enabled; KEM_BACKEND/SIG_BACKEND == liboqs', file=sys.stderr)"
 
 COPY config ./config
 COPY scripts ./scripts

@@ -204,6 +204,15 @@ def render_t6(overhead: dict[str, Any] | None) -> str:
         f"**AI overhead (C3-C2):** {_fmt(ai) if is_blocked(ai) else _fmt(ai.get('absolute_ms')) + ' ms (' + _fmt(ai.get('percent_of_c2'), 1) + '%)'}\n\n"
         f"**AI:PQ overhead ratio:** {_fmt(ratio) if is_blocked(ratio) else _fmt(ratio, 2)}"
     )
+    if not is_blocked(ratio):
+        derived += (
+            "\n\n_The AI:PQ ratio is **provisional and a lower bound on the AI side**: "
+            "C3 runs only one of the six spec'd detectors (injection). pad/morph/deepfake/"
+            "replay are absent (§6/§14), so the AI term is missing four of its five "
+            "attack-detection components. Adding them can only increase C3, pushing the "
+            "ratio further in the same direction — nothing about them could shrink it. "
+            "The PQ term (C2−C1) is not provisional; both configs are complete._"
+        )
     return f"{title}\n{body}{derived}\n"
 
 
@@ -258,22 +267,33 @@ def render_t8(
     ]
     e2e = latency.get("end_to_end_client_observed", {}) if latency else {}
     p95 = e2e.get("p95_ms")
+    pq = (overhead or {}).get("pq_overhead_ms", {})
+    pq_ms = None if is_blocked(pq) else (pq or {}).get("absolute_ms")
+    pq_phrase = (
+        f"the measured PQ overhead is {_fmt(pq_ms, 2)} ms per session (T6), "
+        f"{_fmt((pq_ms / p95 * 100) if (pq_ms and p95) else None, 2)}% of end-to-end p95"
+        if pq_ms is not None
+        else "PQ overhead is BLOCKED (see T6) — measure it before deciding here"
+    )
     rows = [
         [
             "High-security, low-volume (bank onboarding)",
-            "Maximise detection strength once available; current system's own p95 "
-            f"({_fmt(p95)} ms) is not the bottleneck for a low-volume flow.",
+            "Maximise detection strength once available; the system's own p95 "
+            f"({_fmt(p95)} ms) is not the binding constraint at low volume. Crypto choice "
+            "is not the trade-off axis here at all.",
         ],
         [
             "Balanced (mobile login)",
-            "PQ overhead over classical crypto (see T6) is the number to watch here; "
-            "acceptable if it stays a small fraction of total p95 latency.",
+            f"PQ is affordable on these numbers: {pq_phrase}. The cost that matters for "
+            "this scenario is inference, not crypto.",
         ],
         [
             "High-volume, low-latency (access control)",
-            "T7's knee and degradation finding directly bound this scenario's viable "
-            "concurrency; the AI stages (`quality_face`, `heavy_models` in F2) currently "
-            "dominate per-request cost far more than crypto does.",
+            "T7's knee bounds this scenario. Throughput saturates against "
+            "`server.workers` running per-request ONNX inference, so scale that (or move "
+            "inference to a GPU) — dropping PQ for classical crypto would buy back only "
+            f"{_fmt(pq_ms, 2) if pq_ms is not None else '(unmeasured)'} ms per session "
+            "and is not the lever.",
         ],
     ]
     lines.append(_markdown_table(["Scenario", "Recommendation (latency/crypto-only)"], rows))
@@ -486,6 +506,31 @@ def write_blockers_document(out_path: Path = RESULTS_DIR / "BLOCKERS.md") -> Pat
         for entry in entries:
             lines.append(f"- **`{entry['file']}` → `{entry['path']}`**\n  {entry['blocker']}\n")
 
+    # Backend provenance: which PQC backend each result file was actually produced on.
+    # Derived from the files themselves, not maintained by hand — a table measured on
+    # the pure-Python fallback and one measured on liboqs differ by ~3 orders of
+    # magnitude in every crypto number, so "which backend produced this" is not a
+    # footnote, it decides whether the number means anything (§14, 2026-09-01).
+    lines.append("\n---\n\n## Backend provenance of each result file\n")
+    lines.append(
+        "Crypto figures produced on the `kyber-py`/`dilithium-py` fallback are **superseded** "
+        "by any liboqs-backed file below — the fallback is a reference implementation for "
+        "correctness, never a performance measurement of ML-KEM-768/ML-DSA-65. "
+        "`pqc_micro_fallback.json`, if present, is retained deliberately as the labelled "
+        "comparison arm.\n"
+    )
+    lines.append("| Result file | KEM backend | SIG backend | Generated |")
+    lines.append("|---|---|---|---|")
+    for path in sorted(RESULTS_DIR.glob("*.json")):
+        data = _load_json(path)
+        if not data:
+            continue
+        kem = data.get("KEM_BACKEND") or data.get("kem", {}).get("pq", {}).get("backend") or "—"
+        sig = data.get("SIG_BACKEND") or data.get("signer", {}).get("pq", {}).get("backend") or "—"
+        generated = str(data.get("generated_at_utc", "—"))[:19]
+        lines.append(f"| `{path.name}` | {kem} | {sig} | {generated} |")
+    lines.append("")
+
     lines.append("\n---\n\n## What unblocks each category\n")
     lines.append(
         "\n".join(
@@ -500,11 +545,12 @@ def write_blockers_document(out_path: Path = RESULTS_DIR / "BLOCKERS.md") -> Pat
                 "(FRLL-Morphs/SMDD).",
                 "- **match FAR/FRR** — needs a labelled genuine/impostor pair dataset; "
                 "none exists (§6).",
-                "- **C1/C2/C3 overhead ablation** — needs liboqs installed (a C "
-                "toolchain: CMake, Ninja, a C compiler; then "
-                '`pip install -e ".[pqc-liboqs]"`) so KEM_BACKEND/SIG_BACKEND both '
-                "report 'liboqs' instead of the pure-Python fallback — see "
-                "`pqbio/bench/overhead.py`'s `guard_against_fallback_backend`.",
+                "- **C1/C2/C3 overhead ablation** — UNBLOCKED 2026-09-01. Needs liboqs, "
+                "which now builds in `docker/Dockerfile.server`; run it there via "
+                "`make docker-bench`. On a host without a C toolchain the fallback is "
+                "still selected and `pqbio/bench/overhead.py`'s "
+                "`guard_against_fallback_backend` will (correctly) re-block C1/C2/C3, "
+                "so check the backend provenance table above before reading T6.",
                 "- **GPU utilisation/VRAM** — needs a machine with an NVIDIA GPU and "
                 "NVML available; this environment has neither.",
                 "- **T8 real ACER-based recommendation** — depends on the detector and "

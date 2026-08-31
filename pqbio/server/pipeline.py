@@ -26,11 +26,14 @@ reject/error paths (see `phash_index.py`'s own module docstring for why: recordi
 rejected bundle would let an attacker poison the index with a victim's genuine media
 under a garbage session).
 
-**Receipt signing cost.** ML-DSA signing under the kyber-py/dilithium-py fallback costs
-~52ms (`results/pqc_micro.json`); this is not optimised away. It appears as the
-`sign_audit` stage in `stage_latency_ms`, but — for the reason explained at
-`_decision_to_audit_json`'s call site below — only in the audit log's copy, never inside
-the signed `Decision` itself; a signature cannot cover the duration of computing itself.
+**Receipt signing cost.** Backend-dependent by roughly three orders of magnitude, and
+not optimised away either way: ML-DSA-65 signing measures ~79ms under the pure-Python
+kyber-py/dilithium-py fallback versus ~0.11ms under liboqs (`results/pqc_micro.json`,
+`results/pqc_micro_fallback.json`), which shows up here as a `sign_audit` stage of
+~155ms versus ~5ms respectively. It appears in `stage_latency_ms`, but — for the reason
+explained at `_decision_to_audit_json`'s call site below — only in the audit log's copy,
+never inside the signed `Decision` itself; a signature cannot cover the duration of
+computing itself.
 
 **Short-circuit points**, matching §5.5's "fail fast" / "short-circuit if confident":
 stage 1 (crypto) and stage 2 (binding B1-B5) reject immediately on any failure; stage 5
@@ -322,7 +325,7 @@ async def run_verify_pipeline(
     # the duration of its own signing without re-signing itself, which just pushes the
     # same problem out one more level. The audit record is plaintext, not signed, so it
     # has no such constraint; it gets the complete breakdown, sign_audit included, so the
-    # ~52ms fallback signing cost the DoD asked to be recorded is captured somewhere real.
+    # receipt-signing cost the DoD asked to be recorded is captured somewhere real.
     await _run_stage(
         "audit_write",
         ctx.audit_log.record,

@@ -320,10 +320,27 @@ def train_and_evaluate(
     results_out: Path = REPO_ROOT / "results" / "detectors" / "injection" / "results.json",
     test_fraction: float = 0.3,
     seed: int = 2026,
+    record_checksum: bool = True,
 ) -> dict[str, Any]:
     """Train the GBM on the corpus and evaluate on a held-out, subject-disjoint split
     (split by device_id/pair — the genuine and tier-1 sample sharing a device never
     end up on opposite sides of the split, and no device_id appears in both).
+
+    `record_checksum=False` skips writing `model_out` into `models/checksums.txt` and
+    lets `model_out` live outside `models/` entirely (`_record_model_checksum` requires
+    a path under `MODELS_DIR`, which a scratch/test model deliberately isn't) — for
+    callers verifying *reproducibility* of the training result itself
+    (`tests/integration/test_bench_reproducibility.py`), not registering a new
+    production model. Retraining as a side effect of running that test used to silently
+    overwrite the real `models/injection_gbm.txt` + `models/checksums.txt` on every
+    test run, which is what caused a real, confusing regression this session (§14):
+    an unrelated corpus-regeneration fix shifted the production model's decision
+    boundary just by running the test suite, and a security-regression test in a
+    completely different module started failing for a reason that had nothing to do
+    with what it was testing. It also means this test cannot run at all against a
+    models/ directory mounted read-only (e.g. the liboqs Docker image, deliberately
+    read-only so a running server can never mutate its own verified models) without
+    this flag.
     """
     import lightgbm as lgb
     from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score
@@ -367,7 +384,8 @@ def train_and_evaluate(
 
     model_out.parent.mkdir(parents=True, exist_ok=True)
     booster.save_model(str(model_out))
-    _record_model_checksum(model_out)
+    if record_checksum:
+        _record_model_checksum(model_out)
 
     train_pred = np.asarray(booster.predict(x_train))
     test_pred = np.asarray(booster.predict(x_test)) if len(x_test) else np.array([])

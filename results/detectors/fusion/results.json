@@ -1,23 +1,23 @@
 {
-  "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+  "git_commit": "unknown (not a git repository at run time)",
   "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
-  "generated_at_utc": "2026-08-31T13:16:33.498813+00:00",
+  "generated_at_utc": "2026-08-31T18:52:17.334008+00:00",
   "scope_note": "Only match/injection/binding/quality signals exist this session \u2014 pad/morph/deepfake/replay are dataset-blocked and not built. Both strategies are compared on the injection corpus only (provenance detection), not full system ACER. See pqbio/detect/fusion.py's module docstring.",
-  "n_samples": 50,
+  "n_samples": 40,
   "rule_accuracy": 1.0,
   "cascade_accuracy": 1.0,
   "cascade_model_trained": true,
   "rows": [
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_000.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_000.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859244
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_000.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_000.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -25,15 +25,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_001.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_001.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859244
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_001.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_001.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -41,15 +41,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_002.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_002.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859244
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_002.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_002.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -57,15 +57,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_003.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_003.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_003.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_003.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -73,15 +73,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_004.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_004.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_004.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_004.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -89,15 +89,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_005.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_005.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_005.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_005.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -105,15 +105,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_006.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_006.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_006.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_006.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -121,15 +121,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_007.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_007.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_007.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_007.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -137,15 +137,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_008.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_008.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859244
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_008.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_008.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -153,15 +153,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_009.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_009.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859244
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_009.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_009.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -169,15 +169,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_010.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_010.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859244
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_010.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_010.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -185,15 +185,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_011.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_011.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859244
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_011.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_011.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -201,15 +201,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_012.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_012.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_012.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_012.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -217,15 +217,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_013.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_013.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_013.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_013.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -233,15 +233,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_014.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_014.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859244
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_014.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_014.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -249,15 +249,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_015.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_015.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_015.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_015.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -265,15 +265,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_016.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_016.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_016.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_016.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -281,15 +281,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_017.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_017.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_017.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_017.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -297,15 +297,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_018.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_018.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_018.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_018.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",
@@ -313,95 +313,15 @@
       "cascade_fused_score": 1.0
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_019.cbor",
+      "bundle_path": "data/processed/injection_corpus/genuine/sample_019.cbor",
       "label": "bona_fide",
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
+      "cascade_fused_score": 0.16457880345859238
     },
     {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_019.cbor",
-      "label": "injection_tier1",
-      "rule_decision": "REJECT",
-      "cascade_decision": "REJECT",
-      "rule_fused_score": 1.0,
-      "cascade_fused_score": 1.0
-    },
-    {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_020.cbor",
-      "label": "bona_fide",
-      "rule_decision": "ACCEPT",
-      "cascade_decision": "ACCEPT",
-      "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
-    },
-    {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_020.cbor",
-      "label": "injection_tier1",
-      "rule_decision": "REJECT",
-      "cascade_decision": "REJECT",
-      "rule_fused_score": 1.0,
-      "cascade_fused_score": 1.0
-    },
-    {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_021.cbor",
-      "label": "bona_fide",
-      "rule_decision": "ACCEPT",
-      "cascade_decision": "ACCEPT",
-      "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
-    },
-    {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_021.cbor",
-      "label": "injection_tier1",
-      "rule_decision": "REJECT",
-      "cascade_decision": "REJECT",
-      "rule_fused_score": 1.0,
-      "cascade_fused_score": 1.0
-    },
-    {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_022.cbor",
-      "label": "bona_fide",
-      "rule_decision": "ACCEPT",
-      "cascade_decision": "ACCEPT",
-      "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
-    },
-    {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_022.cbor",
-      "label": "injection_tier1",
-      "rule_decision": "REJECT",
-      "cascade_decision": "REJECT",
-      "rule_fused_score": 1.0,
-      "cascade_fused_score": 1.0
-    },
-    {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_023.cbor",
-      "label": "bona_fide",
-      "rule_decision": "ACCEPT",
-      "cascade_decision": "ACCEPT",
-      "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
-    },
-    {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_023.cbor",
-      "label": "injection_tier1",
-      "rule_decision": "REJECT",
-      "cascade_decision": "REJECT",
-      "rule_fused_score": 1.0,
-      "cascade_fused_score": 1.0
-    },
-    {
-      "bundle_path": "data\\processed\\injection_corpus\\genuine\\sample_024.cbor",
-      "label": "bona_fide",
-      "rule_decision": "ACCEPT",
-      "cascade_decision": "ACCEPT",
-      "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.14429391940448694
-    },
-    {
-      "bundle_path": "data\\processed\\injection_corpus\\tier1_injection\\sample_024.cbor",
+      "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_019.cbor",
       "label": "injection_tier1",
       "rule_decision": "REJECT",
       "cascade_decision": "REJECT",

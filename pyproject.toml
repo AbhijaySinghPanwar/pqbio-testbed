@@ -43,8 +43,15 @@ dependencies = [
 pqc-liboqs = ["liboqs-python==0.16.0"]
 
 ml = [
-    "torch>=2.2",
-    "timm>=0.9",
+    # §4's stack table originally named "PyTorch 2.x + timm" for the DL layer; the
+    # actual implementation (Module D) uses insightface+onnxruntime for face
+    # detection/recognition and lightgbm+scikit-learn for the trained detectors
+    # instead, so torch/timm were never imported anywhere -- confirmed via `grep -rn
+    # "import torch\|import timm" pqbio/ scripts/` (zero hits) and the fact that every
+    # test in this project already passes without either installed. Removed here
+    # (2026-09-01) because torch's default PyPI wheel bundles multi-GB CUDA runtime
+    # libraries this CPU-only project never uses, which was timing out the Docker
+    # build (§14's liboqs amendment) for a dependency nothing imports.
     "insightface>=0.7",
     "onnxruntime>=1.17",
     "scikit-image>=0.22",

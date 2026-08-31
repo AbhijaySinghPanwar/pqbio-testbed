@@ -16,6 +16,7 @@ collection this time (there is nothing to collect here).
 from __future__ import annotations
 
 import hashlib
+import os
 import platform
 import statistics
 import subprocess
@@ -46,6 +47,19 @@ RESULTS_DIR = REPO_ROOT / "results"
 
 
 def git_commit() -> str:
+    """The commit these results were produced from.
+
+    `PQBIO_GIT_COMMIT` takes precedence over asking git: inside the Docker image (§4's
+    reference environment) `/app` is assembled from explicit `COPY` steps and has no
+    `.git`, so the subprocess call below can only ever answer "unknown" there — which
+    would silently strip provenance from every containerised result, breaking §0's
+    "every number is traceable" rule exactly where it matters most (the liboqs numbers
+    can *only* be produced in a container). The caller passes the real commit in via
+    `docker run -e PQBIO_GIT_COMMIT=$(git rev-parse HEAD)`.
+    """
+    from_env = os.environ.get("PQBIO_GIT_COMMIT", "").strip()
+    if from_env:
+        return from_env
     try:
         out = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, stderr=subprocess.DEVNULL
@@ -192,6 +206,18 @@ def quality_pass_face_jpeg() -> bytes:
     return bytes(buf)
 
 
+def shared_face_box() -> tuple[int, int, int, int]:
+    """The face box for `quality_pass_face_image()`, detected once. Every bundle this
+    module builds uses that same base crop, so callers building many bundles should
+    compute this once and pass it to `build_signed_bundle(face_box=...)` rather than
+    paying one SCRFD inference per bundle — see that function's docstring for why it
+    matters at high concurrency.
+    """
+    from pqbio.capture.challenge import estimate_face_box
+
+    return estimate_face_box(quality_pass_face_image())
+
+
 def build_signed_bundle(
     device_signer: Any,
     device_sk: bytes,
@@ -201,6 +227,7 @@ def build_signed_bundle(
     n_frames: int = 10,
     counter: int = 1,
     seed: int = 0,
+    face_box: tuple[int, int, int, int] | None = None,
 ) -> Any:
     """A signed `EvidenceBundle` that satisfies every check (B1-B6, quality) against
     `challenge_obj` -- the same real face crop, palette-tinted per frame to correlate
@@ -208,6 +235,17 @@ def build_signed_bundle(
     Used by `AsyncBenchClient.build_bundle` (HTTP-driven flows: latency.py, loadgen.py,
     C3) and directly by `overhead.py`'s C1/C2 (crypto+binding cost in isolation, no
     HTTP, no AI stages -- see overhead.py's module docstring for why).
+
+    `face_box` skips this function's own `estimate_face_box` call, which is a full SCRFD
+    inference. That call is *client-side harness cost*, not server cost, and it runs
+    synchronously — so building N bundles concurrently serialises N SCRFD inferences on
+    the event loop, inside the 30s window a challenge is already ticking through. At the
+    top of the concurrency sweep that harness cost, not the server, was what exhausted
+    the TTL (§14, 2026-09-01). Every bundle here is built from the same base crop, so
+    the box is the same for all of them and hoisting it out is exact up to the per-frame
+    palette tint, which shifts the detected box by a pixel or two at most — a documented
+    approximation that affects only which pixels `measure_chromaticity_trace` averages,
+    well inside B6's correlation tolerance.
     """
     import time
 
@@ -246,8 +284,8 @@ def build_signed_bundle(
         jitter_ns = int(rng.normal(0, nominal_dt_ns * 0.1))
         ts += nominal_dt_ns + jitter_ns
 
-    face_box = estimate_face_box(images[0])
-    trace = measure_chromaticity_trace(images, face_box)
+    resolved_face_box = face_box if face_box is not None else estimate_face_box(images[0])
+    trace = measure_chromaticity_trace(images, resolved_face_box)
     bundle = assemble_bundle(
         session_id=challenge_obj.session_id,
         device_id=device_id,
@@ -356,11 +394,13 @@ class AsyncBenchClient:
         n_frames: int = 10,
         counter: int = 1,
         seed: int = 0,
+        face_box: tuple[int, int, int, int] | None = None,
     ) -> Any:
         """A frame burst that satisfies every check (B1-B6, quality). Thin wrapper
         around `build_signed_bundle` -- this method exists for `AsyncBenchClient`
         callers that already have an HTTP-issued challenge response body; `overhead.py`
         (C1/C2, no HTTP round trip) calls `build_signed_bundle` directly instead.
+        Pass `face_box` (see `shared_face_box()`) to skip a per-call SCRFD inference.
         """
         import base64
 
@@ -384,6 +424,7 @@ class AsyncBenchClient:
             n_frames=n_frames,
             counter=counter,
             seed=seed,
+            face_box=face_box,
         )
 
     async def verify(self, session_id: UUID, bundle: Any, keys: Any) -> VerifyOutcome:

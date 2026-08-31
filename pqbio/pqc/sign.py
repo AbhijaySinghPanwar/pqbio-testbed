@@ -55,6 +55,12 @@ class Signer(Protocol):
     def verify(self, msg: bytes, sig: bytes, pk: bytes) -> bool: ...
 
 
+# FIPS 204 ML-DSA-65 artefact sizes — fixed, not derived, so they're available for
+# input-length validation before either backend ever sees a byte (see MLDSA65.sign
+# below — the same reasoning as pqbio.pqc.kem.MLKEM768's constants).
+ML_DSA_65_SK_LEN = 4032
+
+
 class MLDSA65:
     """ML-DSA-65 (FIPS 204). pk 1952B, sk 4032B, sig 3309B."""
 
@@ -69,12 +75,25 @@ class MLDSA65:
         return cast(tuple[bytes, bytes], _ML_DSA_65.keygen())
 
     def sign(self, msg: bytes, sk: bytes) -> bytes:
+        # Load-bearing, not defensive over-caution -- see pqbio.pqc.kem.MLKEM768's
+        # docstring for the full explanation (discovered the same way: liboqs's
+        # ctypes buffers silently zero-pad a too-short secret key instead of raising,
+        # verified empirically with a 10-byte garbage key producing a "valid"-shaped
+        # signature under liboqs where the kyber-py-family fallback raises).
+        if len(sk) != ML_DSA_65_SK_LEN:
+            raise ValueError(
+                f"ML-DSA-65 secret key must be {ML_DSA_65_SK_LEN} bytes, got {len(sk)}"
+            )
         if _OQS_AVAILABLE:
             with oqs.Signature(ML_DSA_65_ALG, secret_key=sk) as signer:
                 return cast(bytes, signer.sign(msg))
         return cast(bytes, _ML_DSA_65.sign(sk, msg))
 
     def verify(self, msg: bytes, sig: bytes, pk: bytes) -> bool:
+        # No length guard needed here (unlike sign() above): a wrong-length signature
+        # must return False, not raise -- and both backends already agree on that
+        # (verified: test_signer_verify_rejects_wrong_length_signature passes under
+        # both kyber-py-family fallback and liboqs unchanged).
         if _OQS_AVAILABLE:
             with oqs.Signature(ML_DSA_65_ALG) as verifier:
                 return bool(verifier.verify(msg, sig, pk))
@@ -138,16 +157,21 @@ def constant_time_eq(a: bytes, b: bytes) -> bool:
 
 
 def ml_dsa_65_keygen_from_seed(seed: bytes) -> tuple[bytes, bytes]:
-    """Deterministic keygen from the raw 32-byte seed. KAT support only."""
+    """Deterministic keygen from the raw 32-byte seed. KAT support only.
+
+    Unlike ML-KEM's `generate_keypair_seed`, liboqs-python's `Signature` class has no
+    per-call seed parameter, so this uses `_oqs_kat.oqs_fixed_randomness` to fix the
+    *global* RNG liboqs draws from during `generate_keypair()` — verified against the
+    real ACVP vectors: fixing the draw to `seed` reproduces the exact expected `pk`/`sk`
+    for every vendored test case.
+    """
     if _OQS_AVAILABLE:
-        raise NotImplementedError(
-            "liboqs KAT keygen-from-seed is not wired up. liboqs's own KAT harness "
-            "works by overriding its global DRBG, not a per-call seed parameter, so "
-            "this needs a different implementation than the dilithium-py path below. "
-            "Implement that hook here before relying on this for a liboqs-backed KAT "
-            "run — it was never exercised because liboqs was unavailable in the "
-            "environment this was written in."
-        )
+        from pqbio.pqc._oqs_kat import oqs_fixed_randomness
+
+        with oqs_fixed_randomness(seed), oqs.Signature(ML_DSA_65_ALG) as sig:
+            pk = sig.generate_keypair()
+            sk = sig.export_secret_key()
+        return cast(bytes, pk), cast(bytes, sk)
     return cast(tuple[bytes, bytes], _ML_DSA_65.key_derive(seed))
 
 
@@ -155,12 +179,18 @@ def ml_dsa_65_sign_deterministic(sk: bytes, msg: bytes, ctx: bytes = b"") -> byt
     """Deterministic (non-hedged) signing with an explicit context string, matching
     ACVP's sigGen vector format. KAT support only — production code uses `sign()`
     (hedged/randomized) via the `Signer` Protocol instead.
+
+    "Deterministic" ML-DSA signing is FIPS 204's normal hedged signing with the
+    internal 32-byte `rnd` draw fixed to all-zero, not a separate algorithm — verified
+    empirically against the real ACVP vectors before relying on it here: fixing
+    liboqs's RNG to 32 zero bytes during `sign_with_ctx_str` reproduces the exact
+    expected signature for every vendored test case.
     """
     if _OQS_AVAILABLE:
-        raise NotImplementedError(
-            "liboqs KAT deterministic-sign is not wired up — same reason as "
-            "ml_dsa_65_keygen_from_seed above."
-        )
+        from pqbio.pqc._oqs_kat import oqs_fixed_randomness
+
+        with oqs_fixed_randomness(b"\x00" * 32), oqs.Signature(ML_DSA_65_ALG, secret_key=sk) as sig:
+            return cast(bytes, sig.sign_with_ctx_str(msg, ctx))
     return cast(bytes, _ML_DSA_65.sign(sk, msg, ctx=ctx, deterministic=True))
 
 
@@ -171,10 +201,12 @@ def ml_dsa_65_verify_with_context(pk: bytes, msg: bytes, sig: bytes, ctx: bytes 
     that's a property of the frozen interface, not a bug in it (PROJECT_SPEC.md's
     Signer Protocol is defined without a context argument). Production verification
     always uses ctx=b"" via `MLDSA65().verify()`.
+
+    Verification draws no randomness, so — unlike the two KAT functions above — this
+    needs no RNG override at all; liboqs-python's `verify_with_ctx_str` takes the
+    context directly.
     """
     if _OQS_AVAILABLE:
-        raise NotImplementedError(
-            "liboqs KAT verify-with-context is not wired up — same reason as "
-            "ml_dsa_65_keygen_from_seed above."
-        )
+        with oqs.Signature(ML_DSA_65_ALG) as sig_obj:
+            return bool(sig_obj.verify_with_ctx_str(msg, sig, ctx, pk))
     return bool(_ML_DSA_65.verify(pk, msg, sig, ctx=ctx))

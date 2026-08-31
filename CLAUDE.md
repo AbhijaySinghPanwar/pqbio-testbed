@@ -82,15 +82,19 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   never a blank or a zero, see `results/BLOCKERS.md`, regenerated every run). §8.2
   latency/throughput/CPU/RSS are real, measured against the actual Module E app
   in-process over HTTP (`pqbio.bench._common.AsyncBenchClient`), concurrency swept to
-  64. §8.3's C0 runs for real; C1/C2/C3 sit behind `overhead.py`'s pre-existing
-  fallback-backend guard (unchanged) and report BLOCKED, not a number, on this
-  environment's pure-Python PQC. `report.py` renders `results/report.md` (T1-T8, F1-F4)
-  and `results/BLOCKERS.md` from JSON only — never hand-assembled. See §14's Module F
-  amendment for a real concurrency-related bug this found and fixed in the bench
-  harness itself (not Module E): sequential per-device setup at high concurrency let
-  early-prepared sessions' 30s challenge TTL expire before their `verify()` call ran,
-  surfacing as a spurious 409; fixed by parallelising setup and reporting expiry as a
-  named outcome rather than crashing the sweep.
+  64. **§8.3's C0-C3 ablation is complete as of 2026-09-01** (run it with `make
+  docker-bench`; on a fallback-only host `overhead.py`'s guard correctly re-blocks
+  C1/C2/C3): PQ overhead = C2−C1 = 0.88 ms (+8.1%), AI overhead = C3−C2 = 703.8 ms,
+  ratio 798x — provisional on the AI side only, since C3 runs one of six detectors.
+  `report.py` renders `results/report.md` (T1-T8, F1-F4) and `results/BLOCKERS.md` from
+  JSON only — never hand-assembled, including a generated backend-provenance table.
+  See §14's Module F and liboqs amendments for two real bench-harness bugs found this
+  way (neither in Module E): sequential per-device setup letting the 30s challenge TTL
+  expire mid-sweep, and — the one that actually caused the concurrency=64 collapse — a
+  per-device SCRFD inference inside `build_signed_bundle` serialising on the event loop
+  while the TTL ran. With that hoisted out, concurrency=64 completes 64/64 on both
+  backends and the real knee is ~8-16, set by `server.workers` against ONNX inference,
+  not by crypto.
 - **Placeholder only (docstring naming owner + purpose, no logic):** the remaining
   scripts under `scripts/` — `download_datasets.py`, `prepare_datasets.py`,
   `train_detector.py` — pending the same dataset licensing §6 blocks everywhere else.
@@ -100,27 +104,46 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
 
 ## PQC backend (read before touching pqbio/pqc/)
 
-`liboqs-python` (the primary backend per §4) requires a C build: CMake, Ninja, and a C
-compiler. This dev environment has none of those usable (no `cmake`/`ninja` on PATH, no
-MSVC C++ workload, only a 32-bit MinGW.org gcc 6.3 from 2016), so `import oqs` fails.
+**Two live backends, and which one you get depends on where you run.**
 
-Per an explicit, documented instruction, `pqbio/pqc/kem.py` and `pqbio/pqc/sign.py`
-fall back at runtime to `kyber_py.ml_kem.ML_KEM_768` / `dilithium_py.ml_dsa.ML_DSA_65` —
-pure-Python FIPS 203/204 reference implementations — never to a mock or a different
-algorithm. Both modules expose `KEM_BACKEND` / `SIG_BACKEND` (`"liboqs"` or
-`"...-fallback"`); every result that gets persisted (bench JSON, audit log, receipts)
-should record which backend produced it. `results/pqc_micro.json` does this already.
+- **In Docker (`docker/Dockerfile.server`) — liboqs 0.16.0.** This is §4's reference
+  environment and the only place PQ *performance* numbers mean anything. The image
+  build asserts `ML-KEM-768`/`ML-DSA-65` are both in liboqs' enabled-mechanism list and
+  that `KEM_BACKEND`/`SIG_BACKEND` report `liboqs`, and **fails the build** otherwise —
+  it can't silently ship the fallback. Use `make docker-build` / `docker-test` /
+  `docker-bench` / `docker-cross-check`.
+- **On a host without a C toolchain — the pure-Python fallback.** `pqbio/pqc/kem.py`
+  and `sign.py` fall back to `kyber_py.ml_kem.ML_KEM_768` /
+  `dilithium_py.ml_dsa.ML_DSA_65` — real FIPS 203/204 reference implementations, never
+  a mock. This is what this Windows dev host uses (no usable `cmake`/`ninja`/MSVC).
 
-The fallback's artefact sizes were verified against FIPS 203/204 exactly (pk/sk/ct/sig
-byte lengths). It is **not** verified against liboqs' own KAT vectors (needs the liboqs
-C source) and is **not constant-time** — treat any latency number produced under the
-fallback as an upper bound on the fallback's cost, not as liboqs' cost, and do not use
-it for a timing-side-channel argument.
+Both modules expose `KEM_BACKEND` / `SIG_BACKEND`; every persisted result (bench JSON,
+audit log, receipts) records which produced it, and `results/BLOCKERS.md` carries a
+generated per-file provenance table. **Any crypto number measured on the fallback is
+superseded** by the liboqs equivalent — the fallback is ~200-700x slower (ML-DSA-65
+signing: 78.9 ms vs 0.114 ms) and is not constant-time, so never use a fallback timing
+for a performance or side-channel claim.
 
-**To switch to the real backend:** install a C++ toolchain (Visual Studio Build Tools
-"Desktop development with C++" workload, or mingw-w64), then
-`pip install -e ".[pqc-liboqs]"`. No code changes needed — both modules detect `oqs`
-at import time and prefer it automatically.
+**The two backends agree byte for byte** — 339 fields over 127 deterministic cases
+(ACVP vectors + synthetic seeds), plus two-directional interop, via
+`scripts/cross_check_backends.py` (`make docker-cross-check`,
+`results/backend_cross_check.json`). That is what retroactively validates every result
+produced during the period when only the fallback existed. Re-run it if you touch
+either backend path.
+
+Things that bite here, all learned the hard way (PROJECT_SPEC.md §14, 2026-09-01):
+
+- **liboqs-python's ctypes wrappers silently zero-pad or truncate wrong-length input**
+  instead of raising. `MLKEM768.encapsulate`/`decapsulate` and `MLDSA65.sign` therefore
+  validate lengths themselves — do not remove those checks; the "fail closed" property
+  is ours, not the backend's.
+- **KAT determinism works differently per backend.** ML-KEM keygen takes a real per-call
+  seed; everything else goes through liboqs' *process-global* RNG override in
+  `pqbio/pqc/_oqs_kat.py`. Always use its context manager — leaving that override
+  installed makes every later liboqs call in the process use predictable "randomness".
+- **A test that only passes on one backend is a bug in the test.** Branch on the live
+  `KEM_BACKEND`/`SIG_BACKEND` and assert behaviour *matches* it, rather than asserting
+  which backend is present.
 
 ## Code
 

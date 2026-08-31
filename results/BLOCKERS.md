@@ -2,12 +2,12 @@
 
 Every metric this evaluation could not produce, where it would have appeared, and what would need to change to unblock it. Generated from the `blocked` markers in `results/*.json` -- not maintained by hand.
 
-_Generated 2026-08-31T13:29:16.134746+00:00_
+_Generated 2026-08-31T19:23:23.038268+00:00_
 
 
 ---
 
-**23 blocked entries.**
+**17 blocked entries.**
 
 - **`accuracy.json` → `T1_per_detector_accuracy_intra_dataset.deepfake`**
   no deepfake detector implemented -- pqbio/detect/deepfake.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
@@ -57,26 +57,30 @@ _Generated 2026-08-31T13:29:16.134746+00:00_
 - **`accuracy.json` → `mmpmr`**
   MMPMR is morph-only (§8.1); no morph detector and no morph dataset exist (§6/§14)
 
-- **`overhead_ablation.json` → `C1`**
-  Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' — a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing — see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e ".[pqc-liboqs]"` so both backends report 'liboqs', then re-run.
-
-- **`overhead_ablation.json` → `C2`**
-  Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' — a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing — see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e ".[pqc-liboqs]"` so both backends report 'liboqs', then re-run.
-
-- **`overhead_ablation.json` → `C3`**
-  Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' — a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing — see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e ".[pqc-liboqs]"` so both backends report 'liboqs', then re-run.
-
-- **`overhead_ablation.json` → `ai_overhead_ms`**
-  requires C2 and C3, both blocked by the fallback backend
-
-- **`overhead_ablation.json` → `ai_to_pq_overhead_ratio`**
-  requires pq_overhead_ms and ai_overhead_ms, both blocked
-
-- **`overhead_ablation.json` → `pq_overhead_ms`**
-  requires C1 and C2, both blocked by the fallback backend
-
 - **`resources.json` → `gpu`**
   no GPU / NVML unavailable in this environment: NVML Shared Library Not Found
+
+
+---
+
+## Backend provenance of each result file
+
+Crypto figures produced on the `kyber-py`/`dilithium-py` fallback are **superseded** by any liboqs-backed file below — the fallback is a reference implementation for correctness, never a performance measurement of ML-KEM-768/ML-DSA-65. `pqc_micro_fallback.json`, if present, is retained deliberately as the labelled comparison arm.
+
+| Result file | KEM backend | SIG backend | Generated |
+|---|---|---|---|
+| `accuracy.json` | liboqs | liboqs | 2026-08-31T18:52:17 |
+| `backend_cross_check.json` | liboqs | liboqs | 2026-08-31T18:48:56 |
+| `binding_fpr.json` | — | — | 2026-08-30T17:04:48 |
+| `latency.json` | liboqs | liboqs | 2026-08-31T18:53:44 |
+| `loadgen.json` | liboqs | liboqs | 2026-08-31T19:19:04 |
+| `loadgen_fallback_controlled.json` | kyber-py-fallback | dilithium-py-fallback | 2026-08-31T19:21:14 |
+| `overhead_ablation.json` | liboqs | liboqs | 2026-08-31T18:59:03 |
+| `phash_burst_calibration.json` | — | — | 2026-08-31T09:33:14 |
+| `phash_robustness.json` | — | — | 2026-08-31T06:42:36 |
+| `pqc_micro.json` | liboqs | liboqs | 2026-08-31T18:59:03 |
+| `pqc_micro_fallback.json` | kyber-py-fallback | dilithium-py-fallback | 2026-08-31T13:27:07 |
+| `resources.json` | liboqs | liboqs | 2026-08-31T18:57:18 |
 
 
 ---
@@ -87,6 +91,6 @@ _Generated 2026-08-31T13:29:16.134746+00:00_
 - **Cross-dataset accuracy (T2)** — needs a second, independent labelled dataset per attack type; only the self-generated injection corpus exists today.
 - **MMPMR** — needs the morph detector above, plus a morph dataset (FRLL-Morphs/SMDD).
 - **match FAR/FRR** — needs a labelled genuine/impostor pair dataset; none exists (§6).
-- **C1/C2/C3 overhead ablation** — needs liboqs installed (a C toolchain: CMake, Ninja, a C compiler; then `pip install -e ".[pqc-liboqs]"`) so KEM_BACKEND/SIG_BACKEND both report 'liboqs' instead of the pure-Python fallback — see `pqbio/bench/overhead.py`'s `guard_against_fallback_backend`.
+- **C1/C2/C3 overhead ablation** — UNBLOCKED 2026-09-01. Needs liboqs, which now builds in `docker/Dockerfile.server`; run it there via `make docker-bench`. On a host without a C toolchain the fallback is still selected and `pqbio/bench/overhead.py`'s `guard_against_fallback_backend` will (correctly) re-block C1/C2/C3, so check the backend provenance table above before reading T6.
 - **GPU utilisation/VRAM** — needs a machine with an NVIDIA GPU and NVML available; this environment has neither.
 - **T8 real ACER-based recommendation** — depends on the detector and dataset gaps above; today's T8 is latency/crypto-cost-only.

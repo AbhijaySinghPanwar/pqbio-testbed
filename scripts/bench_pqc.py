@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import statistics
 import subprocess
@@ -63,6 +64,12 @@ def _time_ms(fn: Callable[[], Any], iterations: int) -> dict[str, float]:
 
 
 def _git_commit() -> str:
+    # PQBIO_GIT_COMMIT first: inside the Docker image there is no .git to ask, so
+    # without it every containerised (i.e. every liboqs) benchmark would lose its
+    # provenance. Same rationale as pqbio.bench._common.git_commit — see its docstring.
+    from_env = os.environ.get("PQBIO_GIT_COMMIT", "").strip()
+    if from_env:
+        return from_env
     try:
         out = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, stderr=subprocess.DEVNULL

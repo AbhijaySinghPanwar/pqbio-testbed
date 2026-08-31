@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pqbio.bench.accuracy import detector_accuracy_report
 from pqbio.bench.latency import measure_latency
-from pqbio.detect.injection import DEFAULT_MODEL_PATH, train_and_evaluate
+from pqbio.detect.injection import train_and_evaluate
 
 MANIFEST = (
     Path(__file__).resolve().parent.parent.parent
@@ -30,10 +30,18 @@ STATED_TIMING_VARIANCE_RATIO = 3.0
 def test_same_seed_reproduces_injection_accuracy_exactly():
     with tempfile.TemporaryDirectory() as tmp:
         r1 = train_and_evaluate(
-            MANIFEST, model_out=DEFAULT_MODEL_PATH, results_out=Path(tmp) / "r1.json", seed=2026
+            MANIFEST,
+            model_out=Path(tmp) / "m1.txt",
+            results_out=Path(tmp) / "r1.json",
+            seed=2026,
+            record_checksum=False,
         )
         r2 = train_and_evaluate(
-            MANIFEST, model_out=DEFAULT_MODEL_PATH, results_out=Path(tmp) / "r2.json", seed=2026
+            MANIFEST,
+            model_out=Path(tmp) / "m2.txt",
+            results_out=Path(tmp) / "r2.json",
+            seed=2026,
+            record_checksum=False,
         )
 
     assert r1["test_accuracy"] == r2["test_accuracy"]
@@ -51,10 +59,18 @@ def test_same_seed_reproduces_downstream_metrics_exactly():
     """
     with tempfile.TemporaryDirectory() as tmp:
         r1 = train_and_evaluate(
-            MANIFEST, model_out=DEFAULT_MODEL_PATH, results_out=Path(tmp) / "r1.json", seed=2026
+            MANIFEST,
+            model_out=Path(tmp) / "m1.txt",
+            results_out=Path(tmp) / "r1.json",
+            seed=2026,
+            record_checksum=False,
         )
         r2 = train_and_evaluate(
-            MANIFEST, model_out=DEFAULT_MODEL_PATH, results_out=Path(tmp) / "r2.json", seed=2026
+            MANIFEST,
+            model_out=Path(tmp) / "m2.txt",
+            results_out=Path(tmp) / "r2.json",
+            seed=2026,
+            record_checksum=False,
         )
 
     scores1, scores2 = r1["test_scores"], r2["test_scores"]

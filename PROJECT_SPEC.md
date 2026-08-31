@@ -652,6 +652,18 @@ sizes (see the 2026-08-30 KAT amendment below). **Reversal:** install a C++ tool
 `pip install -e ".[pqc-liboqs]"` — both modules detect `oqs` at import time and prefer
 it automatically, no code changes needed.
 
+> **RESOLVED 2026-09-01.** liboqs 0.16.0 now builds and runs in
+> `docker/Dockerfile.server`; `KEM_BACKEND`/`SIG_BACKEND` both report `liboqs` there,
+> enforced by a build-time assertion that fails the image rather than shipping the
+> fallback. The reversal path above turned out to be exactly right — no code changes
+> were needed to *select* liboqs — but four things had to be fixed before it worked
+> end to end, and the two backends were then cross-checked against each other rather
+> than merely assumed equivalent. See the 2026-09-01 amendment at the end of this
+> section for the full account, the measured speedups (ML-DSA-65 signing 78.9 ms →
+> 0.114 ms), and what it unblocked. **The fallback remains the live backend on a host
+> without a C toolchain** — this is a resolution for the reference environment (§4),
+> not a removal of the fallback.
+
 ### 2026-08-30 — hybrid crypto mode built, then removed
 
 An earlier draft of this spec specified three crypto modes (`classical`, `pq`,
@@ -1058,6 +1070,18 @@ bundles) produced two distinct, honest findings, not one:**
   substantially once liboqs replaces the fallback (ML-DSA sign alone is ~52ms fallback
   vs. an expected ~2 orders of magnitude faster under liboqs — `results/pqc_micro.json`).
 
+  > **CORRECTED 2026-09-01 — this attribution was wrong.** The ceiling was not the
+  > crypto backend. Installing liboqs (crypto ~600x faster) did **not** move it: a
+  > controlled A/B in one container, same host, same sweep, only the backend differing,
+  > hit zero completions at concurrency=64 on *both* backends. The actual cause was in
+  > the benchmark harness, not the server or the crypto: `_common.build_signed_bundle`
+  > ran a full SCRFD face-detection inference per device, synchronously, so preparing N
+  > sessions concurrently serialised N inferences on the event loop *while each
+  > session's 30s challenge TTL was already ticking*. Hoisting that one inference out
+  > (it is identical for every device — same base crop) cleared the ceiling completely:
+  > concurrency=64 now completes 64/64, 0 expired, 0 setup failures. See the 2026-09-01
+  > amendment at the end of this section for the corrected sweep and the real knee.
+
 **Overhead ablation (§8.3): C0 real, C1/C2/C3 correctly BLOCKED.** C0 (bare
 `GET /v1/health`, no crypto, no AI) measures ~1.2ms mean — the ASGI/FastAPI dispatch
 floor. C1/C2/C3 all refuse via `overhead.py`'s pre-existing fallback-backend guard
@@ -1084,4 +1108,180 @@ shared/virtualised environment is never bit-reproducible the way accuracy number
 `test_bench_loadgen.py`, `test_bench_overhead.py`, `test_bench_reproducibility.py`),
 265 passed / 1 documented skip project-wide, `ruff`/`black` clean repo-wide, `mypy`
 clean on `pqbio/bench/` and `mypy --strict` clean on `pqc/`/`binding/`/`server/`.
-`results/BLOCKERS.md` (32 blocked entries) is the honest scope statement for weeks 6-8.
+`results/BLOCKERS.md` (23 blocked entries) is the honest scope statement for weeks 6-8.
+
+### 2026-09-01 — liboqs working in Docker; fallback results retroactively validated
+
+Closes the 2026-08-30 liboqs amendment at the top of this section. liboqs 0.16.0 now
+builds and runs in `docker/Dockerfile.server`, `KEM_BACKEND`/`SIG_BACKEND` both report
+`liboqs` there, and the image refuses to build otherwise. The fallback remains the live
+backend on a host without a C toolchain — this resolves the reference environment (§4),
+it does not remove the fallback.
+
+**Four things had to be fixed before the image worked; none were guessed at.**
+
+1. **`libssl-dev` was missing.** liboqs's CMake build fails at configure time with
+   "Could NOT find OpenSSL" without it. Added to the apt layer.
+2. **`opencv-python` needs X11/GL shared libraries** that `python:3.11-slim` doesn't
+   ship — `import cv2` failed with `libxcb.so.1: cannot open shared object file`, which
+   surfaced only when the *test suite* ran in the image, not at build time. Added
+   `libgl1 libglib2.0-0 libxcb1 libxrender1 libxext6 libsm6`.
+3. **`pip install liboqs-python` does not build liboqs.** It installs a thin ctypes
+   wrapper; the C library is cloned from GitHub and CMake-built *lazily on first
+   `import oqs`*. The expensive ~6-minute build was therefore silently deferred into
+   whichever layer first imported it — the last one — so it re-ran on every retry of an
+   unrelated, flakier step. The Dockerfile now forces the build immediately after the
+   `pqc-liboqs` install, in its own cacheable layer.
+4. **`torch` and `timm` were dead weight.** §4's stack table names PyTorch for the DL
+   layer, but Module D was built on insightface+onnxruntime and lightgbm+scikit-learn,
+   and neither `torch` nor `timm` is imported anywhere (`grep -rn` finds zero hits, and
+   every test already passed on a host where neither is installed). Their only effect
+   was pulling multi-GB CUDA wheels into a CPU-only image, which repeatedly timed out
+   the build. Removed from the `ml` extra.
+
+**The backends agree, byte for byte** (`scripts/cross_check_backends.py`,
+`results/backend_cross_check.json`, `make docker-cross-check`). This is the check that
+retroactively validates every result produced while the fallback was the only option,
+and it is a positive result: **339 fields identical across 127 deterministic cases** —
+ML-KEM keygen from (d,z), encapsulation from explicit `m`, decapsulation, ML-DSA keygen
+from seed, deterministic signing, and verification, over the vendored NIST ACVP vectors
+plus fixed synthetic seeds. Interop was checked separately and in both directions: each
+backend accepts the other's signatures and agrees on the other's decapsulated shared
+secret. The 7 ACVP KAT tests pass unchanged on liboqs.
+
+**Getting the KATs to run on liboqs required implementing the deterministic hooks the
+fallback had for free.** `ml_kem_768_keygen_from_seed`, `..._encapsulate_with_randomness`,
+`ml_dsa_65_keygen_from_seed`, `..._sign_deterministic` and `..._verify_with_context` all
+raised `NotImplementedError` on the liboqs path — deliberately, with a note that the hook
+still needed writing. It now exists (`pqbio/pqc/_oqs_kat.py`). liboqs-python exposes a
+real per-call seed for ML-KEM keygen (`generate_keypair_seed`), but nothing equivalent
+for encapsulation or for ML-DSA, so those go through liboqs's global
+`OQS_randombytes_custom_algorithm` override. Two things about that were verified
+empirically rather than assumed: that fixing the RNG to the ACVP `m`/seed reproduces the
+published vectors exactly, and that ML-DSA "deterministic" signing is simply hedged
+signing with the internal 32-byte `rnd` fixed to zero. The override is **process-global**,
+so it is wrapped in a context manager that restores the system RNG in a `finally` and
+raises if the restore fails — leaving it installed would give every subsequent liboqs
+call in the process fixed, predictable "randomness", which is a live vulnerability rather
+than a test-hygiene problem.
+
+**A real fail-closed gap, found by cross-checking and fixed.** Two negative tests
+(`test_kem_encapsulate_rejects_malformed_public_key`,
+`test_kem_decapsulate_rejects_wrong_length_ciphertext`) passed on the fallback and failed
+on liboqs. The tests were right and the production code was wrong: `kyber-py` happens to
+raise on malformed-length input as a side effect of its own array slicing, so
+`MLKEM768`'s "fail closed" behaviour was never a contract this project provided — it was
+borrowed from one backend. liboqs-python builds its C buffers with
+`ctypes.create_string_buffer(data, expected_length)`, which *silently zero-pads or
+truncates* instead: a 10-byte garbage "public key" encapsulates without error, and a
+10-byte "secret key" produces a well-formed 3309-byte signature. `MLKEM768.encapsulate`,
+`MLKEM768.decapsulate` and `MLDSA65.sign` now validate input lengths against the FIPS
+203/204 sizes explicitly, before either backend sees a byte. `MLDSA65.verify` needs no
+guard — a wrong-length signature must return `False`, not raise, and both backends
+already agree on that.
+
+**Measured speedups** (`results/pqc_micro.json` vs the labelled
+`results/pqc_micro_fallback.json`, 1000 iterations each, same machine):
+
+| Operation | fallback | liboqs | speedup |
+|---|---|---|---|
+| ML-KEM-768 keygen | 4.734 ms | 0.0246 ms | 193x |
+| ML-KEM-768 encaps | 6.302 ms | 0.0216 ms | 291x |
+| ML-KEM-768 decaps | 8.388 ms | 0.0249 ms | 337x |
+| ML-DSA-65 keygen | 12.842 ms | 0.0472 ms | 272x |
+| **ML-DSA-65 sign** | **78.886 ms** | **0.1144 ms** | **689x** |
+| ML-DSA-65 verify | 14.653 ms | 0.0498 ms | 294x |
+
+The 2026-08-30 amendment predicted "roughly two orders of magnitude"; measured is closer
+to three. Worth noting against the classical baseline from the same run: ML-KEM-768
+encapsulation (0.0216 ms) is now *faster* than X25519 (0.0669 ms), while ML-DSA-65
+signing (0.1144 ms) is about 1.9x Ed25519 (0.0607 ms).
+
+**§8.3 overhead ablation, now real** (`results/overhead_ablation.json`, 50 iterations):
+
+| Config | Crypto | AI | Mean |
+|---|---|---|---|
+| C0 | none | none | 1.675 ms |
+| C1 | X25519 + Ed25519 | none | 10.839 ms |
+| C2 | ML-KEM-768 + ML-DSA-65 | none | 11.721 ms |
+| C3 | ML-KEM-768 + ML-DSA-65 | full | 715.513 ms |
+
+- **PQ overhead = C2 − C1 = 0.88 ms (+8.1% over C1).**
+- **AI overhead = C3 − C2 = 703.79 ms (+6005% over C2).**
+- **AI:PQ ratio = 798x.**
+
+The numbers do say PQ is cheap next to inference — but the ratio is a **lower bound on
+the AI side and therefore provisional**: only one of six detectors exists (injection), so
+C3 is missing pad/morph/deepfake/replay entirely. Adding them can only increase the AI
+term, pushing the ratio further in the same direction; nothing about the missing
+detectors could shrink it. The PQ term is the one that is now solid.
+
+**The concurrency ceiling was not what the previous amendment said it was.** The
+prediction was that ~52 ms signs exhausting the 30s challenge TTL caused the
+concurrency=64 collapse, and that liboqs would clear it. A controlled A/B — one
+container, one host, one sweep, only the backend differing — showed **both** backends
+still completing zero requests at concurrency=64. The cause was in the benchmark harness:
+`_common.build_signed_bundle` ran a full SCRFD face-detection inference *per device*,
+synchronously, so preparing N sessions concurrently serialised N inferences on the event
+loop while each session's TTL was already running. That inference is identical for every
+device (same base crop); hoisting it out cleared the ceiling completely — concurrency=64
+now completes 64/64 with zero expiries on both backends.
+
+**Corrected sweep** (`results/loadgen.json` on liboqs;
+`results/loadgen_fallback_controlled.json` is the same sweep with `import oqs` blocked,
+for a like-for-like backend comparison): throughput rises to a peak of ~3.6
+verifications/sec at concurrency 8–16 and is flat or slightly declining beyond it, on
+**both** backends; p50 latency grows roughly proportionally past that point (479 ms at
+c=1 to ~20 s at c=64 under liboqs). The real knee is concurrency ≈ 8–16, and it is set by
+`server.workers=4` against ~700 ms of ONNX inference per request — not by the crypto,
+which is ~1.6% of a request under liboqs. liboqs is clearly faster per request at low
+concurrency (p50 479 ms vs 775 ms at c=1) but does **not** move the saturation point,
+because it was never the bottleneck.
+
+**A correctness fix to the finding itself:** `_degradation_finding` used to compare p99
+growth across the *whole* sweep and call proportional growth evidence of a blocked event
+loop. Past saturation that is just Little's law, so the verdict is now computed over the
+unsaturated region only. More importantly, the finding now states plainly that a latency
+curve **cannot** distinguish a blocked event loop from ordinary worker/CPU saturation on
+a CPU-bound workload, and points at the test that actually can:
+`test_event_loop_stays_responsive_while_verify_is_in_flight`, which polls `/v1/health`
+during concurrent verifies. That test passes.
+
+**Three unrelated bugs surfaced by running the suite on Linux for the first time**, all
+pre-existing and all real:
+
+- `scripts/make_injection_corpus.py` wrote manifest paths with `str(Path)`, i.e. Windows
+  backslashes, into a committed JSON file. On Linux `data\processed\...` is one filename,
+  not a path, so five tests failed with `FileNotFoundError`. Now `.as_posix()`; the
+  manifest and corpus were regenerated.
+- `tests/integration/test_bench_reproducibility.py` retrained the injection detector into
+  the **shared** `models/injection_gbm.txt` as a side effect of testing reproducibility,
+  silently mutating a verified production artefact on every test run — which is how an
+  unrelated corpus regeneration shifted the model's decision boundary and broke an A6
+  security-regression test in another module. `train_and_evaluate` grew a
+  `record_checksum=False` flag; the test now writes to a temp path. This also made the
+  test runnable against a read-only `models/` mount, which is how the container runs it.
+- `tests/unit/_server_fixtures.py::build_instant_bundle` drew a fresh `time.time_ns()`
+  per frame, making the A6 injection test's outcome depend on real interpreter jitter
+  landing on one side of a trained model's decision boundary. It now uses a seeded,
+  deterministic "file-read with occasional stutter" timing pattern, verified to score
+  ~0.997 against the model rather than sitting on the boundary. (A literal shared
+  timestamp was tried first and rejected: zero-variance deltas force
+  `timing_skew_dt`/`timing_kurtosis_dt` to exactly 0.0, which is *out* of the training
+  distribution and scored as bona fide.)
+
+**Two tests were coupled to the backend rather than to the behaviour they claimed to
+test**, exactly as anticipated — reported and fixed rather than special-cased.
+`test_guard_raises_in_this_environment` and
+`test_guard_raises_when_fallback_backend_is_active` both asserted "this environment runs
+the fallback" as a fact. True when written, false in the image. Both now branch on the
+live `KEM_BACKEND`/`SIG_BACKEND` and assert the guard's behaviour *matches* whichever
+backend is active, so they are correct on either. `test_overhead_ablation_...` likewise
+now asserts C1/C2/C3 are blocked on the fallback and real on liboqs.
+
+**Result:** 265 passed / 1 documented skip **in the container on liboqs**, identical to
+the host on the fallback; `ruff`/`black` clean, `mypy --strict` clean on
+`pqc/`/`binding/`/`server/`. New make targets: `docker-build`, `docker-test`,
+`docker-bench`, `docker-cross-check`. Because the image has no `.git`, provenance is
+passed in via `PQBIO_GIT_COMMIT` rather than silently degrading to "unknown" — every
+containerised result file carries the real commit.

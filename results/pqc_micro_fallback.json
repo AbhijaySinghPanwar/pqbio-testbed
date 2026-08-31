@@ -1,0 +1,135 @@
+{
+  "_label": "PURE-PYTHON FALLBACK BASELINE (kyber-py / dilithium-py), retained deliberately as the comparison arm for the liboqs numbers in results/pqc_micro.json. Not a liboqs measurement. See PROJECT_SPEC.md 14.",
+  "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
+  "generated_at_utc": "2026-08-31T13:27:07.962263+00:00",
+  "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "iterations_per_operation": 1000,
+  "kem": {
+    "classical": {
+      "artefact_sizes_bytes": {
+        "ct": 32,
+        "pk": 32,
+        "sk": 32,
+        "ss": 32
+      },
+      "backend": "x25519",
+      "decaps": {
+        "iterations": 1000,
+        "max_ms": 0.34919999961857684,
+        "mean_ms": 0.14246229998752824,
+        "min_ms": 0.11869999798364006,
+        "p95_ms": 0.2378250024776207
+      },
+      "encaps": {
+        "iterations": 1000,
+        "max_ms": 1.6055999985837843,
+        "mean_ms": 0.14560640002673608,
+        "min_ms": 0.12659999993047677,
+        "p95_ms": 0.20771499912370928
+      },
+      "keygen": {
+        "iterations": 1000,
+        "max_ms": 39.21180000179447,
+        "mean_ms": 0.10568069999862928,
+        "min_ms": 0.05859999873791821,
+        "p95_ms": 0.08280499750981107
+      }
+    },
+    "pq": {
+      "artefact_sizes_bytes": {
+        "ct": 1088,
+        "pk": 1184,
+        "sk": 2400,
+        "ss": 32
+      },
+      "backend": "kyber-py-fallback",
+      "decaps": {
+        "iterations": 1000,
+        "max_ms": 18.918599998869468,
+        "mean_ms": 8.387587699988217,
+        "min_ms": 5.5358999998134095,
+        "p95_ms": 11.877089999325108
+      },
+      "encaps": {
+        "iterations": 1000,
+        "max_ms": 14.735799999471055,
+        "mean_ms": 6.30167259999871,
+        "min_ms": 4.355100001703249,
+        "p95_ms": 9.072014999037492
+      },
+      "keygen": {
+        "iterations": 1000,
+        "max_ms": 8.71969999934663,
+        "mean_ms": 4.733605500023259,
+        "min_ms": 3.8065999979153275,
+        "p95_ms": 6.5721000004487
+      }
+    }
+  },
+  "signer": {
+    "classical": {
+      "artefact_sizes_bytes": {
+        "pk": 32,
+        "sig": 64,
+        "sk": 32
+      },
+      "backend": "ed25519",
+      "keygen": {
+        "iterations": 1000,
+        "max_ms": 4.547599997749785,
+        "mean_ms": 0.06409699992582318,
+        "min_ms": 0.029900002118665725,
+        "p95_ms": 0.08391999872401355
+      },
+      "sign": {
+        "iterations": 1000,
+        "max_ms": 4.890300002443837,
+        "mean_ms": 0.11559310008306056,
+        "min_ms": 0.06539999958476983,
+        "p95_ms": 0.15190499980235472
+      },
+      "verify": {
+        "iterations": 1000,
+        "max_ms": 1.2654999991354998,
+        "mean_ms": 0.1383558000488847,
+        "min_ms": 0.11839999933727086,
+        "p95_ms": 0.2307049995579291
+      }
+    },
+    "pq": {
+      "artefact_sizes_bytes": {
+        "pk": 1952,
+        "sig": 3309,
+        "sk": 4032
+      },
+      "backend": "dilithium-py-fallback",
+      "keygen": {
+        "iterations": 1000,
+        "max_ms": 29.3576000003668,
+        "mean_ms": 12.842364699994505,
+        "min_ms": 6.8828000003122725,
+        "p95_ms": 17.86510999700112
+      },
+      "sign": {
+        "iterations": 1000,
+        "max_ms": 356.77039999791305,
+        "mean_ms": 78.88579320008648,
+        "min_ms": 16.46689999688533,
+        "p95_ms": 182.24129500013078
+      },
+      "verify": {
+        "iterations": 1000,
+        "max_ms": 48.65319999953499,
+        "mean_ms": 14.652578799992625,
+        "min_ms": 7.772600001771934,
+        "p95_ms": 18.0213849987922
+      }
+    }
+  }
+}

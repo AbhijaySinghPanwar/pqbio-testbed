@@ -1,6 +1,6 @@
 {
-  "KEM_BACKEND": "kyber-py-fallback",
-  "SIG_BACKEND": "dilithium-py-fallback",
+  "KEM_BACKEND": "liboqs",
+  "SIG_BACKEND": "liboqs",
   "T1_per_detector_accuracy_intra_dataset": {
     "deepfake": {
       "blocked": true,
@@ -9,13 +9,13 @@
     "injection": {
       "acer": 0.0,
       "apcer": 0.0,
-      "auc_roc": 0.9999999999999999,
+      "auc_roc": 1.0,
       "bpcer": 0.0,
       "eer": 0.0,
-      "eer_threshold": 0.003251039534919764,
+      "eer_threshold": 0.0032510395349198244,
       "far_achieved": 0.01,
-      "n_attack": 7,
-      "n_genuine": 7,
+      "n_attack": 6,
+      "n_genuine": 6,
       "tdr_at_far_1pct": 1.0,
       "threshold": 0.4
     },
@@ -64,7 +64,7 @@
   },
   "T3_fusion_strategy_comparison": {
     "cascade_accuracy": 1.0,
-    "n_samples": 50,
+    "n_samples": 40,
     "rule_accuracy": 1.0,
     "scope_note": "Only match/injection/binding/quality signals exist this session \u2014 pad/morph/deepfake/replay are dataset-blocked and not built. Both strategies are compared on the injection corpus only (provenance detection), not full system ACER. See pqbio/detect/fusion.py's module docstring."
   },
@@ -101,7 +101,7 @@
     ],
     "matrix": [
       [
-        25,
+        20,
         0,
         0,
         0,
@@ -146,7 +146,7 @@
         0,
         0,
         0,
-        25
+        20
       ]
     ]
   },
@@ -162,32 +162,29 @@
         0.0,
         0.0,
         0.0,
-        0.0,
         1.0
       ],
       "frr": [
         1.0,
-        0.7142857142857143,
-        0.1428571428571429,
+        0.6666666666666667,
         0.0,
         0.0
       ],
       "thresholds": [
         -Infinity,
-        0.0032510395349197433,
-        0.0032510395349197464,
-        0.003251039534919764,
+        0.0032510395349197897,
+        0.0032510395349198244,
         0.9967489604650802
       ]
     }
   },
-  "generated_at_utc": "2026-08-31T13:16:33.536813+00:00",
-  "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+  "generated_at_utc": "2026-08-31T18:52:17.362925+00:00",
+  "git_commit": "95e4e6a2a6682a03a1548ecf7db71d90585c6ce0",
   "hardware": {
-    "platform": "Windows-10-10.0.26200-SP0",
-    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+    "processor": "x86_64",
     "python_implementation": "CPython",
-    "python_version": "3.11.9"
+    "python_version": "3.11.16"
   },
   "mmpmr": {
     "blocked": true,

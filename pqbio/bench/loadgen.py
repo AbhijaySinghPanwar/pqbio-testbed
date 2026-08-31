@@ -28,6 +28,7 @@ from pqbio.bench._common import (
     latency_stats,
     print_progress,
     run_metadata,
+    shared_face_box,
     write_json,
 )
 from pqbio.server.app import create_app
@@ -38,13 +39,18 @@ DEFAULT_N_FRAMES = 6
 
 
 async def _prepare_one(
-    device: AsyncBenchClient, n_frames: int, seed: int
+    device: AsyncBenchClient,
+    n_frames: int,
+    seed: int,
+    face_box: tuple[int, int, int, int] | None = None,
 ) -> tuple[AsyncBenchClient, Any, Any, Any] | None:
     try:
         await device.enroll()
         session_id, challenge_body = await device.challenge()
         keys = await device.handshake(session_id)
-        bundle = device.build_bundle(session_id, challenge_body, n_frames=n_frames, seed=seed)
+        bundle = device.build_bundle(
+            session_id, challenge_body, n_frames=n_frames, seed=seed, face_box=face_box
+        )
         return device, session_id, bundle, keys
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 409:
@@ -81,7 +87,13 @@ async def _prepare_requests(
     devices = [
         AsyncBenchClient(http, device_id=f"loadgen-c{concurrency}-{i}") for i in range(total)
     ]
-    results = await asyncio.gather(*[_prepare_one(d, n_frames, i) for i, d in enumerate(devices)])
+    # One SCRFD inference for the whole level instead of one per device: it is identical
+    # for every device (same base crop) and running it per device serialises `total`
+    # blocking inferences on the event loop *inside* the challenge TTL window.
+    face_box = shared_face_box()
+    results = await asyncio.gather(
+        *[_prepare_one(d, n_frames, i, face_box) for i, d in enumerate(devices)]
+    )
     prepared = [r for r in results if r is not None]
     setup_failed = len(results) - len(prepared)
     return prepared, setup_failed
@@ -183,11 +195,18 @@ def _find_knee(
 def _degradation_finding(
     levels: list[dict[str, Any]], linear_threshold: float = 0.5
 ) -> dict[str, Any]:
-    """Compares p99 growth across the full sweep to concurrency growth. A blocked event
-    loop (or a shared resource serialising requests) would make p99 grow roughly
-    proportionally to concurrency; genuine off-loop concurrency keeps it far flatter.
+    """Characterises how p99 latency grows with offered concurrency, split at the point
+    where throughput peaks (i.e. where the server saturates).
+
     `linear_threshold` (default 0.5) is how much of "fully proportional" growth counts
-    as a red flag -- p99 growing at >=50% of the concurrency growth rate.
+    as notable -- p99 growing at >=50% of the concurrency growth rate, measured over the
+    *unsaturated* region only. Past saturation, proportional growth is Little's law, not
+    a defect, and reading it as one is a mistake this function used to make (§14,
+    2026-09-01).
+
+    Deliberately does **not** claim to answer "is the event loop blocked" by itself: on
+    a CPU-bound pipeline, worker-pool and CPU contention produce the same curve. The
+    returned `finding` says so explicitly and names the direct test that does answer it.
     """
     with_latency = [lvl for lvl in levels if "p99_ms" in lvl.get("latency", {})]
     zero_completion_levels = [
@@ -218,35 +237,82 @@ def _degradation_finding(
             )
             + collapse_note,
         }
+    # The event-loop question is only answerable *below saturation*. Once throughput
+    # stops rising, the server is saturated and p99 growing in proportion to offered
+    # concurrency is simply queueing (Little's law), not a blocked coroutine — reading
+    # post-saturation growth as "the event loop is blocked" would be wrong, and this
+    # function used to do exactly that (§14, 2026-09-01). So the verdict is computed
+    # over the unsaturated region: from the lowest level up to peak throughput.
+    peak_idx = max(range(len(with_latency)), key=lambda i: with_latency[i]["throughput_per_s"])
+    unsaturated = with_latency[: peak_idx + 1]
     first, last = with_latency[0], with_latency[-1]
     p99_first = first["latency"]["p99_ms"]
     p99_last = last["latency"]["p99_ms"]
-    p99_ratio = p99_last / p99_first if p99_first > 0 else float("inf")
-    concurrency_ratio = last["concurrency"] / first["concurrency"]
-    is_linear = p99_ratio >= concurrency_ratio * linear_threshold
-    finding = (
-        f"p99 latency grew {p99_ratio:.2f}x while concurrency grew {concurrency_ratio:.0f}x "
-        f"(concurrency={first['concurrency']}->{last['concurrency']}). "
+
+    if len(unsaturated) >= 2:
+        u_first, u_last = unsaturated[0], unsaturated[-1]
+        u_p99_ratio = (
+            u_last["latency"]["p99_ms"] / u_first["latency"]["p99_ms"]
+            if u_first["latency"]["p99_ms"] > 0
+            else float("inf")
+        )
+        u_conc_ratio = u_last["concurrency"] / u_first["concurrency"]
+        is_linear = u_p99_ratio >= u_conc_ratio * linear_threshold
+        verdict = (
+            "Below saturation, p99 grew "
+            f"{u_p99_ratio:.2f}x while concurrency grew {u_conc_ratio:.0f}x "
+            f"(concurrency={u_first['concurrency']}->{u_last['concurrency']}, peak "
+            f"throughput {u_last['throughput_per_s']:.2f}/s). "
+        )
+        verdict += (
+            "That is at or above proportional growth. "
+            if is_linear
+            else "That is well below proportional growth, i.e. per-request latency stays "
+            "roughly flat while there is spare capacity. "
+        )
+    else:
+        is_linear = None
+        u_p99_ratio = None
+        u_conc_ratio = None
+        verdict = (
+            "Peak throughput occurred at the lowest concurrency level, so there is no "
+            "unsaturated region to read an event-loop verdict from."
+        )
+
+    saturation_note = (
+        f" Past the peak, p99 rises to {p99_last:.0f}ms at concurrency="
+        f"{last['concurrency']} (from {p99_first:.0f}ms at {first['concurrency']}) while "
+        "throughput stays flat — expected queueing against a saturated worker pool "
+        "(`server.workers` in config), not a separate defect."
     )
-    finding += (
-        "This is consistent with something serialising requests under load -- the event "
-        "loop, the ThreadPoolExecutor being saturated at server.workers, or a shared "
-        "resource -- contrary to Module E's 'event loop never blocked' design goal; "
-        "investigate before trusting throughput numbers past the knee."
-        if is_linear
-        else "This is well below proportional growth, consistent with Module E's event "
-        "loop staying unblocked under concurrency (per-request latency stays roughly flat "
-        "as concurrency rises, rather than queuing up behind a blocked resource)."
+
+    # Stated rather than glossed over: this metric cannot answer the event-loop
+    # question on its own. On a CPU-bound workload (this pipeline spends ~98% of a
+    # request inside ONNX face inference, see results/overhead_ablation.json) latency
+    # rising with concurrency is what worker-pool and CPU contention look like too, and
+    # neither is a blocked coroutine. The discriminating test is a direct one.
+    caveat = (
+        " NOTE: latency growth alone cannot separate a blocked event loop from ordinary "
+        "worker-pool/CPU saturation on a CPU-bound workload, so do not read the ratio "
+        "above as a verdict on its own. The direct discriminator is "
+        "tests/integration/test_server_happy_path.py::"
+        "test_event_loop_stays_responsive_while_verify_is_in_flight, which polls "
+        "GET /v1/health while concurrent /v1/verify calls are in flight and requires it "
+        "to stay responsive — a blocked loop would stall those health checks behind the "
+        "CPU-bound work, whatever the latency curve looks like."
     )
-    finding += collapse_note
+
     return {
         "p99_ms_low_concurrency": p99_first,
         "p99_ms_high_concurrency": p99_last,
-        "p99_growth_ratio": p99_ratio,
-        "concurrency_growth_ratio": concurrency_ratio,
+        "p99_growth_ratio_full_sweep": p99_last / p99_first if p99_first > 0 else float("inf"),
+        "peak_throughput_concurrency": with_latency[peak_idx]["concurrency"],
+        "peak_throughput_per_s": with_latency[peak_idx]["throughput_per_s"],
+        "unsaturated_p99_growth_ratio": u_p99_ratio,
+        "unsaturated_concurrency_growth_ratio": u_conc_ratio,
         "linear_degradation_detected": is_linear,
         "zero_completion_levels": zero_completion_levels,
-        "finding": finding,
+        "finding": verdict + saturation_note + caveat + collapse_note,
     }
 
 

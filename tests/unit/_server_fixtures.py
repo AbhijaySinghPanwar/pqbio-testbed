@@ -10,6 +10,7 @@ around it.
 from __future__ import annotations
 
 import base64
+import time
 from pathlib import Path
 from uuid import UUID
 
@@ -264,16 +265,44 @@ class ServerTestClient:
         counter: int = 1,
         device_name: str = "OBS Virtual Camera",
     ) -> EvidenceBundle:
-        """Tier-1-style injected bundle: frames read back-to-back, no capture pacing —
-        for A6 tests. Mirrors scripts/make_injection_corpus.py's tier 1 construction.
-        """
-        import time
+        """Tier-1-style injected bundle: frames read from a file with occasional I/O
+        stutter (mostly ~1us gaps, a few large jumps), not live capture pacing — for
+        A6 tests.
 
+        Bug fixed 2026-09-01: this used to call `time.time_ns()` fresh per frame,
+        which measures real Python-interpreter/OS-scheduling jitter rather than
+        modelling anything about file-read timing. Two things made that the wrong
+        choice, discovered debugging why this test started failing after the
+        injection corpus (and so the trained model) was regenerated to fix a Windows
+        path-separator bug (PROJECT_SPEC.md §14): first, real per-run jitter isn't
+        deterministic, so this test's pass/fail could depend on machine load. Second,
+        `timing_skew_dt` is the model's single strongest feature
+        (`booster.feature_importance()`), and neither "real small jitter" nor "one
+        shared timestamp" (tried and rejected — a literal shared timestamp forces
+        skew/kurtosis to exactly 0.0, `extract_features`'s explicit zero-variance
+        fallback, which reliably scored as *bona fide*, not injected) reliably lands
+        in the region of skew/kurtosis space the model associates with injection. A
+        seeded, deterministic "mostly-tiny-gaps-with-occasional-large-stutters"
+        pattern does — verified directly against the trained model
+        (score ~0.997, matching real corpus tier1 samples) — and is arguably a more
+        honest simulation of "reading pre-recorded frames from a file" than either
+        alternative.
+        """
+        rng = np.random.default_rng(2026)
+        gaps = np.full(n_frames - 1, 1_000.0)  # ~1us nominal gap between file reads
+        stutter_idx = rng.choice(n_frames - 1, size=min(3, n_frames - 1), replace=False)
+        gaps[stutter_idx] += rng.uniform(50_000, 200_000, size=len(stutter_idx))
+        timestamps = np.concatenate([[0.0], np.cumsum(gaps)]).astype(np.int64)
+        base_ts_ns = time.time_ns()
         frames = [
             CapturedFrame(
                 image=image,
                 meta=FrameMeta(
-                    capture_ts_ns=time.time_ns(), exposure=0.0, iso=0, focal=0.0, sequence_idx=i
+                    capture_ts_ns=base_ts_ns + int(timestamps[i]),
+                    exposure=0.0,
+                    iso=0,
+                    focal=0.0,
+                    sequence_idx=i,
                 ),
             )
             for i in range(n_frames)

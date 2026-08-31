@@ -1,6 +1,6 @@
 # Evaluation report (PROJECT_SPEC.md §8)
 
-*git `25d56db2e9f1` · config `2b8a593b5937` · Windows-10-10.0.26200-SP0 / Intel64 Family 6 Model 154 Stepping 3, GenuineIntel · KEM=kyber-py-fallback SIG=dilithium-py-fallback · seed=2026 · generated 2026-08-31T13:16:33.536813+00:00*
+*git `95e4e6a2a668` · config `2b8a593b5937` · Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41 / x86_64 · KEM=liboqs SIG=liboqs · seed=2026 · generated 2026-08-31T18:52:17.362925+00:00*
 
 ---
 
@@ -9,7 +9,7 @@
 | Detector | APCER | BPCER | ACER | EER | AUC-ROC | TDR@FAR=1% | n_genuine | n_attack |
 |---|---|---|---|---|---|---|---|---|
 | deepfake | BLOCKED — no deepfake detector implemented -- pqbio/detect/deepfake.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14) |  |  |  |  |  |  |  |
-| injection | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | 1.0000 | 7 | 7 |
+| injection | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | 1.0000 | 6 | 6 |
 | match | BLOCKED — no labelled genuine/impostor pair dataset exists to compute match FAR/FRR (§6) |  |  |  |  |  |  |  |
 | morph | BLOCKED — no morph detector implemented -- pqbio/detect/morph.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14) |  |  |  |  |  |  |  |
 | pad | BLOCKED — no pad detector implemented -- pqbio/detect/pad.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14) |  |  |  |  |  |  |  |
@@ -33,7 +33,7 @@
 | rule | 1.0000 |
 | cascade | 1.0000 |
 
-_n=50 — Only match/injection/binding/quality signals exist this session — pad/morph/deepfake/replay are dataset-blocked and not built. Both strategies are compared on the injection corpus only (provenance detection), not full system ACER. See pqbio/detect/fusion.py's module docstring._
+_n=40 — Only match/injection/binding/quality signals exist this session — pad/morph/deepfake/replay are dataset-blocked and not built. Both strategies are compared on the injection corpus only (provenance detection), not full system ACER. See pqbio/detect/fusion.py's module docstring._
 
 ### T4 — Per-attack detection rate at the deployed operating point
 
@@ -49,53 +49,55 @@ _n=50 — Only match/injection/binding/quality signals exist this session — pa
 
 | Operation | Backend | Mean (ms) | p95 (ms) | Iterations |
 |---|---|---|---|---|
-| kem/classical/keygen | x25519 | 0.1057 | 0.0828 | 1000 |
-| kem/classical/encaps | x25519 | 0.1456 | 0.2077 | 1000 |
-| kem/classical/decaps | x25519 | 0.1425 | 0.2378 | 1000 |
+| kem/classical/keygen | x25519 | 0.0453 | 0.0597 | 1000 |
+| kem/classical/encaps | x25519 | 0.0744 | 0.0952 | 1000 |
+| kem/classical/decaps | x25519 | 0.0700 | 0.1251 | 1000 |
 | kem/classical/artefact_sizes_bytes | x25519 | {"ct": 32, "pk": 32, "sk": 32, "ss": 32} |  |  |
-| kem/pq/keygen | kyber-py-fallback | 4.7336 | 6.5721 | 1000 |
-| kem/pq/encaps | kyber-py-fallback | 6.3017 | 9.0720 | 1000 |
-| kem/pq/decaps | kyber-py-fallback | 8.3876 | 11.8771 | 1000 |
-| kem/pq/artefact_sizes_bytes | kyber-py-fallback | {"ct": 1088, "pk": 1184, "sk": 2400, "ss": 32} |  |  |
-| signer/classical/keygen | ed25519 | 0.0641 | 0.0839 | 1000 |
-| signer/classical/sign | ed25519 | 0.1156 | 0.1519 | 1000 |
-| signer/classical/verify | ed25519 | 0.1384 | 0.2307 | 1000 |
+| kem/pq/keygen | liboqs | 0.0235 | 0.0498 | 1000 |
+| kem/pq/encaps | liboqs | 0.0226 | 0.0368 | 1000 |
+| kem/pq/decaps | liboqs | 0.0257 | 0.0330 | 1000 |
+| kem/pq/artefact_sizes_bytes | liboqs | {"ct": 1088, "pk": 1184, "sk": 2400, "ss": 32} |  |  |
+| signer/classical/keygen | ed25519 | 0.0385 | 0.0476 | 1000 |
+| signer/classical/sign | ed25519 | 0.0654 | 0.0894 | 1000 |
+| signer/classical/verify | ed25519 | 0.1065 | 0.1312 | 1000 |
 | signer/classical/artefact_sizes_bytes | ed25519 | {"pk": 32, "sig": 64, "sk": 32} |  |  |
-| signer/pq/keygen | dilithium-py-fallback | 12.8424 | 17.8651 | 1000 |
-| signer/pq/sign | dilithium-py-fallback | 78.8858 | 182.2413 | 1000 |
-| signer/pq/verify | dilithium-py-fallback | 14.6526 | 18.0214 | 1000 |
-| signer/pq/artefact_sizes_bytes | dilithium-py-fallback | {"pk": 1952, "sig": 3309, "sk": 4032} |  |  |
+| signer/pq/keygen | liboqs | 0.0471 | 0.0586 | 1000 |
+| signer/pq/sign | liboqs | 0.1185 | 0.2653 | 1000 |
+| signer/pq/verify | liboqs | 0.0430 | 0.0550 | 1000 |
+| signer/pq/artefact_sizes_bytes | liboqs | {"pk": 1952, "sig": 3309, "sk": 4032} |  |  |
 
 ### T6 — Four-configuration overhead ablation
 
 | Config | Crypto | AI | Isolates | Mean latency (ms) |
 |---|---|---|---|---|
-| C0 | none | none | framework/transport floor | 1.2363 |
-| C1 |  |  | BLOCKED — Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' — a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing — see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e ".[pqc-liboqs]"` so both backends report 'liboqs', then re-run. |  |
-| C2 |  |  | BLOCKED — Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' — a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing — see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e ".[pqc-liboqs]"` so both backends report 'liboqs', then re-run. |  |
-| C3 |  |  | BLOCKED — Refusing to run the overhead ablation (C1/C2/C3): KEM_BACKEND='kyber-py-fallback', SIG_BACKEND='dilithium-py-fallback' — a pure-Python fallback is active for at least one primitive. The C2-C1 'marginal PQ cost' figure would be dominated by rejection-sampling overhead specific to that fallback, not by ML-KEM-768/ML-DSA-65 themselves (liboqs is expected to be roughly two orders of magnitude faster for ML-DSA signing — see results/pqc_micro.json). Install a C toolchain (CMake, Ninja, a C compiler) and run `pip install -e ".[pqc-liboqs]"` so both backends report 'liboqs', then re-run. |  |
+| C0 | none | none | framework/transport floor | 1.6753 |
+| C1 | X25519 + Ed25519 | none | conventional crypto cost | 10.8389 |
+| C2 | ML-KEM-768 + ML-DSA-65 | none | marginal PQ cost | 11.7205 |
+| C3 | ML-KEM-768 + ML-DSA-65 | full | total system cost | 715.5132 |
 
-**PQ overhead (C2-C1):** BLOCKED — requires C1 and C2, both blocked by the fallback backend
+**PQ overhead (C2-C1):** 0.8816 ms (8.1%)
 
-**AI overhead (C3-C2):** BLOCKED — requires C2 and C3, both blocked by the fallback backend
+**AI overhead (C3-C2):** 703.7927 ms (6004.8%)
 
-**AI:PQ overhead ratio:** BLOCKED — requires pq_overhead_ms and ai_overhead_ms, both blocked
+**AI:PQ overhead ratio:** 798.32
+
+_The AI:PQ ratio is **provisional and a lower bound on the AI side**: C3 runs only one of the six spec'd detectors (injection). pad/morph/deepfake/replay are absent (§6/§14), so the AI term is missing four of its five attack-detection components. Adding them can only increase C3, pushing the ratio further in the same direction — nothing about them could shrink it. The PQ term (C2−C1) is not provisional; both configs are complete._
 
 ### T7 — Throughput vs concurrency
 
 | Concurrency | Throughput (verif/s) | p50 (ms) | p95 (ms) | p99 (ms) | Setup failed (409) | Expired before verify (409) |
 |---|---|---|---|---|---|---|
-| 1 | 0.811 | 1232.0434 | 1232.0434 | 1232.0434 | 0 | 0 |
-| 2 | 1.124 | 1700.2842 | 1716.2193 | 1717.6358 | 0 | 0 |
-| 4 | 1.921 | 1940.9812 | 2068.1426 | 2078.6752 | 0 | 0 |
-| 8 | 2.192 | 3399.8649 | 3590.5793 | 3608.5664 | 0 | 0 |
-| 16 | 2.285 | 6579.9956 | 6893.2938 | 6919.4943 | 0 | 0 |
-| 32 | 2.246 | 13454.5872 | 13816.2868 | 13877.9503 | 0 | 0 |
-| 64 | 0.000 | n/a | n/a | n/a | 29 | 35 |
+| 1 | 1.680 | 592.6707 | 592.6707 | 592.6707 | 0 | 0 |
+| 2 | 2.060 | 837.6061 | 944.5535 | 954.0599 | 0 | 0 |
+| 4 | 2.629 | 1404.9759 | 1500.1209 | 1506.5613 | 0 | 0 |
+| 8 | 2.794 | 2691.0657 | 2819.1287 | 2841.0602 | 0 | 0 |
+| 16 | 3.409 | 4509.4922 | 4616.4253 | 4660.8828 | 0 | 0 |
+| 32 | 3.250 | 9460.6459 | 9740.1780 | 9789.4414 | 0 | 0 |
+| 64 | 3.252 | 19148.8691 | 19549.0358 | 19562.7294 | 0 | 0 |
 
-**Knee:** concurrency=8 — throughput gain from concurrency=8 to 16 was 4.2%, below the 10% threshold
+**Knee:** concurrency=4 — throughput gain from concurrency=4 to 8 was 6.3%, below the 10% threshold
 
-**Event-loop-blocking finding:** p99 latency grew 11.26x while concurrency grew 32x (concurrency=1->32). This is well below proportional growth, consistent with Module E's event loop staying unblocked under concurrency (per-request latency stays roughly flat as concurrency rises, rather than queuing up behind a blocked resource). Separately: concurrency level(s) [64] completed *zero* requests before every session's 30s challenge TTL elapsed -- a real scalability ceiling of this environment's slow PQC fallback + AI pipeline under sustained load at that concurrency, not the event-loop-blocking question this comparison is about. See setup_failed_before_verify/expired_before_verify on those levels.
+**Event-loop-blocking finding:** Below saturation, p99 grew 7.86x while concurrency grew 16x (concurrency=1->16, peak throughput 3.41/s). That is well below proportional growth, i.e. per-request latency stays roughly flat while there is spare capacity.  Past the peak, p99 rises to 19563ms at concurrency=64 (from 593ms at 1) while throughput stays flat — expected queueing against a saturated worker pool (`server.workers` in config), not a separate defect. NOTE: latency growth alone cannot separate a blocked event loop from ordinary worker-pool/CPU saturation on a CPU-bound workload, so do not read the ratio above as a verdict on its own. The direct discriminator is tests/integration/test_server_happy_path.py::test_event_loop_stays_responsive_while_verify_is_in_flight, which polls GET /v1/health while concurrent /v1/verify calls are in flight and requires it to stay responsive — a blocked loop would stall those health checks behind the CPU-bound work, whatever the latency curve looks like.
 
 ### T8 — Deployment recommendation matrix
 
@@ -103,9 +105,9 @@ _n=50 — Only match/injection/binding/quality signals exist this session — pa
 
 | Scenario | Recommendation (latency/crypto-only) |
 |---|---|
-| High-security, low-volume (bank onboarding) | Maximise detection strength once available; current system's own p95 (2556.1220 ms) is not the bottleneck for a low-volume flow. |
-| Balanced (mobile login) | PQ overhead over classical crypto (see T6) is the number to watch here; acceptable if it stays a small fraction of total p95 latency. |
-| High-volume, low-latency (access control) | T7's knee and degradation finding directly bound this scenario's viable concurrency; the AI stages (`quality_face`, `heavy_models` in F2) currently dominate per-request cost far more than crypto does. |
+| High-security, low-volume (bank onboarding) | Maximise detection strength once available; the system's own p95 (921.3634 ms) is not the binding constraint at low volume. Crypto choice is not the trade-off axis here at all. |
+| Balanced (mobile login) | PQ is affordable on these numbers: the measured PQ overhead is 0.88 ms per session (T6), 0.10% of end-to-end p95. The cost that matters for this scenario is inference, not crypto. |
+| High-volume, low-latency (access control) | T7's knee bounds this scenario. Throughput saturates against `server.workers` running per-request ONNX inference, so scale that (or move inference to a GPU) — dropping PQ for classical crypto would buy back only 0.88 ms per session and is not the lever. |
 
 ---
 

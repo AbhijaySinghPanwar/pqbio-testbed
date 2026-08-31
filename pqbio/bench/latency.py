@@ -13,9 +13,10 @@ Two latency numbers exist for a reason, not by oversight:
   after the run, not from the client-visible `Decision.stage_latency_ms` -- the signed
   receipt cannot include `sign_audit`'s own duration (a signature can't cover the time
   spent computing itself; see `pqbio/server/pipeline.py`'s module docstring), but the
-  unsigned audit record can and does. Reading it here is what makes the ~52ms fallback
-  signing cost visible as its own stacked-breakdown segment (F2) instead of silently
-  missing from every per-request number.
+  unsigned audit record can and does. Reading it here is what makes the receipt-signing
+  cost visible as its own stacked-breakdown segment (F2) instead of silently missing
+  from every per-request number — which matters most when it is large: ~155 ms under
+  the pure-Python fallback, ~5 ms under liboqs (§14, 2026-09-01).
 """
 
 from __future__ import annotations
@@ -81,13 +82,14 @@ def _stage_breakdown_summary(breakdowns: list[dict[str, float]]) -> dict[str, di
     return summary
 
 
-def _fallback_signing_cost_ms() -> dict[str, Any]:
-    """The ~52ms fallback ML-DSA signing cost, sourced from `results/pqc_micro.json`
+def _ml_dsa_signing_cost_ms() -> dict[str, Any]:
+    """ML-DSA-65 signing cost for whichever backend produced `results/pqc_micro.json`
     (measured over >=1000 iterations there, far more precise than re-deriving it from
-    N in-pipeline sign calls) if present; otherwise timed fresh here as a fallback.
-    Reported separately so it's visibly separable from the rest of the per-stage
-    breakdown, per the build instruction -- it is a documented property of the
-    kyber-py/dilithium-py pure-Python fallback, not of ML-DSA-65 itself (§14).
+    N in-pipeline sign calls); otherwise timed fresh here. Always carries the `backend`
+    field, because the number means two completely different things depending on it:
+    ~79 ms under the pure-Python kyber-py/dilithium-py fallback, ~0.11 ms under liboqs
+    (§14, 2026-09-01). Reported as its own line, separable from the per-stage
+    breakdown, per the Module F build instruction.
     """
     pqc_micro_path = RESULTS_DIR / "pqc_micro.json"
     if pqc_micro_path.is_file():
@@ -104,7 +106,7 @@ def _fallback_signing_cost_ms() -> dict[str, Any]:
 
     signer = get_signer("pq")
     pk, sk = signer.keygen()
-    msg = b"pqbio bench fallback signing cost probe"
+    msg = b"pqbio bench ML-DSA signing cost probe"
     samples = []
     import time
 
@@ -156,7 +158,7 @@ def measure_latency(
         "end_to_end_client_observed": latency_stats(client_latencies),
         "decision_outcomes": decision_counts,
         "stage_breakdown": _stage_breakdown_summary(breakdowns),
-        "fallback_ml_dsa_signing_cost": _fallback_signing_cost_ms(),
+        "ml_dsa_signing_cost": _ml_dsa_signing_cost_ms(),
         "note": (
             "end_to_end_client_observed times the POST /v1/verify call only (§8.2); "
             "stage_breakdown is read from the audit log after the run, not the signed "

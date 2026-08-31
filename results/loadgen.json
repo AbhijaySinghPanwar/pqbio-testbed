@@ -1,139 +1,152 @@
 {
-  "KEM_BACKEND": "kyber-py-fallback",
-  "SIG_BACKEND": "dilithium-py-fallback",
+  "KEM_BACKEND": "liboqs",
+  "SIG_BACKEND": "liboqs",
   "concurrency_levels": [
     {
       "concurrency": 1,
       "decision_outcomes": {
-        "ACCEPT": 1
+        "REJECT": 1
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 1232.0433999993838,
-        "mean_ms": 1232.0433999993838,
-        "min_ms": 1232.0433999993838,
+        "max_ms": 592.6706870000019,
+        "mean_ms": 592.6706870000019,
+        "min_ms": 592.6706870000019,
         "n": 1,
-        "p50_ms": 1232.0433999993838,
-        "p95_ms": 1232.0433999993838,
-        "p99_ms": 1232.0433999993838
+        "p50_ms": 592.6706870000019,
+        "p95_ms": 592.6706870000019,
+        "p99_ms": 592.6706870000019
       },
       "requested": 1,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 0.8112764176949236,
-      "wall_time_s": 1.2326255000007222
+      "throughput_per_s": 1.6796840388010732,
+      "wall_time_s": 0.5953500640000016
     },
     {
       "concurrency": 2,
       "decision_outcomes": {
-        "ACCEPT": 2
+        "ACCEPT": 1,
+        "REJECT": 1
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 1717.9899000002479,
-        "mean_ms": 1700.2842000001692,
-        "min_ms": 1682.5785000000906,
+        "max_ms": 956.4365010000024,
+        "mean_ms": 837.6061255000025,
+        "min_ms": 718.7757500000025,
         "n": 2,
-        "p50_ms": 1700.2842000001692,
-        "p95_ms": 1716.21933000024,
-        "p99_ms": 1717.6357860002463
+        "p50_ms": 837.6061255000025,
+        "p95_ms": 944.5534634500024,
+        "p99_ms": 954.0598934900024
       },
       "requested": 2,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 1.1240365320844774,
-      "wall_time_s": 1.7793016000032367
+      "throughput_per_s": 2.0600050889541737,
+      "wall_time_s": 0.9708713879999991
     },
     {
       "concurrency": 4,
       "decision_outcomes": {
-        "ACCEPT": 4
+        "ACCEPT": 2,
+        "REJECT": 2
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 2081.308299999364,
-        "mean_ms": 1941.3036000005377,
-        "min_ms": 1801.9438000010268,
+        "max_ms": 1508.1714330000011,
+        "mean_ms": 1388.1477697500015,
+        "min_ms": 1234.4677810000028,
         "n": 4,
-        "p50_ms": 1940.98115000088,
-        "p95_ms": 2068.1426499995723,
-        "p99_ms": 2078.6751699994056
+        "p50_ms": 1404.9759325000011,
+        "p95_ms": 1500.120908250001,
+        "p99_ms": 1506.561328050001
       },
       "requested": 4,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 1.921361184488018,
-      "wall_time_s": 2.0818574000004446
+      "throughput_per_s": 2.6292776046831974,
+      "wall_time_s": 1.521330418999998
     },
     {
       "concurrency": 8,
       "decision_outcomes": {
-        "ACCEPT": 8
+        "ACCEPT": 4,
+        "REJECT": 4
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 3613.063199998578,
-        "mean_ms": 3403.5902499995245,
-        "min_ms": 3220.4056000009587,
+        "max_ms": 2846.543062000002,
+        "mean_ms": 2568.809667000001,
+        "min_ms": 2240.8996289999977,
         "n": 8,
-        "p50_ms": 3399.864899998647,
-        "p95_ms": 3590.579269997943,
-        "p99_ms": 3608.566413998451
+        "p50_ms": 2691.0656750000007,
+        "p95_ms": 2819.1287152500013,
+        "p99_ms": 2841.0601926500017
       },
       "requested": 8,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 2.19219313440839,
-      "wall_time_s": 3.649313499998243
+      "throughput_per_s": 2.793662866886139,
+      "wall_time_s": 2.8636239880000005
     },
     {
       "concurrency": 16,
       "decision_outcomes": {
-        "ACCEPT": 16
+        "ACCEPT": 9,
+        "REJECT": 7
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 6926.044399999228,
-        "mean_ms": 6507.460706248821,
-        "min_ms": 6160.669900000357,
+        "max_ms": 4671.997151,
+        "mean_ms": 4479.056205125001,
+        "min_ms": 4295.772153000002,
         "n": 16,
-        "p50_ms": 6579.995599999165,
-        "p95_ms": 6893.293849998372,
-        "p99_ms": 6919.4942899990565
+        "p50_ms": 4509.492221999999,
+        "p95_ms": 4616.4252665,
+        "p99_ms": 4660.8827741
       },
       "requested": 16,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 2.285267091591053,
-      "wall_time_s": 7.001369800000248
+      "throughput_per_s": 3.408905369973866,
+      "wall_time_s": 4.6935887810000025
     },
     {
       "concurrency": 32,
       "decision_outcomes": {
-        "ACCEPT": 32
+        "ACCEPT": 17,
+        "REJECT": 15
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 13898.681699996814,
-        "mean_ms": 13481.062600000087,
-        "min_ms": 13211.602600000333,
+        "max_ms": 9796.083775,
+        "mean_ms": 9351.998361406251,
+        "min_ms": 9013.292983,
         "n": 32,
-        "p50_ms": 13454.587150001316,
-        "p95_ms": 13816.2867500012,
-        "p99_ms": 13877.950263998646
+        "p50_ms": 9460.645947499997,
+        "p95_ms": 9740.178027999995,
+        "p99_ms": 9789.441382679997
       },
       "requested": 32,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 2.2456623365264727,
-      "wall_time_s": 14.24969350000174
+      "throughput_per_s": 3.250199748211515,
+      "wall_time_s": 9.845548729
     },
     {
       "concurrency": 64,
-      "decision_outcomes": {},
-      "expired_before_verify": 35,
+      "decision_outcomes": {
+        "ACCEPT": 37,
+        "REJECT": 27
+      },
+      "expired_before_verify": 0,
       "latency": {
-        "n": 0,
-        "note": "no request at this concurrency level reached a completed verify() -- see setup_failed_before_verify/expired_before_verify"
+        "max_ms": 19573.585745000004,
+        "mean_ms": 19062.288978250002,
+        "min_ms": 18491.062986000004,
+        "n": 64,
+        "p50_ms": 19148.869090999993,
+        "p95_ms": 19549.03575345,
+        "p99_ms": 19562.72935379
       },
       "requested": 64,
-      "setup_failed_before_verify": 29,
-      "throughput_per_s": 0.0,
-      "wall_time_s": 0.6130849000001035
+      "setup_failed_before_verify": 0,
+      "throughput_per_s": 3.2517914455939065,
+      "wall_time_s": 19.68145899599999
     }
   ],
   "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
@@ -144,27 +157,28 @@
     "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
   },
   "degradation_finding": {
-    "concurrency_growth_ratio": 32.0,
-    "finding": "p99 latency grew 11.26x while concurrency grew 32x (concurrency=1->32). This is well below proportional growth, consistent with Module E's event loop staying unblocked under concurrency (per-request latency stays roughly flat as concurrency rises, rather than queuing up behind a blocked resource). Separately: concurrency level(s) [64] completed *zero* requests before every session's 30s challenge TTL elapsed -- a real scalability ceiling of this environment's slow PQC fallback + AI pipeline under sustained load at that concurrency, not the event-loop-blocking question this comparison is about. See setup_failed_before_verify/expired_before_verify on those levels.",
+    "finding": "Below saturation, p99 grew 7.86x while concurrency grew 16x (concurrency=1->16, peak throughput 3.41/s). That is well below proportional growth, i.e. per-request latency stays roughly flat while there is spare capacity.  Past the peak, p99 rises to 19563ms at concurrency=64 (from 593ms at 1) while throughput stays flat \u2014 expected queueing against a saturated worker pool (`server.workers` in config), not a separate defect. NOTE: latency growth alone cannot separate a blocked event loop from ordinary worker-pool/CPU saturation on a CPU-bound workload, so do not read the ratio above as a verdict on its own. The direct discriminator is tests/integration/test_server_happy_path.py::test_event_loop_stays_responsive_while_verify_is_in_flight, which polls GET /v1/health while concurrent /v1/verify calls are in flight and requires it to stay responsive \u2014 a blocked loop would stall those health checks behind the CPU-bound work, whatever the latency curve looks like.",
     "linear_degradation_detected": false,
-    "p99_growth_ratio": 11.264173213383218,
-    "p99_ms_high_concurrency": 13877.950263998646,
-    "p99_ms_low_concurrency": 1232.0433999993838,
-    "zero_completion_levels": [
-      64
-    ]
+    "p99_growth_ratio_full_sweep": 33.007755880104696,
+    "p99_ms_high_concurrency": 19562.72935379,
+    "p99_ms_low_concurrency": 592.6706870000019,
+    "peak_throughput_concurrency": 16,
+    "peak_throughput_per_s": 3.408905369973866,
+    "unsaturated_concurrency_growth_ratio": 16.0,
+    "unsaturated_p99_growth_ratio": 7.864203302668122,
+    "zero_completion_levels": []
   },
-  "generated_at_utc": "2026-08-31T13:23:23.642121+00:00",
-  "git_commit": "25d56db2e9f18b22b3626d2f844eb91095471e94",
+  "generated_at_utc": "2026-08-31T19:19:04.192160+00:00",
+  "git_commit": "95e4e6a2a6682a03a1548ecf7db71d90585c6ce0",
   "hardware": {
-    "platform": "Windows-10-10.0.26200-SP0",
-    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+    "processor": "x86_64",
     "python_implementation": "CPython",
-    "python_version": "3.11.9"
+    "python_version": "3.11.16"
   },
   "knee": {
-    "concurrency": 8,
-    "reason": "throughput gain from concurrency=8 to 16 was 4.2%, below the 10% threshold"
+    "concurrency": 4,
+    "reason": "throughput gain from concurrency=4 to 8 was 6.3%, below the 10% threshold"
   },
   "n_frames_per_bundle": 8,
   "requests_per_worker": 1,
