@@ -34,6 +34,7 @@ class BindingConfig(BaseModel):
     illumination_steps: int
     illumination_corr_min: float
     phash_hamming_max: int
+    phash_reuse_min_frames: int
 
 
 class CaptureConfig(BaseModel):

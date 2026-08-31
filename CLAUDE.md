@@ -34,12 +34,14 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   negative tests; nonce single-use consumption verified atomic under a real 100-thread
   race (`tests/unit/test_nonce_store.py`); reuse check verified against exact,
   re-encoded, and rescaled resubmission, and to survive a process restart
-  (BK-tree rebuilt from SQLite). `phash_hamming_max` (config, default 6) was measured
-  against synthetic data (`results/binding_fpr.json`, `results/phash_robustness.json`)
-  — kept at 6 despite a non-trivial synthetic false-positive rate and a demonstrated
-  robustness gap against aggressive JPEG re-encoding; see §14 Amendments for the full
-  reasoning and the recorded (not implemented) N-of-burst mitigation before touching
-  that value. B6's frame-to-challenge-step timing alignment is an even-split
+  (BK-tree rebuilt from SQLite). Reuse now fires on **N-of-burst**, not any single
+  frame: `phash_hamming_max: 10` (the floor that still catches every re-encode/rescale/
+  crop case measured) and `phash_reuse_min_frames: 30` (require every frame of the
+  burst — the least-bad point measured, not one that hits the original <1% FPR target;
+  burst frames turned out to be highly correlated under phash, so N barely helps — see
+  §14 Amendments, `results/phash_burst_calibration.json`, before touching either value
+  or assuming N alone will fix the residual false-positive rate). B6's
+  frame-to-challenge-step timing alignment is an even-split
   approximation (Module B doesn't interleave live render+capture yet) — see
   `verify.py`'s `_expand_expected_trace`.
 - **Implemented: parts of Module D — `pqbio/detect/`** (base.py, face.py, match.py,

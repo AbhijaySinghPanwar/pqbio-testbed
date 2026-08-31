@@ -130,8 +130,15 @@ class PhashIndex:
     ) -> list[tuple[int, str, int]]:
         """Read-only. For each frame, look up already-accepted hashes within
         `max_distance`. Returns (frame_index, matched_hash_hex, distance) for every
-        match — empty means no reuse detected. This method never writes to the index;
-        see the module docstring for why that matters.
+        match — empty means no single-frame match at all. This method never writes to
+        the index; see the module docstring for why that matters.
+
+        This is the low-level primitive; `is_burst_reused` below is what
+        `pqbio.binding.verify.check_evidence_reuse` actually uses to decide
+        `BIND_EVIDENCE_REUSE` (§5.3, §14's N-of-burst amendment) — a single frame
+        landing within `max_distance` of something already accepted is common enough
+        between two genuinely distinct captures of the same person that it is not, on
+        its own, evidence of reuse. See `is_burst_reused`'s docstring for why.
         """
         hits: list[tuple[int, str, int]] = []
         for idx, frame_jpeg in enumerate(frame_jpegs):
@@ -139,6 +146,30 @@ class PhashIndex:
             for matched_hex, distance in self._tree.find_within(frame_hash, max_distance):
                 hits.append((idx, matched_hex, distance))
         return hits
+
+    def is_burst_reused(
+        self, frame_jpegs: list[bytes], max_distance: int, min_matching_frames: int
+    ) -> bool:
+        """True iff at least `min_matching_frames` *distinct* frames in `frame_jpegs`
+        each have >=1 match within `max_distance` against previously accepted hashes.
+
+        §14 found that per-frame Hamming distance alone can't serve both goals at a
+        single threshold: distance 6 already had a ~13% synthetic within-subject false
+        positive rate, and raising it to 10 (the floor that still catches aggressive
+        JPEG re-encoding) makes single-frame collisions between distinct captures of
+        the same person routine, not rare. Requiring N matching frames out of a burst
+        was the proposed fix — measured with
+        `scripts/measure_phash_burst_calibration.py`, which found the mitigation
+        weaker than hoped (burst frames are highly correlated: within one capture,
+        nearly all frames share the same coarse pose/lighting, so a false-positive
+        collision tends to hit *all* frames of a burst or *none*, not some fraction
+        that scales smoothly with N — see PROJECT_SPEC.md §14 for the full numbers).
+        `min_matching_frames` is still config-driven (`phash_reuse_min_frames`), not
+        hardcoded, so it can be revised as real data becomes available.
+        """
+        hits = self.check_reuse(frame_jpegs, max_distance)
+        matching_frame_indices = {idx for idx, _matched_hex, _distance in hits}
+        return len(matching_frame_indices) >= min_matching_frames
 
     def record_accepted_bundle(self, session_id: str, frame_jpegs: list[bytes]) -> None:
         """Record every frame's hash for an ACCEPTED bundle. Call this only from the

@@ -9,7 +9,12 @@ binding:
   clock_skew_s: 2
   illumination_steps: 4
   illumination_corr_min: 0.70
-  phash_hamming_max: 6
+  # Both calibrated by scripts/measure_phash_burst_calibration.py — see
+  # PROJECT_SPEC.md §14 for the full reasoning and the honest limitation it found.
+  phash_hamming_max: 10       # D: per-frame distance floor that still catches every
+                               # re-encode/rescale/crop case in the robustness sweep
+  phash_reuse_min_frames: 30  # N: frames of the burst that must each match within D
+                               # before BIND_EVIDENCE_REUSE fires (out of capture.n_frames)
 
 capture:
   n_frames: 30

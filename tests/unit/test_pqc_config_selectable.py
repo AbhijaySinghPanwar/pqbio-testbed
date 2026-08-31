@@ -25,7 +25,8 @@ binding:
   clock_skew_s: 2
   illumination_steps: 4
   illumination_corr_min: 0.70
-  phash_hamming_max: 6
+  phash_hamming_max: 10
+  phash_reuse_min_frames: 30
 capture:
   n_frames: 30
   fps: 15

@@ -34,6 +34,27 @@ def _synthetic_frame(seed: int, size: int = 128) -> np.ndarray:
     return img
 
 
+def _structurally_varied_frame(seed: int, size: int = 128) -> np.ndarray:
+    """Unlike `_synthetic_frame` (tone-only) or the illumination-challenge solid
+    colour blocks `build_bundle` normally uses, this varies ellipse size/eye spacing
+    per seed — needed for phash reuse tests, since phash is coarse/low-frequency and
+    barely responds to tone-only or solid-colour variation (every solid-colour frame
+    hashes close to every other, and every tone-only frame hashes close to every
+    other, which makes both useless as a "genuinely different frame" phash fixture).
+    """
+    rng = np.random.default_rng(seed)
+    img = np.full((size, size, 3), 200, dtype=np.uint8)
+    skin = (int(rng.integers(150, 220)),) * 3
+    face_w = int(rng.integers(size // 3 - 10, size // 3 + 10))
+    face_h = int(rng.integers(size // 2 - 18, size // 2 - 2))
+    cv2.ellipse(img, (size // 2, size // 2), (face_w, face_h), 0, 0, 360, skin, -1)
+    eye_dx = int(rng.integers(14, 28))
+    eye_y = size // 2 - int(rng.integers(6, 16))
+    cv2.circle(img, (size // 2 - eye_dx, eye_y), 6, (30, 30, 30), -1)
+    cv2.circle(img, (size // 2 + eye_dx, eye_y), 6, (30, 30, 30), -1)
+    return img
+
+
 class Harness:
     """Everything a valid verify_binding() call needs, built once per test and mutable
     per-field for the negative cases.
@@ -67,7 +88,6 @@ class Harness:
         expected = derive_illumination_sequence(
             self.challenge.nonce, settings.binding.illumination_steps
         )
-        captured_frames = []
         images = []
         for i in range(n_frames):
             if satisfy_b6:
@@ -78,18 +98,27 @@ class Harness:
             else:
                 img = _synthetic_frame(seed=i)
             images.append(img)
-            captured_frames.append(
-                CapturedFrame(
-                    image=img,
-                    meta=FrameMeta(
-                        capture_ts_ns=self.now_ns + i,
-                        exposure=0.01,
-                        iso=100,
-                        focal=4.2,
-                        sequence_idx=i,
-                    ),
-                )
+        return self.build_bundle_from_images(images, counter=counter)
+
+    def build_bundle_from_images(self, images: list, *, counter: int = 1):
+        """Build a signed bundle from explicit frame images — used directly by tests
+        that need control over frame *content* (e.g. phash reuse tests, where
+        `build_bundle`'s solid-colour illumination frames or single-seed-varying
+        frames are too structurally uniform to be a meaningful phash fixture).
+        """
+        captured_frames = [
+            CapturedFrame(
+                image=img,
+                meta=FrameMeta(
+                    capture_ts_ns=self.now_ns + i,
+                    exposure=0.01,
+                    iso=100,
+                    focal=4.2,
+                    sequence_idx=i,
+                ),
             )
+            for i, img in enumerate(images)
+        ]
 
         face_box = estimate_face_box(images[0])
         trace = measure_chromaticity_trace(images, face_box)
@@ -107,7 +136,7 @@ class Harness:
                 os="test",
                 camera_device_name="cam",
                 camera_driver_id="0",
-                resolution=(64, 64),
+                resolution=(images[0].shape[1], images[0].shape[0]),
                 codec="raw",
                 app_version="0.1.0",
             ),
@@ -288,14 +317,49 @@ def test_evidence_reuse_check_passes_on_first_submission(tmp_path: Path) -> None
 
 def test_evidence_reuse_check_fails_on_previously_accepted_media(tmp_path: Path) -> None:
     """This is the check that stops resubmission of the same *media* under a fresh,
-    correctly-signed session — B1-B5 alone would let this through.
+    correctly-signed session — B1-B5 alone would let this through. Uses a full
+    30-frame burst (config's capture.n_frames) since exact resubmission means every
+    frame matches, comfortably clearing the default `phash_reuse_min_frames` (30).
     """
     h = Harness(tmp_path)
-    bundle = h.build_bundle()
+    bundle = h.build_bundle(n_frames=30)
     index = PhashIndex(tmp_path / "phash.db")
     index.record_accepted_bundle("earlier-session", bundle.frames)
 
     result = check_evidence_reuse(bundle, index)
+    assert result.passed is False
+
+
+def test_evidence_reuse_check_ignores_a_handful_of_frame_matches(tmp_path: Path) -> None:
+    """§14's N-of-burst rule: a few frames matching by chance must not trip
+    BIND_EVIDENCE_REUSE — only when at least `min_matching_frames` do. Uses
+    structurally-varied frames (not the solid-colour illumination blocks
+    `build_bundle` defaults to): those are near-flat images that all hash close to
+    each other under phash regardless of exact colour, which would make "only 5 of
+    30 frames match" untestable — every frame would match every other.
+    """
+    h = Harness(tmp_path)
+    images = [_structurally_varied_frame(seed=i) for i in range(30)]
+    bundle = h.build_bundle_from_images(images)
+    index = PhashIndex(tmp_path / "phash.db")
+    # accept only the first 5 of this bundle's frames under a different session, so at
+    # most 5 of the new submission's 30 frames can ever match — short of the default N.
+    index.record_accepted_bundle("earlier-session", bundle.frames[:5])
+
+    result = check_evidence_reuse(bundle, index)
+    assert result.passed is True
+    assert result.reason_code == "REUSE_OK"
+
+
+def test_evidence_reuse_check_respects_min_matching_frames_override(tmp_path: Path) -> None:
+    h = Harness(tmp_path)
+    images = [_structurally_varied_frame(seed=i) for i in range(30)]
+    bundle = h.build_bundle_from_images(images)
+    index = PhashIndex(tmp_path / "phash.db")
+    index.record_accepted_bundle("earlier-session", bundle.frames[:5])
+
+    # with a lowered N, those same 5 matching frames are now enough to flag reuse.
+    result = check_evidence_reuse(bundle, index, min_matching_frames=5)
     assert result.passed is False
     assert result.reason_code == "BIND_EVIDENCE_REUSE"
 
@@ -367,7 +431,9 @@ def test_evidence_reuse_fails_closed_when_index_unusable(tmp_path: Path) -> None
     bundle = h.build_bundle()
 
     class BrokenIndex:
-        def check_reuse(self, frame_jpegs: list[bytes], max_distance: int) -> list:
+        def is_burst_reused(
+            self, frame_jpegs: list[bytes], max_distance: int, min_matching_frames: int
+        ) -> bool:
             raise RuntimeError("simulated index failure")
 
     result = check_evidence_reuse(bundle, BrokenIndex())  # type: ignore[arg-type]

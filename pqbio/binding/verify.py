@@ -195,7 +195,10 @@ def check_b6_challenge_correlation(bundle: EvidenceBundle) -> CheckResult:
 
 
 def check_evidence_reuse(
-    bundle: EvidenceBundle, phash_index: PhashIndex, max_distance: int | None = None
+    bundle: EvidenceBundle,
+    phash_index: PhashIndex,
+    max_distance: int | None = None,
+    min_matching_frames: int | None = None,
 ) -> CheckResult:
     """Not one of B1-B6 — a separate check via the seen-evidence index
     (phash_index.py), kept structurally separate (own CheckResult, not folded into
@@ -203,11 +206,22 @@ def check_evidence_reuse(
     different pipeline stage in Module E's design (§5.5: stage 5, after B1-B5's
     fail-fast group and B6's "cheap signals" group). Read-only — never writes to the
     index; see phash_index.py's module docstring for why that matters.
+
+    Fires `BIND_EVIDENCE_REUSE` on `PhashIndex.is_burst_reused` — at least
+    `min_matching_frames` (config `phash_reuse_min_frames`) of the burst's frames each
+    matching within `max_distance` (config `phash_hamming_max`), not any single frame.
+    See phash_index.py's `is_burst_reused` docstring and PROJECT_SPEC.md §14 for why
+    this replaced a single-frame-match rule.
     """
     try:
-        threshold = max_distance if max_distance is not None else settings.binding.phash_hamming_max
-        hits = phash_index.check_reuse(bundle.frames, threshold)
-        passed = len(hits) == 0
+        distance = max_distance if max_distance is not None else settings.binding.phash_hamming_max
+        min_frames = (
+            min_matching_frames
+            if min_matching_frames is not None
+            else settings.binding.phash_reuse_min_frames
+        )
+        reused = phash_index.is_burst_reused(bundle.frames, distance, min_frames)
+        passed = not reused
     except Exception:
         passed = False
     return CheckResult("REUSE", passed, "REUSE_OK" if passed else "BIND_EVIDENCE_REUSE")

@@ -851,3 +851,65 @@ elevated install. `scripts/make_injection_corpus.py` builds tier 1 only and reco
 `BLOCKED_TIER2_REASON`), rather than simulating a virtual camera in software and
 mislabelling it tier 2. **Unblock condition:** run on a machine with OBS Studio (Virtual
 Camera feature enabled) or Linux with v4l2loopback loaded, then re-run with `--tier2`.
+
+### 2026-08-31 — N-of-burst evidence reuse implemented; mitigation weaker than hoped
+
+Promotes the "known mitigation, deliberately not implemented" amendment above from
+proposal to implementation, via `scripts/measure_phash_burst_calibration.py`
+(→ `results/phash_burst_calibration.json`), and reports an honest, unwelcome finding
+along the way.
+
+**Phase A (D floor).** Re-ran the robustness sweep (JPEG requality 95→20, rescale
+0.5x/0.7x/1.3x, 5% centre crop, 5 base images): worst-case distance is **10**, matching
+the earlier robustness-sweep amendment exactly. `phash_hamming_max` raised from 6 to
+**10** — the floor that still catches every case measured, not a number picked by feel.
+
+**Phase B (N sweep).** Simulated 30 synthetic subjects × 5 capture sessions each × a
+30-frame burst per session (a session-level jitter — same magnitude as
+`measure_phash_fpr.py`'s single-frame jitter — plus a much smaller per-frame jitter on
+top, modelling natural intra-burst video variation), then measured, for every N from 1
+to 30, the fraction of same-subject session-pairs where ≥N frames of one session land
+within D=10 of the other:
+
+| N | 1 | 5 | 10 | 15 | 20 | 25 | 29 | 30 |
+|---|---|---|---|---|---|---|---|---|
+| Within-subject FPR | 33.7% | 31.3% | 30.0% | 29.0% | 26.3% | 26.0% | 25.0% | 24.0% |
+
+**No N in [1, 30] gets anywhere near the "comfortably below 1%" target** — not even
+N=30 (require every single frame to match). The instruction anticipated N might need
+*raising* if real collisions ran higher than synthetic ones; what this run actually
+found is structural, not a matter of degree: **burst frames are not independent
+trials.** Within one capture, all 30 frames share the same coarse pose/lighting (only
+small intra-burst jitter on top of one session-level draw), so under phash's coarse,
+low-frequency hashing a false-positive collision tends to hit *all* frames of a burst
+or *none* — the match-count distribution across the 300 session-pairs measured is
+sharply bimodal (median 0, p95 = 30 of 30, mean 8.6), not a smooth curve N could ride
+down. Raising N barely helps because the thing that determines a collision (whether two
+sessions' overall pose/lighting happened to land close) is already decided before N is
+ever evaluated.
+
+**Implemented anyway, with the values the data actually supports:** `phash_hamming_max:
+10`, new `phash_reuse_min_frames: 30` (require *every* frame of the burst to match —
+the least-bad point measured, not a point that meets the original target).
+`pqbio.binding.phash_index.PhashIndex.is_burst_reused(frame_jpegs, max_distance,
+min_matching_frames)` implements the rule; `pqbio.binding.verify.check_evidence_reuse`
+calls it instead of flagging on any single `check_reuse` hit (the low-level primitive
+is unchanged and still used directly by `is_burst_reused`, so nothing about hash
+computation or the BK-tree/SQLite consistency property changed — the restart test
+still passes unmodified logic, just through the new method too).
+
+**What this means for a real deployment, stated plainly:** at these values, the check
+still reliably catches genuine reuse (identical or lightly modified media matches on
+effectively all frames, trivially clearing N=30) but the false-positive rate against a
+*second genuine session of the same person* remains high — the burst aggregation did
+not fix that, contrary to the original hope. A production system should not treat a
+lone `BIND_EVIDENCE_REUSE` as an automatic hard reject; routing it to `CHALLENGE`
+(step up with a fresh nonce) once Module D's policy engine exists is the honest
+mitigation for the residual FPR, not a further N/D tuning pass. A structurally
+different signal — one that doesn't inherit phash's per-burst correlation — is the
+real fix, and is out of scope here.
+
+**This remains a synthetic measurement** (§6: no licensed dataset yet). Re-run
+`scripts/measure_phash_burst_calibration.py` once real multi-session captures of the
+same subjects are available — both the bimodal shape and the specific FPR numbers need
+checking against real data, not just the headline percentages.

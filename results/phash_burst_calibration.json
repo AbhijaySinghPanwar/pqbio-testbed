@@ -1,0 +1,661 @@
+{
+  "git_commit": "b0cfa70f31ef1943a5fab4e0099aab0dda3aad49",
+  "config_hash_sha256": "78b21c8b462aa4af5820d04ac8a562342cce2cae4a5fdc47d67bf4ee77d325b0",
+  "generated_at_utc": "2026-08-31T09:33:14.874333+00:00",
+  "method": "synthetic",
+  "caveat": "No licensed face dataset is available yet (PROJECT_SPEC.md \u00a76). Both phases use the same synthetic face-like generator as measure_phash_fpr.py / measure_phash_robustness.py. Phase B's within-subject FPR is a plausibility check on the chosen N, not a validated false-positive rate -- re-measure on real multi-session captures once datasets land, and note N may need raising if real within-subject collisions run higher than these jittered synthetic ones.",
+  "phase_a_d_floor": {
+    "d_floor": 10,
+    "reasoning": "Smallest per-frame Hamming distance that still covers every re-encode/rescale/crop case measured in this run (the same worst-case-distance definition scripts/measure_phash_robustness.py reports).",
+    "n_cases": 100,
+    "cases": [
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 95,
+        "distance": 0
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 90,
+        "distance": 0
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 85,
+        "distance": 2
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 80,
+        "distance": 2
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 75,
+        "distance": 2
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 70,
+        "distance": 2
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 65,
+        "distance": 2
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 60,
+        "distance": 2
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 55,
+        "distance": 4
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 50,
+        "distance": 4
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 45,
+        "distance": 4
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 40,
+        "distance": 4
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 35,
+        "distance": 4
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 30,
+        "distance": 4
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 25,
+        "distance": 8
+      },
+      {
+        "base_seed": 1,
+        "transform": "jpeg_requality",
+        "param": 20,
+        "distance": 6
+      },
+      {
+        "base_seed": 1,
+        "transform": "rescale_round_trip",
+        "param": 0.5,
+        "distance": 0
+      },
+      {
+        "base_seed": 1,
+        "transform": "rescale_round_trip",
+        "param": 0.7,
+        "distance": 0
+      },
+      {
+        "base_seed": 1,
+        "transform": "rescale_round_trip",
+        "param": 1.3,
+        "distance": 0
+      },
+      {
+        "base_seed": 1,
+        "transform": "centre_crop",
+        "param": 0.05,
+        "distance": 4
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 95,
+        "distance": 0
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 90,
+        "distance": 2
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 85,
+        "distance": 4
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 80,
+        "distance": 2
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 75,
+        "distance": 6
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 70,
+        "distance": 2
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 65,
+        "distance": 4
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 60,
+        "distance": 6
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 55,
+        "distance": 6
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 50,
+        "distance": 4
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 45,
+        "distance": 2
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 40,
+        "distance": 4
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 35,
+        "distance": 4
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 30,
+        "distance": 4
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 25,
+        "distance": 8
+      },
+      {
+        "base_seed": 2,
+        "transform": "jpeg_requality",
+        "param": 20,
+        "distance": 10
+      },
+      {
+        "base_seed": 2,
+        "transform": "rescale_round_trip",
+        "param": 0.5,
+        "distance": 4
+      },
+      {
+        "base_seed": 2,
+        "transform": "rescale_round_trip",
+        "param": 0.7,
+        "distance": 2
+      },
+      {
+        "base_seed": 2,
+        "transform": "rescale_round_trip",
+        "param": 1.3,
+        "distance": 2
+      },
+      {
+        "base_seed": 2,
+        "transform": "centre_crop",
+        "param": 0.05,
+        "distance": 4
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 95,
+        "distance": 0
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 90,
+        "distance": 2
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 85,
+        "distance": 2
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 80,
+        "distance": 0
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 75,
+        "distance": 2
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 70,
+        "distance": 4
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 65,
+        "distance": 4
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 60,
+        "distance": 2
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 55,
+        "distance": 2
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 50,
+        "distance": 4
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 45,
+        "distance": 2
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 40,
+        "distance": 2
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 35,
+        "distance": 6
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 30,
+        "distance": 10
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 25,
+        "distance": 4
+      },
+      {
+        "base_seed": 3,
+        "transform": "jpeg_requality",
+        "param": 20,
+        "distance": 0
+      },
+      {
+        "base_seed": 3,
+        "transform": "rescale_round_trip",
+        "param": 0.5,
+        "distance": 2
+      },
+      {
+        "base_seed": 3,
+        "transform": "rescale_round_trip",
+        "param": 0.7,
+        "distance": 2
+      },
+      {
+        "base_seed": 3,
+        "transform": "rescale_round_trip",
+        "param": 1.3,
+        "distance": 2
+      },
+      {
+        "base_seed": 3,
+        "transform": "centre_crop",
+        "param": 0.05,
+        "distance": 2
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 95,
+        "distance": 0
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 90,
+        "distance": 0
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 85,
+        "distance": 0
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 80,
+        "distance": 2
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 75,
+        "distance": 2
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 70,
+        "distance": 2
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 65,
+        "distance": 2
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 60,
+        "distance": 2
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 55,
+        "distance": 4
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 50,
+        "distance": 4
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 45,
+        "distance": 4
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 40,
+        "distance": 4
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 35,
+        "distance": 4
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 30,
+        "distance": 2
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 25,
+        "distance": 2
+      },
+      {
+        "base_seed": 4,
+        "transform": "jpeg_requality",
+        "param": 20,
+        "distance": 4
+      },
+      {
+        "base_seed": 4,
+        "transform": "rescale_round_trip",
+        "param": 0.5,
+        "distance": 0
+      },
+      {
+        "base_seed": 4,
+        "transform": "rescale_round_trip",
+        "param": 0.7,
+        "distance": 0
+      },
+      {
+        "base_seed": 4,
+        "transform": "rescale_round_trip",
+        "param": 1.3,
+        "distance": 0
+      },
+      {
+        "base_seed": 4,
+        "transform": "centre_crop",
+        "param": 0.05,
+        "distance": 4
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 95,
+        "distance": 0
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 90,
+        "distance": 0
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 85,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 80,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 75,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 70,
+        "distance": 4
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 65,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 60,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 55,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 50,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 45,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 40,
+        "distance": 0
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 35,
+        "distance": 4
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 30,
+        "distance": 6
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 25,
+        "distance": 8
+      },
+      {
+        "base_seed": 5,
+        "transform": "jpeg_requality",
+        "param": 20,
+        "distance": 4
+      },
+      {
+        "base_seed": 5,
+        "transform": "rescale_round_trip",
+        "param": 0.5,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "rescale_round_trip",
+        "param": 0.7,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "rescale_round_trip",
+        "param": 1.3,
+        "distance": 2
+      },
+      {
+        "base_seed": 5,
+        "transform": "centre_crop",
+        "param": 0.05,
+        "distance": 4
+      }
+    ]
+  },
+  "phase_b_n_sweep": {
+    "n_subjects": 30,
+    "n_sessions_per_subject": 5,
+    "n_session_pairs": 300,
+    "burst_size": 30,
+    "match_count_distribution": {
+      "mean": 8.58,
+      "max": 30,
+      "p50": 0.0,
+      "p95": 30.0
+    },
+    "fpr_by_n": {
+      "1": 0.33666666666666667,
+      "2": 0.3333333333333333,
+      "3": 0.32666666666666666,
+      "4": 0.3233333333333333,
+      "5": 0.31333333333333335,
+      "6": 0.31,
+      "7": 0.30333333333333334,
+      "8": 0.3,
+      "9": 0.3,
+      "10": 0.3,
+      "11": 0.2966666666666667,
+      "12": 0.2966666666666667,
+      "13": 0.29333333333333333,
+      "14": 0.29333333333333333,
+      "15": 0.29,
+      "16": 0.2866666666666667,
+      "17": 0.2866666666666667,
+      "18": 0.28,
+      "19": 0.2733333333333333,
+      "20": 0.2633333333333333,
+      "21": 0.2633333333333333,
+      "22": 0.2633333333333333,
+      "23": 0.2633333333333333,
+      "24": 0.2633333333333333,
+      "25": 0.26,
+      "26": 0.25666666666666665,
+      "27": 0.25666666666666665,
+      "28": 0.25666666666666665,
+      "29": 0.25,
+      "30": 0.24
+    }
+  },
+  "chosen_d": 10,
+  "chosen_n": null,
+  "chosen_n_reasoning": "No N up to 30 reached FPR < 1% in this run; see fpr_by_n."
+}
