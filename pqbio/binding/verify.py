@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from typing import Protocol
 
 import numpy as np
 
@@ -28,11 +29,23 @@ from pqbio.binding.phash_index import PhashIndex
 from pqbio.capture.bundler import compute_capture_binding
 from pqbio.capture.challenge import PALETTE_BGR
 from pqbio.config import settings
-from pqbio.pqc.keystore import KeyStore
+from pqbio.pqc.keystore import DeviceRecord
 from pqbio.pqc.sign import Signer, constant_time_eq
 from pqbio.schemas import Challenge, EvidenceBundle, model_signing_payload, sha256
 
 CHECK_NAMES = ("B1", "B2", "B3", "B4", "B5", "B6")
+
+
+class KeyStoreLike(Protocol):
+    """The one method B4 needs from a device-key store, as a structural type rather
+    than the concrete in-memory `pqbio.pqc.keystore.KeyStore` -- its own docstring
+    already calls its method signatures "the contract that backing store will need to
+    satisfy", i.e. duck typing was always the intent, not inheritance. Both `KeyStore`
+    and Module E's SQLite-backed `pqbio.server.store.SqliteKeyStore` satisfy this
+    without either needing to import or subclass the other.
+    """
+
+    def get(self, device_id: str) -> DeviceRecord: ...
 
 
 @dataclass(frozen=True)
@@ -104,7 +117,7 @@ def check_b3_nonce_freshness(nonce: bytes, nonce_store: NonceStore) -> CheckResu
     return CheckResult("B3", passed, "B3_OK" if passed else "BIND_NONCE_REPLAY")
 
 
-def check_b4_counter(device_id: str, counter: int, keystore: KeyStore) -> CheckResult:
+def check_b4_counter(device_id: str, counter: int, keystore: KeyStoreLike) -> CheckResult:
     """B4: device counter strictly greater than last seen.
 
     Read-only — does *not* advance the stored counter. Advancing belongs to the accept
@@ -231,7 +244,7 @@ def verify_binding(
     *,
     bundle: EvidenceBundle,
     nonce_store: NonceStore,
-    keystore: KeyStore,
+    keystore: KeyStoreLike,
     server_signer: Signer,
     server_pk: bytes,
     now_ns: int | None = None,

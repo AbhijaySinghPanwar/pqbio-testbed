@@ -33,12 +33,46 @@ from scipy import stats
 from pqbio.binding.verify import compute_challenge_correlation
 from pqbio.config import DEFAULT_CONFIG_PATH, settings
 from pqbio.detect.base import Detector, DetectorResult
-from pqbio.detect.face import PreparedEvidence, prepared_evidence_bundle_only
+from pqbio.detect.face import (
+    CHECKSUMS_PATH,
+    PreparedEvidence,
+    _load_checksums,
+    _sha256_file,
+    prepared_evidence_bundle_only,
+)
 from pqbio.schemas import EvidenceBundle, canonical_cbor_decode
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 MODELS_DIR = REPO_ROOT / "models"
 DEFAULT_MODEL_PATH = MODELS_DIR / "injection_gbm.txt"
+
+
+def _record_model_checksum(model_path: Path) -> None:
+    """Record `model_path`'s SHA-256 into models/checksums.txt, same file and format
+    `scripts/fetch_face_models.py` uses for the face models — so
+    `pqbio.server.app`'s startup integrity check can refuse to start on a mismatch or
+    missing entry for *this* detector too, not just the face models (§5.5: "never
+    silently skips a detector").
+    """
+    entries = _load_checksums()
+    rel_path = model_path.relative_to(MODELS_DIR).as_posix()
+    entries[rel_path] = _sha256_file(model_path)
+    lines = [
+        "# Model weight checksums",
+        "#",
+        "# Format: <sha256>  <relative-path-under-models/>",
+        "#",
+        "# Populated by scripts/fetch_face_models.py (face models) and",
+        "# pqbio.detect.injection's train_and_evaluate (injection_gbm.txt, gitignored — the",
+        "# model binary isn't committed, only its provenance is).",
+        "# Model binaries themselves (models/*.onnx, models/*.txt except this file) are",
+        "# gitignored; this file is tracked so weight provenance survives even though the",
+        "# weights do not.",
+        "",
+    ]
+    for rel in sorted(entries):
+        lines.append(f"{entries[rel]}  {rel}")
+    CHECKSUMS_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _git_commit() -> str:
@@ -333,6 +367,7 @@ def train_and_evaluate(
 
     model_out.parent.mkdir(parents=True, exist_ok=True)
     booster.save_model(str(model_out))
+    _record_model_checksum(model_out)
 
     train_pred = np.asarray(booster.predict(x_train))
     test_pred = np.asarray(booster.predict(x_test)) if len(x_test) else np.array([])

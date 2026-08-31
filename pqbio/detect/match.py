@@ -48,6 +48,26 @@ def compute_embedding(evidence: PreparedEvidence) -> npt.NDArray[np.float32]:
     return _l2_normalize(raw)
 
 
+def compute_embedding_from_image(image: npt.NDArray[np.uint8]) -> npt.NDArray[np.float32] | None:
+    """Detect + align + embed directly from a raw image — for enrollment (§5.5
+    POST /v1/enroll), where there is no `EvidenceBundle`/`PreparedEvidence` yet, just
+    an enrollment photo. Returns `None` if no face is detected, never raises for that
+    case (a bad enrollment photo is a request-validation failure for the caller to
+    handle, not a crash).
+    """
+    from insightface.utils import face_align
+
+    app = _get_app()
+    faces = app.get(image)
+    if not faces:
+        return None
+    face = max(faces, key=lambda f: float(f.det_score))
+    crop_112 = face_align.norm_crop(image, face.kps, image_size=112)
+    rec_model = app.models["recognition"]
+    raw = np.asarray(rec_model.get_feat(crop_112), dtype=np.float32).reshape(-1)
+    return _l2_normalize(raw)
+
+
 class MatchDetector(Detector):
     """Score = 1 - cosine_similarity against the enrolled template, clamped to [0, 1],
     so it follows every other detector's 0=benign/1=attack convention: a perfect

@@ -24,12 +24,12 @@ Starting prompt:
 
 | Brief requirement | Where it is met |
 |---|---|
-| O1 Testbed combining PQC with AI biometric verification | §2 architecture, Modules A/B/E |
+| O1 Testbed combining PQC with AI biometric verification | §2 architecture, Modules A/B/E — A/B/C/E implemented; D3/D4 (morph/deepfake) absent, no detector to plug in (§14) |
 | O2 Integrate ML-KEM and ML-DSA | Module A (§5.1) |
 | O3 Detect presentation, morphing, deepfake, replay, injection | Module D (§5.4) |
 | O4 Measure accuracy, latency, throughput, CPU, memory | Module F (§5.6), §8 |
 | O5 Security–performance trade-off analysis | §8.3, §8.4 |
-| D1 Working reproducible prototype | §13 |
+| D1 Working reproducible prototype | §13 — real enroll→challenge→handshake→verify→signed-receipt flow now runs end-to-end through Module E (§13's `make demo`/`docker-compose` packaging still open, Module F) |
 | D2 Attack-detection component on suitable datasets | §5.4, §6 |
 | D3 Transaction binding and freshness mechanism | Module C (§5.3) |
 | D4 Security + performance evaluation incl. PQ overhead | §8 |
@@ -913,3 +913,84 @@ real fix, and is out of scope here.
 `scripts/measure_phash_burst_calibration.py` once real multi-session captures of the
 same subjects are available — both the bimodal shape and the specific FPR numbers need
 checking against real data, not just the headline percentages.
+
+### 2026-08-31 — Module E: verification server implemented (`pqbio/server/`)
+
+`app.py` (startup/model-integrity gate), `routes.py` (the five §5.5 endpoints),
+`pipeline.py` (eight-stage orchestration), `decision.py` (receipt construction/signing),
+`store.py` (SQLite keystore/sessions/audit). Real enroll → challenge → handshake →
+verify → signed-decision flow now runs end-to-end through real ML-KEM-768/ML-DSA-65
+(fallback backend) and AES-256-GCM, verified by an actual passing test, not just
+component-level tests of the pieces.
+
+**Deliberate extension beyond the literal spec text:** all eight stages run off the
+event loop via a `ThreadPoolExecutor`, not just stages 3-6 as §5.5 names — under the
+kyber-py/dilithium-py fallback, stage 1's ML-DSA verify and stage 8's ML-DSA sign alone
+cost tens of milliseconds each (`results/pqc_micro.json`), so offloading only 3-6 would
+not actually have delivered "event loop never blocked" on this backend. Documented in
+`pipeline.py`'s module docstring, not silently done.
+
+**Two real gaps found and fixed while building this, not anticipated in the instruction:**
+both binding checks B4 (device counter) and the evidence-reuse pHash index are
+deliberately *read-only* during verification (§5.3's own design — a check must not
+mutate state for a bundle some *later* check might still reject). Module C's own
+docstrings correctly named the accept path as the place that should advance them
+(`PhashIndex.record_accepted_bundle`, `KeyStore.update_counter`) — but nothing in this
+session's first pipeline.py draft ever called either one. Caught by writing the A5(b)
+reuse regression test and finding it didn't fire. Both are now called from
+`run_verify_pipeline`, gated on `decision_outcome == "ACCEPT"`, after fusion. The
+counter advance has a known, undefended TOCTOU race against a second concurrent
+accepted request for the same device (B4's check and this advance are two separate
+statements, unlike `nonce.py`'s single atomic `UPDATE`); `SqliteKeyStore.update_counter`
+raises `ValueError` on a regression rather than corrupting state, so the race fails
+loud, not silently, but doesn't yet resolve to a clean reason code. Flagged for
+whoever picks up server concurrency hardening next, not fixed here.
+
+**Receipt self-reporting is logically impossible, so the signed receipt doesn't try:**
+`stage_latency_ms["sign_audit"]` (the ~52ms fallback ML-DSA signing cost the build
+instruction asked to be recorded) cannot appear inside the *signed* `Decision` object,
+because a signature cannot cover the duration of computing itself — by the time signing
+finishes, the payload it signed is already fixed. It's recorded in the (unsigned) audit
+log instead, which has no such constraint; `pipeline.py`'s docstring and
+`_decision_to_audit_json`'s call site explain why.
+
+**Windows SQLite connection leak, found by the test suite itself, not anticipated:**
+every store (`nonce.py`, `phash_index.py`, `server/store.py`) opened connections via
+`with _connect(path) as conn:` — but `with` on a raw `sqlite3.Connection` only
+commits/rolls back a transaction; it never closes the connection. Under this project's
+`isolation_level=None` autocommit convention there's no transaction for that to matter,
+so the connection was simply never closed, relying on GC. POSIX tolerates deleting an
+open file; Windows doesn't, and the very first Module E integration test
+(`tests/integration/test_server_happy_path.py`) hit `PermissionError: [WinError 32]`
+tearing down its `tempfile.TemporaryDirectory`. Fixed by turning all three `_connect`
+helpers into `@contextmanager` generators that `close()` in a `finally`, with zero
+changes needed at any of the ~20 call sites. Real bug, not a test-only artefact — would
+have leaked file handles in a long-running server too.
+
+**A face-detection/video-codec interaction, found while building realistic test
+fixtures:** the astronaut crop used elsewhere in this project detects at a borderline
+SCRFD confidence (~0.52, just above the model's internal 0.5 filter) in memory, but a
+`cv2.VideoWriter` → `cv2.VideoCapture` round-trip (tested across mp4v/XVID/MJPG,
+identical result on all three) degrades it just enough to drop to zero detections —
+not a codec bug, a margin problem. A wider-crop version with more background margin
+detects at ~0.77-0.99 and survives the round-trip cleanly. `tests/unit/_server_fixtures.py`
+uses the wider crop; `ReplaySource`-backed bundles (`build_genuine_bundle`) now correctly
+exercise codec-driven pacing, and a separate `build_live_genuine_bundle` (paced,
+jittered timestamps; palette-tinted frames that actually satisfy B6's illumination
+correlation) is the ACCEPT-path happy-path fixture, since a static pre-recorded clip
+can never react to a fresh per-session nonce by construction — that's B6 working
+correctly, not a fixture bug.
+
+**A2/A3/A4 remain BLOCKED, as anticipated going in:** `pad.py`/`morph.py`/`deepfake.py`
+are still absent (Module D amendment above). Their tests confirm the DoD's actual
+ask — the pipeline reaches a real decision and reports `MISSING_SIGNAL_PAD` /
+`_MORPH` / `_DEEPFAKE`, never silently defaulting to benign — not that the attacks are
+caught. A5(c) (screen-replay recapture) is `pytest.mark.skip`, not faked: it needs a
+real display+webcam capture loop that doesn't exist in this headless environment (§5.2
+amendment above).
+
+**Result:** 18 new tests (`tests/integration/test_server_happy_path.py`,
+`tests/integration/test_server_startup.py`, `tests/security/test_server_adversary_classes.py`),
+204 passed / 1 documented skip project-wide, `ruff`/`black`/`mypy --strict` clean on
+`pqc/`, `binding/`, `server/`. Concurrency and receipt-verification DoD items measured
+directly (see those test files), not asserted from documentation.

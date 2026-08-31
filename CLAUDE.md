@@ -58,11 +58,29 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   not a production claim. Tier 2 (virtual camera) injection is blocked in this
   environment (no OBS, no admin rights) — tier 1 only, reason recorded in every
   manifest.
-- **Placeholder only (docstring naming owner + purpose, no logic):** `pqbio/server/`,
+- **Implemented: Module E — `pqbio/server/`** (app.py, routes.py, pipeline.py,
+  decision.py, store.py). Real enroll → challenge → handshake → verify → signed-decision
+  flow, end-to-end through real crypto, verified by a passing integration test — not
+  just the pieces tested in isolation. All eight pipeline stages (not just §5.5's named
+  3-6) run off the event loop via a `ThreadPoolExecutor`, since this environment's PQC
+  fallback backend makes stages 1 and 8 (ML-DSA verify/sign) genuinely blocking too —
+  see `pipeline.py`'s module docstring. SQLite for keystore/sessions/audit
+  (`store.py`), reusing Module C's `NonceStore`/`PhashIndex` as-is. Server refuses to
+  start if any `models/checksums.txt` entry is missing or mismatched
+  (`app.py:verify_all_model_checksums`). A2/A3/A4 (presentation/morph/deepfake) remain
+  **blocked** — no detector exists to score them, only to confirm the pipeline reaches a
+  real decision reporting `MISSING_SIGNAL_*` rather than silently accepting. See §14's
+  2026-08-31 Module E amendment for two real accept-path gaps found and fixed while
+  building this (phash reuse recording and B4 counter advance were never wired up to
+  the accept path in the first draft), a Windows SQLite connection leak found by the
+  test suite (fixed across `nonce.py`/`phash_index.py`/`store.py`), and why the signed
+  receipt cannot report its own signing latency (the audit log does instead).
+- **Placeholder only (docstring naming owner + purpose, no logic):**
   `pqbio/bench/` (except `overhead.py`'s guard), and all of `scripts/` except
   `bench_pqc.py`, `measure_phash_fpr.py`, `measure_phash_robustness.py`,
-  `fetch_face_models.py`, and `make_injection_corpus.py`.
-- Do not start Module E/F, or `pad.py`/`morph.py`/`deepfake.py`/`replay.py`, without
+  `measure_phash_burst_calibration.py`, `fetch_face_models.py`, and
+  `make_injection_corpus.py`.
+- Do not start Module F, or `pad.py`/`morph.py`/`deepfake.py`/`replay.py`, without
   explicit instruction — see PROJECT_SPEC.md §0 and §10 for the intended build order.
 
 ## PQC backend (read before touching pqbio/pqc/)

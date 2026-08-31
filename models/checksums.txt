@@ -3,10 +3,12 @@
 # Format: <sha256>  <relative-path-under-models/>
 #
 # Populated by scripts/fetch_face_models.py (face models) and
-# scripts/make_injection_corpus.py's training path (injection_gbm.txt, gitignored
-# — the model binary isn't committed, only its provenance would be if it were).
-# Model binaries themselves (models/*.onnx, models/*.pt) are gitignored; this file
-# is tracked so weight provenance survives even though the weights do not.
+# pqbio.detect.injection's train_and_evaluate (injection_gbm.txt, gitignored — the
+# model binary isn't committed, only its provenance is).
+# Model binaries themselves (models/*.onnx, models/*.txt except this file) are
+# gitignored; this file is tracked so weight provenance survives even though the
+# weights do not.
 
+95c99b629e98e1318c643e206ecba929f84d46642acca6b50de53f70e7edeac6  injection_gbm.txt
 5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91  insightface/models/buffalo_l/det_10g.onnx
 4c06341c33c2ca1f86781dab0e829f88ad5b64be9fba56e56bc9ebdefc619e43  insightface/models/buffalo_l/w600k_r50.onnx

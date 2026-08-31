@@ -17,6 +17,8 @@ from __future__ import annotations
 import os
 import sqlite3
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from uuid import UUID
 
@@ -60,13 +62,25 @@ class NonceStore:
                 )
                 """)
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         # isolation_level=None -> autocommit: every statement is its own transaction,
         # which is exactly the "single atomic statement" the consume() contract needs.
+        #
+        # `with conn:` on a raw sqlite3.Connection only commits/rolls back a
+        # transaction on exit -- it does NOT close the connection. Under autocommit
+        # there's no transaction for that to matter, but the connection itself was
+        # never being closed either way, which Windows' exclusive-lock file semantics
+        # (unlike POSIX, which allows unlinking an open file) turns into real
+        # PermissionErrors on any cleanup that tries to delete the db file shortly
+        # after. This wrapper is what actually closes it.
         conn = sqlite3.connect(self._db_path, timeout=5.0, isolation_level=None)
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA busy_timeout=5000;")
-        return conn
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def record_issued(
         self, nonce: bytes, session_id: UUID, issued_at_ns: int, expires_at_ns: int

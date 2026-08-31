@@ -22,6 +22,8 @@ from __future__ import annotations
 import io
 import sqlite3
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import imagehash
@@ -112,11 +114,18 @@ class PhashIndex:
                 """)
         self._tree = self._rebuild_tree_from_sqlite()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        # `with conn:` on a raw sqlite3.Connection commits/rolls back but never
+        # closes it -- see pqbio.binding.nonce.NonceStore._connect for why this
+        # wrapper (not a bare `with sqlite3.connect(...) as conn:`) is required.
         conn = sqlite3.connect(self._db_path, timeout=5.0, isolation_level=None)
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA busy_timeout=5000;")
-        return conn
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def _rebuild_tree_from_sqlite(self) -> BKTree:
         tree = BKTree()

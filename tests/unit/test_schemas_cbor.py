@@ -155,7 +155,6 @@ def test_decision_round_trips_through_json() -> None:
         reason_codes=["BIND_OK", "PAD_OK"],
         detector_scores={"pad": 0.02, "deepfake": 0.11},
         stage_latency_ms={"crypto": 1.2, "binding": 0.9},
-        policy_version="v1.0",
         model_versions={"pad": "sha256:abc"},
     )
     restored = Decision.model_validate_json(decision.model_dump_json())

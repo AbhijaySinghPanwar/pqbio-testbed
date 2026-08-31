@@ -171,8 +171,9 @@ DecisionOutcome = Literal["ACCEPT", "REJECT", "CHALLENGE"]
 
 
 class Decision(BaseModel):
-    """Server-signed decision receipt returned to the client and retrievable via
-    GET /v1/receipt/{id}. `receipt_signature` is empty until the server signs
+    """Server-signed decision receipt returned to the client from POST /v1/verify
+    (§5.5 — matched verbatim, field for field; no `/v1/receipt/{id}` endpoint exists
+    in this spec). `receipt_signature` is empty until the server signs
     `model_signing_payload(decision, exclude={"receipt_signature"})`.
     """
 
@@ -182,6 +183,5 @@ class Decision(BaseModel):
     reason_codes: list[str]
     detector_scores: dict[str, float]
     stage_latency_ms: dict[str, float]
-    policy_version: str
     model_versions: dict[str, str]
     receipt_signature: bytes = b""
