@@ -48,6 +48,20 @@ def run_accuracy_stage() -> dict[str, Any]:
     from pqbio.detect.injection import DEFAULT_MODEL_PATH, train_and_evaluate
 
     def no_detector(name: str, module: str) -> dict[str, Any]:
+        if module == "replay":
+            # More precise than "dataset-blocked": as of 2026-09-01 the hardware blocker
+            # is gone (camera + display verified working, WB/exposure lock demonstrated
+            # -- results/live_challenge_check.json), so what actually blocks the
+            # self-recorded route named in §5.4 D4 is human subjects, not equipment.
+            return blocked(
+                "no replay detector implemented -- pqbio/detect/replay.py is deliberately "
+                "absent, not stubbed. Replay-Attack/MSU-MFSD are unlicensed (§6), and the "
+                "self-recorded alternative is blocked on human subjects rather than "
+                "hardware: §6 requires written consent and supervisor approval to record "
+                "anyone, and a subject-disjoint split needs at least two consenting "
+                "subjects. The capture rig itself is verified working (camera, display, "
+                "WB/exposure lock -- PROJECT_SPEC.md §14, 2026-09-01)"
+            )
         return blocked(
             f"no {name} detector implemented -- pqbio/detect/{module}.py is deliberately "
             "absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / "

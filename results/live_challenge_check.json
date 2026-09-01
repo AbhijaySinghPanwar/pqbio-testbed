@@ -1,0 +1,241 @@
+{
+  "KEM_BACKEND": "kyber-py-fallback",
+  "SIG_BACKEND": "dilithium-py-fallback",
+  "camera_index": 0,
+  "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
+  "correlation_b6_even_split": -0.4667358727091387,
+  "correlation_exact_alignment": -0.4667358727091387,
+  "dataset_versions": {
+    "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
+    "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
+    "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
+    "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
+  },
+  "face_box_source": "centre-crop fallback",
+  "face_box_used": [
+    160,
+    80,
+    320,
+    240
+  ],
+  "face_detected": false,
+  "face_detection_score": 0.0,
+  "fullscreen": true,
+  "generated_at_utc": "2026-09-01T11:51:12.254118+00:00",
+  "git_commit": "bf8bdd79702349fb8938d7762f8cd3ce7e441e27",
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "illumination_corr_min": 0.7,
+  "n_frames": 48,
+  "note": "Live check on a real sensor + display. Records aggregate per-frame colour means only -- no frames retained, no face required or stored. correlation_exact_alignment uses the step actually on screen per frame; correlation_b6_even_split reproduces what pqbio.binding.verify's B6 actually computes, so the difference is the cost of that documented approximation.",
+  "per_step_measured_rgb": {
+    "step0_white": {
+      "mean_B": 0.10302218647875817,
+      "mean_G": 0.11467270901416123,
+      "mean_R": 0.12456001497821349,
+      "n_frames": 12
+    },
+    "step1_blue": {
+      "mean_B": 0.11014013139978214,
+      "mean_G": 0.12044694648692811,
+      "mean_R": 0.12841566244553376,
+      "n_frames": 12
+    },
+    "step2_blue": {
+      "mean_B": 0.1418158786083878,
+      "mean_G": 0.15265234375,
+      "mean_R": 0.15724882131672113,
+      "n_frames": 12
+    },
+    "step3_green": {
+      "mean_B": 0.13745498451116558,
+      "mean_G": 0.14912007676334424,
+      "mean_R": 0.15323285164760347,
+      "n_frames": 12
+    }
+  },
+  "regional_chromatic_response": {
+    "grid": 4,
+    "interpretation": "A region actually lit by the screen shows its B:R ratio rise on blue steps. Spread <0.02 across all regions means no cast reached the sensor at all; a large spread in some region means the cast is physically present and the limitation is where/how B6 measures, not the mechanism.",
+    "max_b_over_r_spread": 0.09881705965180498,
+    "max_spread_cell": "r2c2",
+    "regions": {
+      "r0c0": {
+        "b_over_r_by_step": [
+          0.8606381065174087,
+          0.8606878262747144,
+          0.8617124177112064,
+          0.8605847763419562
+        ],
+        "spread": 0.001127641369250254
+      },
+      "r0c1": {
+        "b_over_r_by_step": [
+          0.759024952785591,
+          0.7681836387344955,
+          0.7797237419716431,
+          0.7769418504344003
+        ],
+        "spread": 0.020698789186052058
+      },
+      "r0c2": {
+        "b_over_r_by_step": [
+          0.6747738966062967,
+          0.6671599827702874,
+          0.664698558631269,
+          0.6631643472514496
+        ],
+        "spread": 0.011609549354847148
+      },
+      "r0c3": {
+        "b_over_r_by_step": [
+          0.003616682054152674,
+          0.0034456087989787206,
+          0.0034836642912101073,
+          0.00301544089347443
+        ],
+        "spread": 0.0006012411606782439
+      },
+      "r1c0": {
+        "b_over_r_by_step": [
+          0.9260583481559391,
+          0.9273514624680534,
+          0.9281652260488188,
+          0.9271344535794465
+        ],
+        "spread": 0.002106877892879666
+      },
+      "r1c1": {
+        "b_over_r_by_step": [
+          0.6825910084182816,
+          0.7218672323227033,
+          0.7388670606187343,
+          0.7406542196128869
+        ],
+        "spread": 0.058063211194605335
+      },
+      "r1c2": {
+        "b_over_r_by_step": [
+          0.8263541362374645,
+          0.8421254622991973,
+          0.8795258206106807,
+          0.8702001441268314
+        ],
+        "spread": 0.05317168437321629
+      },
+      "r1c3": {
+        "b_over_r_by_step": [
+          0.006630322294021571,
+          0.006691019244476123,
+          0.006488927960525044,
+          0.005834362014708695
+        ],
+        "spread": 0.0008566572297674276
+      },
+      "r2c0": {
+        "b_over_r_by_step": [
+          1.0887020569149815,
+          1.0902332264638075,
+          1.0928250424505428,
+          1.0925231981799872
+        ],
+        "spread": 0.004122985535561341
+      },
+      "r2c1": {
+        "b_over_r_by_step": [
+          1.0222212170772211,
+          1.0470759743378835,
+          1.0703856142730435,
+          1.064473898992484
+        ],
+        "spread": 0.04816439719582233
+      },
+      "r2c2": {
+        "b_over_r_by_step": [
+          0.8121006568985932,
+          0.8636113185333562,
+          0.9109177165503982,
+          0.8751078773948873
+        ],
+        "spread": 0.09881705965180498
+      },
+      "r2c3": {
+        "b_over_r_by_step": [
+          0.0009923524381214158,
+          0.0008621640048936238,
+          0.0008450807391012737,
+          0.0007412220969408608
+        ],
+        "spread": 0.00025113034118055507
+      },
+      "r3c0": {
+        "b_over_r_by_step": [
+          0.8971833840759309,
+          0.9013727565765295,
+          0.9070531314260156,
+          0.8993734454892481
+        ],
+        "spread": 0.009869747350084723
+      },
+      "r3c1": {
+        "b_over_r_by_step": [
+          0.0,
+          0.0,
+          0.0,
+          4.7519972248336215e-06
+        ],
+        "spread": 4.7519972248336215e-06
+      },
+      "r3c2": {
+        "b_over_r_by_step": [
+          0.00018932033997947373,
+          6.991267906384924e-06,
+          0.0,
+          0.0
+        ],
+        "spread": 0.00018932033997947373
+      },
+      "r3c3": {
+        "b_over_r_by_step": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "spread": 0.0
+      }
+    },
+    "step_colours": [
+      "white",
+      "blue",
+      "blue",
+      "green"
+    ]
+  },
+  "resolution": [
+    640,
+    480
+  ],
+  "seed": null,
+  "sequence": [
+    "white",
+    "blue",
+    "blue",
+    "green"
+  ],
+  "step_ms": 500,
+  "trace_recovered_b6_rule": false,
+  "white_balance_exposure_lock": {
+    "auto_brightness_before_lock": 38.399662868923606,
+    "auto_wb_readback": 0.0,
+    "brightness_after_lock_mean": 35.3439677734375,
+    "brightness_after_lock_std": 0.277164349490636,
+    "chosen_exposure": -3,
+    "exposure_forced": true,
+    "wb_temperature_readback": 4600.0
+  }
+}

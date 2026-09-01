@@ -2,7 +2,7 @@
 
 Every metric this evaluation could not produce, where it would have appeared, and what would need to change to unblock it. Generated from the `blocked` markers in `results/*.json` -- not maintained by hand.
 
-_Generated 2026-08-31T19:23:23.038268+00:00_
+_Generated 2026-09-01T11:53:50.773964+00:00_
 
 
 ---
@@ -22,7 +22,7 @@ _Generated 2026-08-31T19:23:23.038268+00:00_
   no pad detector implemented -- pqbio/detect/pad.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
 
 - **`accuracy.json` → `T1_per_detector_accuracy_intra_dataset.replay`**
-  no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
+  no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed. Replay-Attack/MSU-MFSD are unlicensed (§6), and the self-recorded alternative is blocked on human subjects rather than hardware: §6 requires written consent and supervisor approval to record anyone, and a subject-disjoint split needs at least two consenting subjects. The capture rig itself is verified working (camera, display, WB/exposure lock -- PROJECT_SPEC.md §14, 2026-09-01)
 
 - **`accuracy.json` → `T2_per_detector_accuracy_cross_dataset.deepfake`**
   only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6)
@@ -52,7 +52,7 @@ _Generated 2026-08-31T19:23:23.038268+00:00_
   no presentation detector implemented -- pqbio/detect/pad.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
 
 - **`accuracy.json` → `T4_per_attack_detection_rate.replay`**
-  no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
+  no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed. Replay-Attack/MSU-MFSD are unlicensed (§6), and the self-recorded alternative is blocked on human subjects rather than hardware: §6 requires written consent and supervisor approval to record anyone, and a subject-disjoint split needs at least two consenting subjects. The capture rig itself is verified working (camera, display, WB/exposure lock -- PROJECT_SPEC.md §14, 2026-09-01)
 
 - **`accuracy.json` → `mmpmr`**
   MMPMR is morph-only (§8.1); no morph detector and no morph dataset exist (§6/§14)
@@ -69,10 +69,11 @@ Crypto figures produced on the `kyber-py`/`dilithium-py` fallback are **supersed
 
 | Result file | KEM backend | SIG backend | Generated |
 |---|---|---|---|
-| `accuracy.json` | liboqs | liboqs | 2026-08-31T18:52:17 |
+| `accuracy.json` | liboqs | liboqs | 2026-09-01T11:53:48 |
 | `backend_cross_check.json` | liboqs | liboqs | 2026-08-31T18:48:56 |
 | `binding_fpr.json` | — | — | 2026-08-30T17:04:48 |
 | `latency.json` | liboqs | liboqs | 2026-08-31T18:53:44 |
+| `live_challenge_check.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T11:51:12 |
 | `loadgen.json` | liboqs | liboqs | 2026-08-31T19:19:04 |
 | `loadgen_fallback_controlled.json` | kyber-py-fallback | dilithium-py-fallback | 2026-08-31T19:21:14 |
 | `overhead_ablation.json` | liboqs | liboqs | 2026-08-31T18:59:03 |

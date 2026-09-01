@@ -21,14 +21,23 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   implemented (`guard_against_fallback_backend()`); the C0-C3 ablation itself isn't
   built.
 - **Implemented: Module B — `pqbio/capture/`** (camera.py, replay_source.py,
-  challenge.py, bundler.py, `__main__.py` for the CLI). `CameraSource` is untested
-  against a real webcam (none attached in this environment) — everything else
-  (`ReplaySource`, the chromaticity-measurement half of the illumination challenge,
-  bundling/signing/tamper-detection, the CLI) is tested, including one true
-  subprocess end-to-end run. `render_challenge_fullscreen` needs a display and has
-  never been run. `challenge.py`'s `estimate_face_box` now calls Module D's real SCRFD
-  detector (the old fixed-centre-crop placeholder is deleted), falling back to a
-  geometric centre crop only when detection finds nothing.
+  challenge.py, bundler.py, `__main__.py` for the CLI). `ReplaySource`, the
+  chromaticity-measurement half of the illumination challenge,
+  bundling/signing/tamper-detection and the CLI are tested, including one true
+  subprocess end-to-end run. `challenge.py`'s `estimate_face_box` now calls Module D's
+  real SCRFD detector (the old fixed-centre-crop placeholder is deleted), falling back
+  to a geometric centre crop only when detection finds nothing.
+  **A camera and display are now attached, and the live check has been run once**
+  (`scripts/live_challenge_check.py` → `results/live_challenge_check.json`): the
+  challenge renders full-screen, and WB/exposure locking is verified to work and to be
+  necessary (auto drifts 79→88 while correcting the cast; locked holds to σ=0.06).
+  **It does not pass** — B6 correlation came out −0.47 against a 0.70 threshold. The
+  colour cast *is* reaching the sensor (per-region B:R ratio moves 0.81→0.91 on blue
+  steps in the central cells) but B6 cannot see it, because
+  `measure_chromaticity_trace` returns absolute per-channel brightness rather than
+  normalised chromaticity, so luminance drift swamps hue. Read §14's 2026-09-01 Module B
+  amendment before touching B6 or `measure_chromaticity_trace` — the fix is known but
+  changes a binding check's semantics and needs `illumination_corr_min` recalibrated.
 - **Implemented: Module C — `pqbio/binding/`** (nonce.py, phash_index.py, verify.py).
   All six B1-B6 checks plus the separate pHash reuse check, each with positive and
   negative tests; nonce single-use consumption verified atomic under a real 100-thread

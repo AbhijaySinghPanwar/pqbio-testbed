@@ -33,7 +33,7 @@
     },
     "replay": {
       "blocked": true,
-      "blocker": "no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md \u00a714)"
+      "blocker": "no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed. Replay-Attack/MSU-MFSD are unlicensed (\u00a76), and the self-recorded alternative is blocked on human subjects rather than hardware: \u00a76 requires written consent and supervisor approval to record anyone, and a subject-disjoint split needs at least two consenting subjects. The capture rig itself is verified working (camera, display, WB/exposure lock -- PROJECT_SPEC.md \u00a714, 2026-09-01)"
     }
   },
   "T2_per_detector_accuracy_cross_dataset": {
@@ -84,7 +84,7 @@
     },
     "replay": {
       "blocked": true,
-      "blocker": "no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md \u00a714)"
+      "blocker": "no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed. Replay-Attack/MSU-MFSD are unlicensed (\u00a76), and the self-recorded alternative is blocked on human subjects rather than hardware: \u00a76 requires written consent and supervisor approval to record anyone, and a subject-disjoint split needs at least two consenting subjects. The capture rig itself is verified working (camera, display, WB/exposure lock -- PROJECT_SPEC.md \u00a714, 2026-09-01)"
     }
   },
   "caveat": "Every non-BLOCKED number here is measured on the self-generated synthetic injection corpus (scripts/make_injection_corpus.py) -- it describes how well the six D5 signals separate that synthetic construction from its genuine counterpart, not real-world detection rates against a real attacker (\u00a714).",
@@ -178,8 +178,8 @@
       ]
     }
   },
-  "generated_at_utc": "2026-08-31T18:52:17.362925+00:00",
-  "git_commit": "95e4e6a2a6682a03a1548ecf7db71d90585c6ce0",
+  "generated_at_utc": "2026-09-01T11:53:48.843453+00:00",
+  "git_commit": "bf8bdd79702349fb8938d7762f8cd3ce7e441e27",
   "hardware": {
     "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
     "processor": "x86_64",

@@ -1285,3 +1285,168 @@ the host on the fallback; `ruff`/`black` clean, `mypy --strict` clean on
 `docker-bench`, `docker-cross-check`. Because the image has no `.git`, provenance is
 passed in via `PQBIO_GIT_COMMIT` rather than silently degrading to "unknown" — every
 containerised result file carries the real commit.
+
+### 2026-09-01 — two corrections: the assembled system behaved unlike its tested parts
+
+Both of the following were wrong in this document, and both are the same *class* of
+error, which is worth naming rather than filing as two unrelated bugs. In each case
+every component was individually correct and individually tested, the integration was
+also tested, and the assembled system still behaved differently from what the parts
+implied — because the property that mattered lived in the *composition*, where nothing
+was looking. Component tests cannot see these. Only a differential (A/B) or
+cross-implementation check can.
+
+**Correction 1 — the concurrency-64 ceiling was not crypto TTL exhaustion.**
+
+The Module F amendment attributed the concurrency=64 collapse to three ~52 ms ML-DSA
+signs per transaction exhausting the 30 s challenge TTL, and predicted liboqs would
+clear it. Both halves were wrong.
+
+The A/B: one container, one host, one sweep, `import oqs` blocked for the second arm so
+that *only* the backend differed. Both arms still completed **zero** requests at
+concurrency=64 — liboqs, whose crypto is ~600x faster, moved the ceiling not at all.
+
+The real cause was in the benchmark harness, not the server and not the crypto:
+`pqbio/bench/_common.py::build_signed_bundle` ran a full SCRFD face-detection inference
+*per device*, synchronously, inside an `async` setup path. Preparing N sessions
+concurrently therefore serialised N inferences on the event loop **while each session's
+30 s challenge TTL was already running**. The sessions timed out waiting for the
+harness, never for the server. That inference is identical for every device (all bundles
+are built from the same base crop), so hoisting it out of the per-device path removed it
+entirely: concurrency=64 now completes 64/64 with zero expiries on *both* backends.
+
+With the ceiling gone, the corrected sweep gives the real shape: throughput peaks at
+~3.6 verifications/sec around concurrency 8–16 and is flat or slightly declining beyond,
+on both backends. **The knee is set by `server.workers` (4) against ~700 ms of ONNX
+inference per request. Crypto is ~1.6% of a request under liboqs** (C2−C0 ≈ 10 ms of a
+715 ms C3), which is why replacing it changed nothing about where the system saturates.
+liboqs is still clearly faster per request at low concurrency (p50 479 ms vs 775 ms at
+concurrency=1) — it just was never the constraint.
+
+The secondary lesson: the metric itself was miscalibrated. `_degradation_finding` read
+proportional p99 growth *past saturation* as evidence of a blocked event loop, when past
+saturation that is Little's law. It now judges the unsaturated region only, and states
+outright that a latency curve cannot separate a blocked event loop from ordinary
+worker/CPU saturation on a CPU-bound workload — naming
+`test_event_loop_stays_responsive_while_verify_is_in_flight` (which polls `/v1/health`
+under load) as the test that actually discriminates.
+
+**Correction 2 — `MLKEM768`'s "fail closed" was inherited, never implemented.**
+
+`tests/unit/test_pqc_negative.py` asserted that malformed-length input is rejected, and
+it passed for weeks. It was passing on a property this project never wrote:
+`kyber-py` happens to raise on wrong-length input as a side effect of its own array
+slicing. `MLKEM768` and `MLDSA65` simply forwarded the bytes and inherited that
+behaviour. CLAUDE.md §11 says "fail closed" is a project-wide invariant; in fact it was a
+property of one backend, and the test could not tell the difference.
+
+liboqs does not raise. liboqs-python builds its C buffers with
+`ctypes.create_string_buffer(data, expected_length)`, which **silently zero-pads or
+truncates** to the expected size. Measured, not inferred: a 10-byte garbage "public key"
+encapsulates without error, and **a 10-byte "secret key" produces a well-formed
+3309-byte ML-DSA-65 signature**. Under liboqs the negative tests failed — correctly.
+The tests were right; the production code had never had the property.
+
+`MLKEM768.encapsulate`, `MLKEM768.decapsulate` and `MLDSA65.sign` now validate input
+lengths against the FIPS 203/204 sizes explicitly, before either backend sees a byte, so
+the guarantee is ours rather than borrowed. (`MLDSA65.verify` needs no guard: a
+wrong-length signature must return `False`, not raise, and both backends already agree.)
+
+**Only the cross-backend check surfaced this.** Not the unit tests (green on the
+fallback for weeks), not the ACVP KATs (each backend agrees with NIST independently on
+*well-formed* input — malformed input is outside their scope), not code review across
+several sessions. Swapping one dependency for another and demanding identical behaviour
+is what exposed it. That is a general argument for keeping both backends alive and for
+`make docker-cross-check` staying in the loop: the fallback's value is no longer
+performance or availability, it is being a second implementation to disagree with.
+
+### 2026-09-01 — Module B live sensor check: run, and it did not pass
+
+§5.2's DoD item "verified against a real webcam" has been outstanding since Module B was
+built, because no camera was attached. One now is (HP Wide Vision HD, 640x480), and there
+is a display, so the check was run for the first time:
+`scripts/live_challenge_check.py` → `results/live_challenge_check.json`. It renders the
+nonce-derived colour sequence full-screen while capturing from the sensor, tagging every
+frame with the step that was actually on screen — the render/capture interleaving Module
+B's CLI never did.
+
+**What passed.**
+
+- The challenge renders full-screen on a real display.
+- **White balance and exposure locking works, and it matters.** Left on auto, the sensor
+  drifted 79 → 88 mean brightness while settling — auto-exposure actively correcting the
+  very cast the challenge induces. Locked (`CAP_PROP_AUTO_WB` 1.0 → 0.0, manual exposure
+  pinned at the value auto had converged to), frame-to-frame brightness holds to a
+  standard deviation of 0.06 on a mean of 38.4. A no-render control confirms the lock is
+  what is doing it: locks on, nothing displayed, brightness drifts −0.14 over two seconds.
+  So `CameraSource` must lock both at capture start, and this is now demonstrated rather
+  than argued.
+- The even-split timing approximation cost nothing measurable here: correlation under
+  B6's `_expand_expected_trace` and under exact per-frame step alignment agreed to four
+  decimal places (−0.4667 both), because frames arrived uniformly across steps. That is
+  one favourable case, not a general result, but it is the first evidence either way.
+
+**What did not pass: B6 would reject this capture.** Pearson r came out **−0.47**
+(threshold 0.70). The check does **not** close the DoD item.
+
+**Why it failed is the useful part, and it is not "the mechanism doesn't work".** A
+per-region diagnostic (B:R ratio per challenge step, 4x4 grid — a ratio isolates hue from
+brightness in a way B6's absolute per-channel means do not) shows the colour cast is
+physically present and reaching the sensor. In the four central cells the B:R ratio rises
+on blue steps exactly as it should — cell r2c2 goes 0.812 (white) → 0.911 (blue), spread
+0.099 — while peripheral cells sit flat at 0.001–0.005 spread. Reproduced across two
+independent runs. The screen is casting colour on the scene; B6 is not seeing it.
+
+Three contributing causes, in order of how actionable they are:
+
+1. **`measure_chromaticity_trace` measures brightness-per-channel, not chromaticity.**
+   It returns each channel's absolute mean normalised to [0,1], so any change in total
+   illumination moves all three channels together and swamps the hue signal B6 is
+   trying to correlate. That is exactly what the data shows: the per-step means rose
+   monotonically (0.380 → 0.403 → 0.444 → 0.452) with the channel *ratios* essentially
+   fixed. A normalised formulation (r = R/(R+G+B), etc.) would isolate the signal the
+   challenge actually induces. **This is a real design finding about a security check,
+   surfaced only by running on a sensor — but changing B6's formulation changes a
+   binding check's semantics and would need `illumination_corr_min` recalibrated and
+   Module C's suite re-run, so it is recorded here rather than changed in passing.**
+2. **No subject at capture distance.** The challenge assumes a face at roughly selfie
+   distance reflecting the screen. With nobody present, the only surfaces in frame are
+   background, metres away, and the reflected signal is correspondingly weak. The
+   regions that did respond are exactly the central ones nearest the screen.
+3. **Probable panel auto-brightness.** Total scene illumination rose steadily *across*
+   the sequence rather than tracking the displayed colour's luminance (white, the
+   brightest panel, produced the *dimmest* scene). Consistent with the display's own
+   automatic brightness limiting reacting to a full-screen white field. Worth
+   controlling for in any real capture protocol.
+
+**Status:** §5.2's live-webcam DoD item stays open, now with a measured reason and a
+reproducible script rather than "never run". Closing it needs a subject (or a diffuse
+surface) at capture distance, and probably the chromaticity fix in (1).
+
+### 2026-09-01 — replay corpus (§5.4 D4): blocked on subjects, not hardware
+
+Recorded because the blocker changed shape and `results/BLOCKERS.md` said something now
+misleading. Replay was filed as "dataset-blocked" alongside pad/morph/deepfake. For the
+licensed corpora (Replay-Attack, MSU-MFSD) that is still true. But §5.4 D4 also names a
+self-recorded route, and that route is **not** blocked by equipment: the camera, the
+display, and WB/exposure locking are all verified working (previous amendment).
+
+It is blocked by people:
+
+- §6 requires **written consent and supervisor approval** to record any human subject.
+  A replay corpus is, definitionally, recordings of someone's face.
+- A **subject-disjoint split needs at least two consenting subjects** — with one person
+  the split the DoD asks for cannot exist at all.
+- The protocol needs someone to physically run it: capture genuine clips, replay them on
+  a phone and on a laptop screen, at two distances each, re-capturing throughout.
+
+So `pqbio/detect/replay.py` remains deliberately absent rather than stubbed, consistent
+with how pad/morph/deepfake are handled — and consistent with the standing rule that a
+software-simulated screen replay is not a screen replay and must not be substituted for
+one. The blocker text in `BLOCKERS.md` now states the subject/consent requirement
+explicitly, because "dataset-blocked" would send someone looking for a licence when what
+is actually needed is two consenting people and an afternoon.
+
+Consequence for §8.3: C3 still runs **one of six detectors** (injection), so the AI
+overhead term and the 798x AI:PQ ratio remain the provisional lower bound described in
+the liboqs amendment above. Nothing about this session changed them.
