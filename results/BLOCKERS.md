@@ -2,7 +2,7 @@
 
 Every metric this evaluation could not produce, where it would have appeared, and what would need to change to unblock it. Generated from the `blocked` markers in `results/*.json` -- not maintained by hand.
 
-_Generated 2026-09-01T12:31:53.381408+00:00_
+_Generated 2026-09-01T12:49:26.670198+00:00_
 
 
 ---
@@ -69,7 +69,7 @@ Crypto figures produced on the `kyber-py`/`dilithium-py` fallback are **supersed
 
 | Result file | KEM backend | SIG backend | Generated |
 |---|---|---|---|
-| `accuracy.json` | liboqs | liboqs | 2026-09-01T12:31:49 |
+| `accuracy.json` | liboqs | liboqs | 2026-09-01T12:49:24 |
 | `backend_cross_check.json` | liboqs | liboqs | 2026-08-31T18:48:56 |
 | `binding_fpr.json` | — | — | 2026-08-30T17:04:48 |
 | `illumination_corr_calibration.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T12:21:30 |

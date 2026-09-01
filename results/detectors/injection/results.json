@@ -1,7 +1,7 @@
 {
   "git_commit": "unknown (not a git repository at run time)",
   "config_hash_sha256": "65021a84ad899b7630815bf8590bdf30a5e3fc055a02681bf2e3aed55694f532",
-  "generated_at_utc": "2026-09-01T12:31:44.309145+00:00",
+  "generated_at_utc": "2026-09-01T12:49:23.430374+00:00",
   "method": "synthetic corpus (scripts/make_injection_corpus.py)",
   "caveat": "Trained and evaluated on the self-generated synthetic injection corpus (no licensed dataset exists for injection attacks \u2014 \u00a76). Numbers here describe how well the six D5 signals separate this synthetic tier-1 construction from its genuine counterpart, not real-world detection rates.",
   "feature_names": [
