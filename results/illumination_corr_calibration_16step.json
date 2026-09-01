@@ -1,0 +1,231 @@
+{
+  "KEM_BACKEND": "kyber-py-fallback",
+  "SIG_BACKEND": "dilithium-py-fallback",
+  "by_weighting": {
+    "centre": {
+      "negatives": {
+        "real_no_render_control": {
+          "max": 0.18848440980655504,
+          "mean": -0.06339783577376977,
+          "n": 5
+        },
+        "synthetic_no_cast": {
+          "max": 0.16487557650847617,
+          "mean": -0.002352625887052075,
+          "n": 200,
+          "p95": 0.10058514794500684,
+          "synthetic": true
+        },
+        "wrong_nonce_on_real_traces": {
+          "max": 0.45908952894244226,
+          "mean": 0.019144371915406425,
+          "n": 160,
+          "p95": 0.22627300909258974
+        }
+      },
+      "positives_by_condition": {
+        "locked_render": {
+          "mean": 0.570399226782603,
+          "n": 5,
+          "std": 0.09548827413203041
+        },
+        "unlocked_render": {
+          "mean": 0.5678194938000498,
+          "n": 5,
+          "std": 0.45468038055314114
+        },
+        "wb_locked_ae_auto_render": {
+          "mean": 0.6929111695650523,
+          "n": 5,
+          "std": 0.2749747918910975
+        }
+      },
+      "separation_all_negatives": {
+        "auc": 0.9315068493150684,
+        "best_youden": {
+          "fpr": 0.038356164383561646,
+          "threshold": 0.2109901389750365,
+          "tpr": 0.9333333333333333,
+          "youden_j": 0.8949771689497718
+        },
+        "cohens_d": 2.7181853848207433,
+        "lowest_zero_fpr_threshold": 0.46010062424542497,
+        "n_negative": 365,
+        "n_positive": 15,
+        "negative_max": 0.45908952894244226,
+        "negative_mean": 0.006234479863522641,
+        "negative_std": 0.10896212667484595,
+        "positive_mean": 0.610376630049235,
+        "positive_min": -0.2405755172657991,
+        "positive_std": 0.29483165228926766,
+        "separable": false
+      },
+      "separation_best_condition": {
+        "auc": 0.8021917808219178,
+        "best_youden": {
+          "fpr": 0.0,
+          "threshold": 0.7039930677127155,
+          "tpr": 0.8,
+          "youden_j": 0.8
+        },
+        "cohens_d": 1.6986287956691002,
+        "lowest_zero_fpr_threshold": 0.7039930677127155,
+        "n_negative": 365,
+        "n_positive": 5,
+        "negative_max": 0.45908952894244226,
+        "negative_mean": 0.006234479863522641,
+        "negative_std": 0.10896212667484595,
+        "positive_mean": 0.5678194938000498,
+        "positive_min": -0.2405755172657991,
+        "positive_std": 0.45468038055314114,
+        "separable": false
+      },
+      "separation_vs_wrong_nonce_only": {
+        "auc": 0.9291666666666667,
+        "best_youden": {
+          "fpr": 0.0,
+          "threshold": 0.46010062424542497,
+          "tpr": 0.8666666666666667,
+          "youden_j": 0.8666666666666667
+        },
+        "cohens_d": 2.546116246621948,
+        "lowest_zero_fpr_threshold": 0.46010062424542497,
+        "n_negative": 160,
+        "n_positive": 15,
+        "negative_max": 0.45908952894244226,
+        "negative_mean": 0.019144371915406425,
+        "negative_std": 0.14462626291055583,
+        "positive_mean": 0.610376630049235,
+        "positive_min": -0.2405755172657991,
+        "positive_std": 0.29483165228926766,
+        "separable": false
+      }
+    },
+    "uniform": {
+      "negatives": {
+        "real_no_render_control": {
+          "max": 0.289128681989711,
+          "mean": 0.044498284050609516,
+          "n": 5
+        },
+        "synthetic_no_cast": {
+          "max": 0.16487557650847617,
+          "mean": -0.002352625887052075,
+          "n": 200,
+          "p95": 0.10058514794500684,
+          "synthetic": true
+        },
+        "wrong_nonce_on_real_traces": {
+          "max": 0.3604790818170065,
+          "mean": 0.014650871904351612,
+          "n": 160,
+          "p95": 0.21286259788160591
+        }
+      },
+      "positives_by_condition": {
+        "locked_render": {
+          "mean": 0.5168932194539146,
+          "n": 5,
+          "std": 0.22262150511360615
+        },
+        "unlocked_render": {
+          "mean": 0.5494843338952815,
+          "n": 5,
+          "std": 0.4549073595789369
+        },
+        "wb_locked_ae_auto_render": {
+          "mean": 0.6425587942654718,
+          "n": 5,
+          "std": 0.36937244953847015
+        }
+      },
+      "separation_all_negatives": {
+        "auc": 0.8935159817351598,
+        "best_youden": {
+          "fpr": 0.03561643835616438,
+          "threshold": 0.1804603340059762,
+          "tpr": 0.8666666666666667,
+          "youden_j": 0.8310502283105023
+        },
+        "cohens_d": 2.2427484939852302,
+        "lowest_zero_fpr_threshold": 0.39972662348681454,
+        "n_negative": 365,
+        "n_positive": 15,
+        "negative_max": 0.3604790818170065,
+        "negative_mean": 0.005742755472709289,
+        "negative_std": 0.10551030259178606,
+        "positive_mean": 0.5696454492048894,
+        "positive_min": -0.25498724616092094,
+        "positive_std": 0.3395665628284157,
+        "separable": false
+      },
+      "separation_best_condition": {
+        "auc": 0.8021917808219178,
+        "best_youden": {
+          "fpr": 0.0,
+          "threshold": 0.6502138145371109,
+          "tpr": 0.8,
+          "youden_j": 0.8
+        },
+        "cohens_d": 1.646669582133028,
+        "lowest_zero_fpr_threshold": 0.6502138145371109,
+        "n_negative": 365,
+        "n_positive": 5,
+        "negative_max": 0.3604790818170065,
+        "negative_mean": 0.005742755472709289,
+        "negative_std": 0.10551030259178606,
+        "positive_mean": 0.5494843338952815,
+        "positive_min": -0.25498724616092094,
+        "positive_std": 0.4549073595789369,
+        "separable": false
+      },
+      "separation_vs_wrong_nonce_only": {
+        "auc": 0.8908333333333334,
+        "best_youden": {
+          "fpr": 0.0,
+          "threshold": 0.39972662348681454,
+          "tpr": 0.8,
+          "youden_j": 0.8
+        },
+        "cohens_d": 2.1414809222811098,
+        "lowest_zero_fpr_threshold": 0.39972662348681454,
+        "n_negative": 160,
+        "n_positive": 15,
+        "negative_max": 0.3604790818170065,
+        "negative_mean": 0.014650871904351612,
+        "negative_std": 0.1379362820862441,
+        "positive_mean": 0.5696454492048894,
+        "positive_min": -0.25498724616092094,
+        "positive_std": 0.3395665628284157,
+        "separable": false
+      }
+    }
+  },
+  "config_hash_sha256": "a4542d57d7d27a682684147c85af1f54e76ec3c1701bab7a534c988178d222c6",
+  "dataset_versions": {
+    "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
+    "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
+    "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
+    "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
+  },
+  "generated_at_utc": "2026-09-01T12:20:27.526527+00:00",
+  "git_commit": "16a3f4dc139f93108e6e6a554a0f17ad40b76829",
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "illumination_steps": 16,
+  "previous_threshold": 0.7,
+  "previous_threshold_note": "set against the pre-2026-09-02 formulation (absolute per-channel brightness vs raw palette RGB); carries no information about the current one",
+  "seed": 2026,
+  "source_live_check": "results/live_challenge_check_16step.json",
+  "source_live_check_generated_at": "2026-09-01T12:19:58.230217+00:00",
+  "weighting_choice": {
+    "basis": "Cohen's d of rendered captures against all negatives, measured on 5 repeats per condition. Chosen on this number, not on preference: the 4x4 regional diagnostic that motivated the centre-weighted variant showed a much larger per-cell swing, but a larger swing in the signal is not the same as better separation once the periphery's noise is dropped along with its signal.",
+    "centre_cohens_d": 2.7181853848207433,
+    "chosen": "centre",
+    "uniform_cohens_d": 2.2427484939852302
+  }
+}

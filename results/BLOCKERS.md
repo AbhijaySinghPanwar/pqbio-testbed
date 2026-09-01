@@ -2,7 +2,7 @@
 
 Every metric this evaluation could not produce, where it would have appeared, and what would need to change to unblock it. Generated from the `blocked` markers in `results/*.json` -- not maintained by hand.
 
-_Generated 2026-09-01T11:53:50.773964+00:00_
+_Generated 2026-09-01T12:31:53.381408+00:00_
 
 
 ---
@@ -69,11 +69,14 @@ Crypto figures produced on the `kyber-py`/`dilithium-py` fallback are **supersed
 
 | Result file | KEM backend | SIG backend | Generated |
 |---|---|---|---|
-| `accuracy.json` | liboqs | liboqs | 2026-09-01T11:53:48 |
+| `accuracy.json` | liboqs | liboqs | 2026-09-01T12:31:49 |
 | `backend_cross_check.json` | liboqs | liboqs | 2026-08-31T18:48:56 |
 | `binding_fpr.json` | — | — | 2026-08-30T17:04:48 |
+| `illumination_corr_calibration.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T12:21:30 |
+| `illumination_corr_calibration_16step.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T12:20:27 |
 | `latency.json` | liboqs | liboqs | 2026-08-31T18:53:44 |
-| `live_challenge_check.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T11:51:12 |
+| `live_challenge_check.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T12:14:30 |
+| `live_challenge_check_16step.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T12:19:58 |
 | `loadgen.json` | liboqs | liboqs | 2026-08-31T19:19:04 |
 | `loadgen_fallback_controlled.json` | kyber-py-fallback | dilithium-py-fallback | 2026-08-31T19:21:14 |
 | `overhead_ablation.json` | liboqs | liboqs | 2026-08-31T18:59:03 |

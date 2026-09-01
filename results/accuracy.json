@@ -88,7 +88,7 @@
     }
   },
   "caveat": "Every non-BLOCKED number here is measured on the self-generated synthetic injection corpus (scripts/make_injection_corpus.py) -- it describes how well the six D5 signals separate that synthetic construction from its genuine counterpart, not real-world detection rates against a real attacker (\u00a714).",
-  "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
+  "config_hash_sha256": "65021a84ad899b7630815bf8590bdf30a5e3fc055a02681bf2e3aed55694f532",
   "confusion_matrix_6class": {
     "caveat": "Only bona_fide and injection have real labelled samples in this environment; presentation/morph/deepfake/replay rows and columns are structurally zero, not measured-and-found-zero (\u00a714).",
     "labels": [
@@ -178,8 +178,8 @@
       ]
     }
   },
-  "generated_at_utc": "2026-09-01T11:53:48.843453+00:00",
-  "git_commit": "bf8bdd79702349fb8938d7762f8cd3ce7e441e27",
+  "generated_at_utc": "2026-09-01T12:31:49.416537+00:00",
+  "git_commit": "unknown (not a git repository at run time)",
   "hardware": {
     "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
     "processor": "x86_64",

@@ -148,18 +148,34 @@ def check_b5_capture_binding(bundle: EvidenceBundle) -> CheckResult:
     return CheckResult("B5", passed, "B5_OK" if passed else "BIND_DIGEST_MISMATCH")
 
 
+def palette_chromaticity(palette_index: int) -> tuple[float, float, float]:
+    """The expected *normalised chromaticity* of palette colour `palette_index`, in the
+    same space `pqbio.capture.challenge.measure_chromaticity_trace` reports.
+
+    This is not cosmetic. Under the pre-2026-09-02 formulation the expectation was the
+    raw palette RGB, so white was (1, 1, 1) — a maximum in all three channels. In
+    chromaticity space white is (1/3, 1/3, 1/3), the *neutral* point, because white
+    induces no hue shift at all. Correlating a normalised measurement against a
+    non-normalised expectation is exactly the mismatch §14's 2026-09-01 entry recorded;
+    both sides move together or neither does.
+    """
+    b, g, r = PALETTE_BGR[palette_index]
+    total = float(r + g + b)
+    return (r / total, g / total, b / total)
+
+
 def _expand_expected_trace(expected_indices: list[int], n_frames: int) -> list[float]:
     """Map the `illumination_steps` colour indices evenly across `n_frames` captured
-    frames, in the same flat [R,G,B, R,G,B, ...] convention as
+    frames, in the same flat [r,g,b, r,g,b, ...] normalised-chromaticity convention as
     pqbio.capture.challenge.measure_chromaticity_trace.
 
     This even split is a documented approximation: precise per-frame/step timing
     alignment would need the client to report exactly when each challenge step was
     displayed relative to each frame's capture_ts_ns, and Module B's live render+capture
-    interleaving isn't wired up yet (see PROJECT_SPEC.md §14's Module B webcam
-    amendment) — there is nothing more precise to align against yet. Good enough to
-    validate that the correlation signal itself works; revisit once render+capture are
-    interleaved for real.
+    interleaving isn't wired up in the CLI yet (`scripts/live_challenge_check.py` does
+    interleave, and measured the two as agreeing to four decimal places on one run —
+    PROJECT_SPEC.md §14, 2026-09-01 — which is one favourable case, not a general
+    result).
     """
     steps = len(expected_indices)
     if steps == 0 or n_frames == 0:
@@ -167,8 +183,7 @@ def _expand_expected_trace(expected_indices: list[int], n_frames: int) -> list[f
     trace: list[float] = []
     for frame_idx in range(n_frames):
         step_idx = min(frame_idx * steps // n_frames, steps - 1)
-        b, g, r = PALETTE_BGR[expected_indices[step_idx]]
-        trace.extend((r / 255.0, g / 255.0, b / 255.0))
+        trace.extend(palette_chromaticity(expected_indices[step_idx]))
     return trace
 
 
@@ -181,18 +196,56 @@ def _pearson_r(a: list[float], b: list[float]) -> float:
     return float(np.corrcoef(arr_a, arr_b)[0, 1])
 
 
+def _channel_centred_pearson(measured: list[float], expected: list[float]) -> float:
+    """Pearson r between measured and expected traces, after removing each of the three
+    chromaticity channels' own mean across frames.
+
+    **Why the centring is not optional.** Both traces are [r,g,b, r,g,b, ...]. A real
+    scene has its own static chromaticity — skin, walls and furniture under room light
+    gave r=0.42, g=0.39, b=0.19 on every single frame of the 2026-09-02 live check. Plain
+    Pearson over the flattened vector sees that constant offset as most of the variance
+    and correlates *it* against the expected sequence, which asks for b=1 on blue steps.
+    The result is dominated by what colour the room happens to be, and it comes out
+    strongly negative on a capture where the challenge worked perfectly: measured
+    b climbed 0.150 -> 0.213 -> 0.241 across the blue steps and g spiked to 0.457 on the
+    green step, and flattened Pearson still read -0.17.
+
+    Centring each channel on its own mean deletes the room and leaves the modulation,
+    which is the only thing §5.2's challenge actually claims to induce. The same capture
+    then reads +0.79. This is a correction to the statistic, discovered by the same live
+    run that caught the chromaticity defect — see PROJECT_SPEC.md §14, 2026-09-02.
+
+    It also strictly tightens the check rather than loosening it: a bundle can no longer
+    score on the static colour of its scene, only on whether its trace moves the way this
+    nonce's sequence demands.
+    """
+    if len(measured) != len(expected) or len(measured) < 6 or len(measured) % 3 != 0:
+        return 0.0
+    m = np.asarray(measured, dtype=float).reshape(-1, 3)
+    e = np.asarray(expected, dtype=float).reshape(-1, 3)
+    if not np.isfinite(m).all() or not np.isfinite(e).all():
+        return 0.0
+    m = m - m.mean(axis=0)
+    e = e - e.mean(axis=0)
+    return _pearson_r(m.ravel().tolist(), e.ravel().tolist())
+
+
 def compute_challenge_correlation(bundle: EvidenceBundle) -> float:
-    """The raw Pearson r between the bundle's measured challenge signal and the
-    expectation derived from its nonce — the number `check_b6_challenge_correlation`
-    thresholds, and also D5's "challenge-illumination correlation" injection feature
+    """The Pearson r between the bundle's measured challenge signal and the expectation
+    derived from its nonce — the number `check_b6_challenge_correlation` thresholds, and
+    also D5's "challenge-illumination correlation" injection feature
     (pqbio/detect/injection.py): a pre-recorded/injected stream cannot satisfy a fresh
-    challenge either, so this one computation feeds both. Returns 0.0 (never raises) if
-    the trace lengths mismatch or either sequence is constant — see `_pearson_r`.
+    challenge either, so this one computation feeds both.
+
+    Both sides live in normalised chromaticity space and both are channel-centred before
+    correlating — see `palette_chromaticity` and `_channel_centred_pearson` for why each
+    of those is load-bearing. Returns 0.0 (never raises) if the trace lengths mismatch or
+    either sequence is constant, which fails B6 closed.
     """
     expected_indices = expected_illumination_sequence(bundle.challenge_echo.nonce)
     expected_trace = _expand_expected_trace(expected_indices, len(bundle.frame_meta))
     measured_trace = bundle.challenge_signal.illumination_trace
-    return _pearson_r(measured_trace, expected_trace)
+    return _channel_centred_pearson(measured_trace, expected_trace)
 
 
 def check_b6_challenge_correlation(bundle: EvidenceBundle) -> CheckResult:

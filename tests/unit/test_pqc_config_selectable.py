@@ -31,6 +31,9 @@ capture:
   n_frames: 30
   fps: 15
   resolution: [1280, 720]
+  illumination_region_weighting: uniform
+  illumination_min_channel_sum: 12.0
+  illumination_centre_grid: 4
 detect:
   quality:
     min_face_px: 112

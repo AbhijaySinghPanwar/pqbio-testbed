@@ -238,6 +238,16 @@ Two interchangeable sources producing identical bundle structures:
 
 **Challenge.** The server nonce drives a physical challenge a pre-recorded stream cannot satisfy. Derive a colour sequence from the nonce (`PRF(nonce)` → 4 steps from {red, green, blue, white}, ~200 ms each), display full-screen, and record the per-frame mean chromaticity of the face region. The verifier correlates the measured trace against the expected sequence. This is the mechanism behind deliverable D3 and the strongest signal for replay and injection.
 
+**What "mean chromaticity" means here, precisely** (tightened 2026-09-02 — the original wording was too loose to implement correctly, and was implemented incorrectly; see §14):
+
+- The per-frame measurement is **luminance-normalised**: `r = R/(R+G+B)`, `g = G/(R+G+B)`, `b = B/(R+G+B)`, so a frame's three values sum to 1. Absolute per-channel brightness is *not* chromaticity, and correlating it makes B6 track scene illumination instead of hue.
+- The denominator is **guarded**. Below `capture.illumination_min_channel_sum` a region has no recoverable hue, and the measurement returns the neutral point (1/3, 1/3, 1/3) rather than amplifying sensor noise. Neutral is constant, so it contributes nothing to the correlation — the fail-closed direction.
+- The **expected** trace is built in the same normalised space (`pqbio.binding.verify.palette_chromaticity`). White is therefore the neutral point, not a maximum in all three channels.
+- The correlation is **channel-centred**: each of the three channels has its own mean across frames removed before Pearson. Without this the score is dominated by the static colour of the room rather than by the modulation the challenge induces.
+- The measurement region may be weighted (`capture.illumination_region_weighting`: `uniform` or `centre`). Which one separates better is an empirical question, re-derived by `scripts/calibrate_illumination_corr.py`, not a fixed choice.
+
+**Statistical note on the step count.** The correlation's effective sample size is the number of challenge *steps*, not the number of frames — frames captured within one step are near-identical, so capturing more of them narrows nothing. At the 4 steps specified above the null distribution is wide enough that no threshold separates genuine captures from wrong-nonce replays cleanly on real sensor data (§14, 2026-09-02). Raising `binding.illumination_steps` is the lever that fixes this; the 4 above is retained pending the consented recording session that can re-derive both it and the threshold together.
+
 **Evidence bundle:**
 
 ```
@@ -1450,3 +1460,118 @@ is actually needed is two consenting people and an afternoon.
 Consequence for §8.3: C3 still runs **one of six detectors** (injection), so the AI
 overhead term and the 798x AI:PQ ratio remain the provisional lower bound described in
 the liboqs amendment above. Nothing about this session changed them.
+
+
+### 2026-09-02 — B6's measurement was a spec defect, and fixing it exposed a second one
+
+**This is a defect in §5.2's wording, not a coding mistake against it.** §5.2 said "record
+the per-frame mean chromaticity of the face region". `measure_chromaticity_trace` returned
+each channel's absolute mean brightness. Those are different quantities — chromaticity is
+luminance-normalised by definition — and nothing in the spec said so explicitly, so the
+implementation matched the sentence while missing the meaning. Both have now been
+corrected: §5.2 above states the formulation precisely, and the code implements it.
+
+**Why it survived so long.** Every headless test passed, because the test fixtures were
+solid palette-colour frames: when the frame *is* the challenge colour, brightness-per-
+channel and chromaticity carry the same information and B6 scores 1.0 either way. The
+defect only appears when the scene has its own colour and the challenge adds a small
+amount of light on top — which is every real capture and no synthetic one. There is no
+substitute for a sensor here.
+
+**The fix, and the second defect it exposed.** Normalising the measurement was necessary
+and not sufficient. With normalised chromaticity on both sides, a capture where the
+challenge visibly worked *still* scored −0.17: measured `b` climbed 0.150 → 0.213 → 0.241
+across the blue steps and `g` spiked to 0.457 on the green step, and flattened Pearson
+read it as anti-correlated. The reason is that both traces are laid out
+[r,g,b, r,g,b, ...] and a real room has a large static chromaticity offset — r=0.42,
+g=0.39, b=0.19 on every frame — which dominates the variance and gets correlated against
+an expected sequence demanding b=1 on blue steps. **Removing each channel's own mean
+across frames before correlating** deletes the room and leaves the modulation. The same
+capture then reads +0.79.
+
+That second defect was invisible until the first was fixed. It also tightens the check
+rather than loosening it: a bundle can no longer score on the static colour of its scene,
+only on whether its trace moves the way its nonce demands.
+
+**Recalibration** (`scripts/calibrate_illumination_corr.py` →
+`results/illumination_corr_calibration.json`). The old 0.70 was set against the old
+formulation and carried no information about the new one. Re-derived from 24 real captures
+(6 repeats × 4 conditions, `results/live_challenge_check.json`) against three negative
+classes: 6 real no-render controls taken on the same sensor seconds apart, 192 wrong-nonce
+scorings of real traces (the attack B6 exists to stop), and 200 synthetic no-cast traces.
+
+| weighting | positives | negatives | Cohen's d | AUC |
+|---|---|---|---|---|
+| `uniform` | +0.509 ± 0.275 | +0.016 ± 0.259 | 1.85 | 0.911 |
+| `centre` | +0.481 ± 0.325 | +0.003 ± 0.275 | 1.59 | 0.869 |
+
+**`uniform` wins, and that is the opposite of what the 4×4 regional diagnostic suggested.**
+That diagnostic showed central cells swinging 0.05–0.10 in B:R while the periphery sat at
+0.001–0.005, which looked like a clear case for down-weighting the periphery. It is not: a
+larger swing in the signal is not better separation once the periphery's noise is dropped
+along with its signal. Picked on the measured number, not on the earlier reasoning.
+
+**The threshold is 0.70 again, and the coincidence is worth stating so nobody reads it as
+"unchanged".** It is now the lowest round value above the measured zero-false-accept floor
+of 0.688; the worst wrong-nonce negative scored 0.673, giving a margin of +0.027 below.
+**There is no comparable margin above.** Measured TPR at 0.70 is 0.33 across all capture
+conditions and 0.67 in the best one — B6 will false-reject genuine captures at this
+setting. Set on false-accept rate because B6 is one of six ANDed checks: a false reject
+costs a retry, a false accept is the failure the check exists to prevent. Flagged
+**interim**: one session, one room, one sensor, no subject at capture distance.
+
+**The real problem is the step count, not the threshold.** B6's correlation has roughly
+`illumination_steps` effective samples per channel — frames within a step are
+near-identical, so capturing 30 or 300 of them narrows nothing. At the spec'd 4 steps the
+null distribution is far too wide for any threshold to work. Measured directly by re-running
+the live check at 16 steps (`results/live_challenge_check_16step.json`):
+
+| steps | wrong-nonce p95 | wrong-nonce max | control max | zero-FPR threshold |
+|---|---|---|---|---|
+| 4 | 0.577 | 0.673 | 0.498 | 0.688 |
+| 16 | 0.213 | 0.360 | 0.289 | 0.400 |
+
+Four times the steps cuts the false-accept tail roughly in half and would support a
+threshold near 0.40 with far better TPR. **Raise `illumination_steps` before lowering
+`illumination_corr_min`.** Left at 4 here because changing it is a §5.2 protocol change
+that should be made together with the consented recording session, not in passing.
+
+**§5.2's live-webcam DoD item: still not closed, and now for a different reason.** The
+formulation is right — a synthetic scene with only a 5% cast scores r=0.9998, so the
+measurement is not the limitation. On the sensor, `unlocked_render` cleared 0.70 on
+individual runs (+0.79, +0.81 centre) but averaged +0.687 ± 0.269 over 6 repeats, which
+straddles the threshold rather than clearing it. Reporting that as a pass would be picking
+the favourable run.
+
+**What the four-pass design settled about the two locks.** The 2026-09-01 entry said "WB
+and exposure must be locked". That was half right, and the halves point in opposite
+directions:
+
+| condition | uniform r (6 repeats) |
+|---|---|
+| WB+AE locked, rendered | +0.368 ± 0.192 |
+| WB locked, AE auto, rendered | +0.472 ± 0.291 |
+| auto WB+AE, rendered | +0.687 ± 0.269 |
+| WB+AE locked, **not** rendered (control) | +0.058 ± 0.346 |
+
+Auto WB does fight the cast, as argued. But **auto exposure is what reaches an operating
+point where the cast is measurable at all**, and on this sensor that dominates. Locking
+exposure via DirectShow pins a short exposure no `CAP_PROP_EXPOSURE` value lifts: 0, −1 and
+−2 all land at 33/255 in this room, while auto reaches 112–169/255 during rendering. Gain
+is the only remaining lever (0 → 128 buys 33 → 69/255) and it is not enough. So the capture
+protocol needs to lock white balance, lock exposure *at a setpoint chosen while the
+challenge is rendering* rather than at ambient, and verify the resulting operating point —
+not simply "lock both at capture start".
+
+**Of the two contributors flagged on 2026-09-01, one is now distinguished and one is not.**
+Panel auto-brightness is no longer a candidate: the luminance ramp it would cause is exactly
+what normalisation removes, and the control pass isolates sensor drift from screen effects
+directly. **No subject at capture distance remains untested and is now the leading
+explanation** — the screen lights whatever is in front of it, and with nobody there the
+reflecting surfaces are background metres away. Testing it needs the same §6 consent that
+blocks the replay corpus.
+
+**What remains unexplained:** why per-run variance stays as high as it does even at 16
+steps (σ ≈ 0.2–0.45 on the positives). Effective sample size accounts for the 4-step case;
+it does not fully account for the residual spread at 16. Not resolved here, and not papered
+over by moving the threshold.

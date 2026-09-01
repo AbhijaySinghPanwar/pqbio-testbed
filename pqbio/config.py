@@ -41,6 +41,9 @@ class CaptureConfig(BaseModel):
     n_frames: int
     fps: int
     resolution: tuple[int, int]
+    illumination_region_weighting: Literal["uniform", "centre"]
+    illumination_min_channel_sum: float
+    illumination_centre_grid: int
 
 
 class QualityConfig(BaseModel):

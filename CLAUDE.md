@@ -27,17 +27,21 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   subprocess end-to-end run. `challenge.py`'s `estimate_face_box` now calls Module D's
   real SCRFD detector (the old fixed-centre-crop placeholder is deleted), falling back
   to a geometric centre crop only when detection finds nothing.
-  **A camera and display are now attached, and the live check has been run once**
-  (`scripts/live_challenge_check.py` → `results/live_challenge_check.json`): the
-  challenge renders full-screen, and WB/exposure locking is verified to work and to be
-  necessary (auto drifts 79→88 while correcting the cast; locked holds to σ=0.06).
-  **It does not pass** — B6 correlation came out −0.47 against a 0.70 threshold. The
-  colour cast *is* reaching the sensor (per-region B:R ratio moves 0.81→0.91 on blue
-  steps in the central cells) but B6 cannot see it, because
-  `measure_chromaticity_trace` returns absolute per-channel brightness rather than
-  normalised chromaticity, so luminance drift swamps hue. Read §14's 2026-09-01 Module B
-  amendment before touching B6 or `measure_chromaticity_trace` — the fix is known but
-  changes a binding check's semantics and needs `illumination_corr_min` recalibrated.
+  **A camera and display are attached; `scripts/live_challenge_check.py` runs four
+  passes (WB+AE locked / WB-only / auto / no-render control) × N repeats and writes
+  `results/live_challenge_check.json`.** `measure_chromaticity_trace` now returns true
+  luminance-normalised chromaticity with a guarded denominator — it used to return
+  absolute per-channel brightness, which was a **§5.2 spec defect** (read §14's
+  2026-09-02 amendment before touching it, and the module docstring). §5.2's live-webcam
+  DoD item is **still open**: the formulation is right (a synthetic 5% cast scores
+  r=0.9998) but on the sensor the best condition averages +0.687 ± 0.269 over 6 repeats
+  against a 0.70 threshold — individual runs clear it, the mean straddles it, and
+  reporting that as a pass would be picking the favourable run. Two things to know before
+  touching any of this: **auto exposure, not the lock, is what makes the cast measurable**
+  on this hardware (locked tops out at 33/255, auto reaches 112–169), and B6's effective
+  sample size is `illumination_steps` (4), not the frame count — that is what makes the
+  null distribution too wide for any threshold to work. Leading untested explanation is
+  no subject at capture distance (§6 consent, same blocker as the replay corpus).
 - **Implemented: Module C — `pqbio/binding/`** (nonce.py, phash_index.py, verify.py).
   All six B1-B6 checks plus the separate pHash reuse check, each with positive and
   negative tests; nonce single-use consumption verified atomic under a real 100-thread
@@ -51,8 +55,18 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   §14 Amendments, `results/phash_burst_calibration.json`, before touching either value
   or assuming N alone will fix the residual false-positive rate). B6's
   frame-to-challenge-step timing alignment is an even-split
-  approximation (Module B doesn't interleave live render+capture yet) — see
-  `verify.py`'s `_expand_expected_trace`.
+  approximation (Module B's CLI doesn't interleave live render+capture yet; the live
+  check script does) — see `verify.py`'s `_expand_expected_trace`. **B6's semantics
+  changed on 2026-09-02**: both sides of the correlation are now normalised chromaticity
+  and the Pearson is channel-centred (`_channel_centred_pearson`), without which the
+  score is dominated by the static colour of the room rather than the challenge's
+  modulation. `illumination_corr_min` was re-derived
+  (`scripts/calibrate_illumination_corr.py` → `results/illumination_corr_calibration.json`)
+  and is **interim** — it lands on 0.70 again, but that is a coincidence, not a
+  carry-over: it is the zero-false-accept floor (0.688) rounded up, with measured TPR of
+  only 0.33. Don't lower it; raise `illumination_steps` instead (16 steps halves the
+  false-accept tail). `TestB6Semantics` in `tests/unit/test_binding_verify.py` covers the
+  properties that solid-colour fixtures cannot.
 - **Implemented: parts of Module D — `pqbio/detect/`** (base.py, face.py, match.py,
   injection.py, fusion.py) **and its injection corpus**
   (`scripts/make_injection_corpus.py`). `pad.py`/`morph.py`/`deepfake.py`/`replay.py`

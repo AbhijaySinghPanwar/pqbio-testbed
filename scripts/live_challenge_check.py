@@ -10,7 +10,21 @@ gap by doing the one thing that needs both at once — render the nonce-derived 
 sequence full-screen while capturing from a real sensor, then check the trace B6 relies
 on is actually recoverable from the pixels that come back.
 
-Two things it establishes that a headless test cannot:
+It runs **three passes on the same sensor in the same room**, so every comparison it
+reports is controlled rather than argued:
+
+1. `locked_render` — WB/AE locked, challenge rendered. The primary measurement.
+2. `unlocked_render` — auto WB/AE, challenge rendered. What locking actually buys.
+3. `wb_locked_ae_auto_render` — WB locked, exposure automatic. The two locks have
+   opposite effects and lumping them together hid that; this separates them.
+4. `locked_no_render_control` — WB/AE locked, nothing displayed, identical timing and
+   frame budget. The control, and a genuine *no-cast negative* for calibrating
+   `illumination_corr_min` against something the sensor really produced.
+
+Each pass is scored under both region weightings (`uniform` and `centre`), so the choice
+between them is made on measured separation rather than preference.
+
+Three things it establishes that a headless test cannot:
 
 1. **Auto white balance and auto exposure must be locked before capture.** The
    challenge works by inducing a deliberate colour cast; a camera left on auto will
@@ -24,6 +38,11 @@ Two things it establishes that a headless test cannot:
    was actually on screen when it was grabbed. The script reports the correlation both
    ways — B6's even split, and the exact per-frame alignment — so the cost of the
    approximation is a measured number rather than an open question.
+3. **Whether the measurement formulation is right at all.** The 2026-09-01 run of this
+   script is what caught §5.2 specifying "mean chromaticity" while the code returned
+   absolute per-channel brightness (PROJECT_SPEC.md §14). It now measures true
+   luminance-normalised chromaticity; this script is the regression test for that,
+   and there is no substitute for a sensor here.
 
 **Captures no biometric data and retains no frames.** It records only aggregate
 per-frame colour means (the trace B6 itself uses) and writes them to
@@ -51,17 +70,24 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from pqbio.bench._common import run_metadata, write_json  # noqa: E402
-from pqbio.binding.verify import _expand_expected_trace, _pearson_r  # noqa: E402
+from pqbio.binding.verify import (  # noqa: E402
+    _channel_centred_pearson,
+    _expand_expected_trace,
+    palette_chromaticity,
+)
 from pqbio.capture.challenge import (  # noqa: E402
     PALETTE_BGR,
     PALETTE_NAMES,
+    RegionWeighting,
     derive_illumination_sequence,
     estimate_face_box,
     measure_chromaticity_trace,
 )
 from pqbio.config import settings  # noqa: E402
+from pqbio.detect.face import detect_face_box  # noqa: E402
 
 WINDOW = "pqbio-illumination-challenge"
+WEIGHTINGS: tuple[RegionWeighting, ...] = ("uniform", "centre")
 
 
 class HardwareUnavailableError(RuntimeError):
@@ -84,12 +110,23 @@ def _open_camera(index: int) -> cv2.VideoCapture:
 
 
 def _lock_white_balance_and_exposure(
-    cap: cv2.VideoCapture, force_exposure: int | None = None
+    cap: cv2.VideoCapture,
+    force_exposure: int | None = None,
+    force_gain: int | None = None,
 ) -> dict[str, Any]:
     """Let auto settle, read where it converged, then pin both. Returns what actually
     took effect -- DirectShow reports some properties back unreliably, so the evidence
     that the lock worked is the brightness stability measured afterwards, not the
     property read-back.
+
+    `force_gain` exists because of a measured hardware limit, not for tuning. On this
+    sensor, switching `CAP_PROP_AUTO_EXPOSURE` to manual pins a short exposure that no
+    value of `CAP_PROP_EXPOSURE` lifts: -1, -2 and 0 all land at 33/255 in this room and
+    only darker settings respond at all. Auto reaches 112/255 on the same scene. Gain is
+    the one remaining lever (0 -> 128 buys 33 -> 69), so a locked capture that is also
+    bright enough to measure needs it. Locking WB and exposure is about stopping the
+    sensor from *moving*; choosing the operating point it stops at is a separate
+    decision, and on dark hardware it has to be made deliberately.
     """
     for _ in range(15):  # let AE/AWB converge on the real scene
         cap.read()
@@ -102,6 +139,8 @@ def _lock_white_balance_and_exposure(
 
     cap.set(cv2.CAP_PROP_AUTO_WB, 0)
     cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # DSHOW convention: 0.25 = manual
+    if force_gain is not None:
+        cap.set(cv2.CAP_PROP_GAIN, force_gain)
 
     # Pick the manual exposure closest to where auto had converged, so locking does not
     # also change the operating point -- the point is to stop it moving, not to darken.
@@ -127,6 +166,8 @@ def _lock_white_balance_and_exposure(
             "brightness_after_lock_std": float(np.std(stability)) if stability else None,
             "auto_wb_readback": cap.get(cv2.CAP_PROP_AUTO_WB),
             "wb_temperature_readback": cap.get(cv2.CAP_PROP_WB_TEMPERATURE),
+            "gain_requested": force_gain,
+            "gain_readback": cap.get(cv2.CAP_PROP_GAIN),
         }
 
     best: tuple[int | None, float, float] = (None, float("inf"), 0.0)
@@ -160,15 +201,28 @@ def _lock_white_balance_and_exposure(
         "brightness_after_lock_std": float(np.std(stability)) if stability else None,
         "auto_wb_readback": cap.get(cv2.CAP_PROP_AUTO_WB),
         "wb_temperature_readback": cap.get(cv2.CAP_PROP_WB_TEMPERATURE),
+        "gain_requested": force_gain,
+        "gain_readback": cap.get(cv2.CAP_PROP_GAIN),
     }
 
 
 def _render_and_capture(
-    cap: cv2.VideoCapture, sequence: list[int], step_ms: int, fullscreen: bool
+    cap: cv2.VideoCapture,
+    sequence: list[int],
+    step_ms: int,
+    fullscreen: bool,
+    *,
+    render: bool = True,
 ) -> tuple[list[np.ndarray], list[int]]:
     """Interleaved render + capture: display step i, grab whatever frames land inside
     its window, and tag each with the step that was actually on screen. This is the
     interleaving Module B's CLI never did.
+
+    With `render=False` the timing, frame count and step tagging are identical but
+    nothing is displayed. That is the control, and it is not only a sanity check: a
+    capture with no induced cast, correlated against the same nonce-derived expectation,
+    is a *real* negative sample for threshold calibration -- one measured on the same
+    sensor in the same room, which no synthetic negative can be.
     """
     try:
         cv2.namedWindow(WINDOW, cv2.WND_PROP_FULLSCREEN)
@@ -184,7 +238,8 @@ def _render_and_capture(
     frame_steps: list[int] = []
     try:
         for step_idx, colour_idx in enumerate(sequence):
-            panel = np.full((1080, 1920, 3), PALETTE_BGR[colour_idx], dtype=np.uint8)
+            colour = PALETTE_BGR[colour_idx] if render else (0, 0, 0)
+            panel = np.full((1080, 1920, 3), colour, dtype=np.uint8)
             cv2.imshow(WINDOW, panel)
             cv2.waitKey(1)  # let the compositor actually paint it
             time.sleep(0.06)  # settle: panel response + sensor lag before sampling
@@ -253,13 +308,132 @@ def _regional_chromatic_response(
 
 
 def _exact_expected_trace(sequence: list[int], frame_steps: list[int]) -> list[float]:
-    """Expected [R,G,B, ...] using the step that was *actually* displayed per frame,
-    rather than B6's even split across frames."""
+    """Expected normalised-chromaticity trace using the step that was *actually*
+    displayed per frame, rather than B6's even split across frames."""
     trace: list[float] = []
     for step_idx in frame_steps:
-        b, g, r = PALETTE_BGR[sequence[step_idx]]
-        trace.extend((r / 255.0, g / 255.0, b / 255.0))
+        trace.extend(palette_chromaticity(sequence[step_idx]))
     return trace
+
+
+def _evaluate(
+    frames: list[np.ndarray],
+    frame_steps: list[int],
+    sequence: list[int],
+    face_box: tuple[int, int, int, int],
+    weighting: RegionWeighting,
+    threshold: float,
+) -> dict[str, Any]:
+    """Score one capture pass under one region weighting. Returns both correlations,
+    the per-step mean chromaticity, and the raw per-frame trace.
+
+    The per-frame trace is persisted deliberately: it is exactly the aggregate the
+    check consumes (three region means per frame, no pixels), and without it every
+    later recalibration would need the hardware and the room back.
+    """
+    measured = measure_chromaticity_trace(frames, face_box, weighting=weighting)
+    # _channel_centred_pearson is exactly the statistic B6 thresholds -- this script
+    # must not compute its own variant, or it stops being a check of B6.
+    r_even = _channel_centred_pearson(measured, _expand_expected_trace(sequence, len(frames)))
+    r_exact = _channel_centred_pearson(measured, _exact_expected_trace(sequence, frame_steps))
+
+    per_step: dict[str, dict[str, float]] = {}
+    for step_idx, colour_idx in enumerate(sequence):
+        idxs = [i for i, st in enumerate(frame_steps) if st == step_idx]
+        if not idxs:
+            continue
+        chroma = np.array([measured[3 * i : 3 * i + 3] for i in idxs], dtype=float)
+        per_step[f"step{step_idx}_{PALETTE_NAMES[colour_idx]}"] = {
+            "n_frames": len(idxs),
+            "mean_r": float(chroma[:, 0].mean()),
+            "mean_g": float(chroma[:, 1].mean()),
+            "mean_b": float(chroma[:, 2].mean()),
+        }
+
+    return {
+        "weighting": weighting,
+        "correlation_b6_even_split": r_even,
+        "correlation_exact_alignment": r_exact,
+        "trace_recovered_b6_rule": bool(r_even >= threshold),
+        "per_step_mean_chromaticity": per_step,
+        "per_frame_trace": [float(v) for v in measured],
+    }
+
+
+def _capture_pass(
+    cap: cv2.VideoCapture,
+    sequence: list[int],
+    args: argparse.Namespace,
+    *,
+    lock: str,
+    render: bool,
+) -> dict[str, Any]:
+    """One full pass, capture and evaluate under both region weightings. Every pass
+    shares timing and frame budget so they are directly comparable.
+
+    `lock` is a mode rather than a boolean because white balance and exposure turn out to
+    matter for opposite reasons, and lumping them together hides that. Auto WB fights the
+    cast (bad); auto exposure is what reaches an operating point bright enough to see it
+    at all on this sensor (necessary). "wb_only" separates the two.
+    """
+    if lock in ("full", "wb_only"):
+        if lock == "full":
+            lock_info = _lock_white_balance_and_exposure(
+                cap, force_exposure=args.exposure, force_gain=args.gain
+            )
+        else:
+            cap.set(cv2.CAP_PROP_AUTO_WB, 0)
+            cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.75)  # exposure stays automatic
+            for _ in range(15):
+                cap.read()
+            samples = [float(f.mean()) for ok, f in (cap.read() for _ in range(10)) if ok]
+            lock_info = {
+                "mode": "wb_only",
+                "auto_wb_readback": cap.get(cv2.CAP_PROP_AUTO_WB),
+                "brightness_before_capture": float(np.mean(samples)) if samples else None,
+            }
+    else:
+        cap.set(cv2.CAP_PROP_AUTO_WB, 1)
+        cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.75)  # DSHOW convention: 0.75 = auto
+        for _ in range(15):  # let auto reconverge before this pass starts
+            cap.read()
+        samples = [float(f.mean()) for ok, f in (cap.read() for _ in range(10)) if ok]
+        lock_info = {
+            "mode": "none",
+            "auto_brightness_before_capture": float(np.mean(samples)) if samples else None,
+        }
+    lock_info.setdefault("mode", lock)
+
+    frames, frame_steps = _render_and_capture(
+        cap, sequence, args.step_ms, fullscreen=not args.windowed, render=render
+    )
+    if len(frames) < 4:
+        raise HardwareUnavailableError(
+            f"captured only {len(frames)} frames; too few to evaluate a trace"
+        )
+
+    detected_box, detected_score = detect_face_box(frames[0])
+    face_box = estimate_face_box(frames[0])  # falls back to a centre crop when None
+    threshold = settings.binding.illumination_corr_min
+
+    brightness = [float(f.mean()) for f in frames]
+    return {
+        "lock": lock_info,
+        "rendered": render,
+        "n_frames": len(frames),
+        "resolution": [int(frames[0].shape[1]), int(frames[0].shape[0])],
+        "face_box_used": list(face_box),
+        "face_detected": detected_box is not None,
+        "face_detection_score": float(detected_score),
+        "face_box_source": "SCRFD" if detected_box is not None else "centre-crop fallback",
+        "scene_brightness_mean": float(np.mean(brightness)),
+        "scene_brightness_std": float(np.std(brightness)),
+        "scene_brightness_drift": float(brightness[-1] - brightness[0]),
+        "by_weighting": {
+            w: _evaluate(frames, frame_steps, sequence, face_box, w, threshold) for w in WEIGHTINGS
+        },
+        "regional_chromatic_response": _regional_chromatic_response(frames, frame_steps, sequence),
+    }
 
 
 def main() -> None:
@@ -276,6 +450,32 @@ def main() -> None:
         "measurement under the 8-bit noise floor)",
     )
     parser.add_argument(
+        "--steps",
+        type=int,
+        default=None,
+        help="override binding.illumination_steps for this run. The correlation's "
+        "effective sample size is the number of challenge steps, not the number of "
+        "frames -- frames within a step are near-identical -- so this is the knob that "
+        "actually controls B6's noise floor. Used to measure that, not to tune it.",
+    )
+    parser.add_argument(
+        "--repeats",
+        type=int,
+        default=1,
+        help="run every pass this many times. A single capture yields a very noisy r: "
+        "the challenge has only `illumination_steps` distinct levels (4 by default), so "
+        "the correlation has roughly 4 effective samples per channel however many frames "
+        "are captured. Repeats are what make the spread measurable instead of assumed.",
+    )
+    parser.add_argument(
+        "--gain",
+        type=int,
+        default=None,
+        help="pin CAP_PROP_GAIN during the locked passes. Needed on sensors where "
+        "switching to manual exposure forces an operating point too dark to measure "
+        "(see _lock_white_balance_and_exposure).",
+    )
+    parser.add_argument(
         "--nonce-hex",
         default="a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
         help="fixed by default so the derived colour sequence is reproducible",
@@ -286,84 +486,88 @@ def main() -> None:
     args = parser.parse_args()
 
     nonce = bytes.fromhex(args.nonce_hex)
-    sequence = derive_illumination_sequence(nonce, settings.binding.illumination_steps)
+    steps = args.steps or settings.binding.illumination_steps
+    sequence = derive_illumination_sequence(nonce, steps)
+    threshold = settings.binding.illumination_corr_min
     print(f"challenge sequence: {[PALETTE_NAMES[i] for i in sequence]}", file=sys.stderr)
 
+    conditions = [
+        ("locked_render", "full", True),
+        ("unlocked_render", "none", True),
+        ("wb_locked_ae_auto_render", "wb_only", True),
+        ("locked_no_render_control", "full", False),
+    ]
+
     cap = _open_camera(args.camera_index)
+    runs: dict[str, list[dict[str, Any]]] = {name: [] for name, _, _ in conditions}
     try:
-        lock_info = _lock_white_balance_and_exposure(cap, force_exposure=args.exposure)
-        print(f"WB/exposure lock: {lock_info}", file=sys.stderr)
-        frames, frame_steps = _render_and_capture(
-            cap, sequence, args.step_ms, fullscreen=not args.windowed
-        )
+        for rep in range(args.repeats):
+            for name, lock, render in conditions:
+                print(
+                    f"repeat {rep + 1}/{args.repeats}  {name}",
+                    file=sys.stderr,
+                )
+                runs[name].append(_capture_pass(cap, sequence, args, lock=lock, render=render))
     finally:
         cap.release()
 
-    if len(frames) < 4:
-        raise HardwareUnavailableError(
-            f"captured only {len(frames)} frames; too few to evaluate a trace"
-        )
-
-    from pqbio.detect.face import detect_face_box
-
-    detected_box, detected_score = detect_face_box(frames[0])
-    face_box = estimate_face_box(frames[0])  # falls back to a centre crop when None
-    measured = measure_chromaticity_trace(frames, face_box)
-    expected_even = _expand_expected_trace(sequence, len(frames))
-    expected_exact = _exact_expected_trace(sequence, frame_steps)
-
-    r_even = _pearson_r(measured, expected_even)
-    r_exact = _pearson_r(measured, expected_exact)
-    threshold = settings.binding.illumination_corr_min
-
-    per_step: dict[str, dict[str, float]] = {}
-    for step_idx, colour_idx in enumerate(sequence):
-        idxs = [i for i, s in enumerate(frame_steps) if s == step_idx]
-        if not idxs:
-            continue
-        rgb = np.array([measured[3 * i : 3 * i + 3] for i in idxs], dtype=float)
-        per_step[f"step{step_idx}_{PALETTE_NAMES[colour_idx]}"] = {
-            "n_frames": len(idxs),
-            "mean_R": float(rgb[:, 0].mean()),
-            "mean_G": float(rgb[:, 1].mean()),
-            "mean_B": float(rgb[:, 2].mean()),
+    def spread(name: str, weighting: str) -> dict[str, Any]:
+        vals = [r["by_weighting"][weighting]["correlation_b6_even_split"] for r in runs[name]]
+        return {
+            "n_runs": len(vals),
+            "mean": float(np.mean(vals)),
+            "std": float(np.std(vals, ddof=1)) if len(vals) > 1 else None,
+            "min": float(np.min(vals)),
+            "max": float(np.max(vals)),
+            "values": [float(v) for v in vals],
         }
 
+    summary = {
+        name: {w: spread(name, w) for w in ("uniform", "centre")} for name, _, _ in conditions
+    }
     result: dict[str, Any] = {
         **run_metadata(),
         "camera_index": args.camera_index,
-        "resolution": [int(frames[0].shape[1]), int(frames[0].shape[0])],
-        "n_frames": len(frames),
         "step_ms": args.step_ms,
         "fullscreen": not args.windowed,
+        "nonce_hex": args.nonce_hex,
         "sequence": [PALETTE_NAMES[i] for i in sequence],
-        "face_box_used": list(face_box),
-        "face_detected": detected_box is not None,
-        "face_detection_score": float(detected_score),
-        "face_box_source": "SCRFD" if detected_box is not None else "centre-crop fallback",
-        "white_balance_exposure_lock": lock_info,
+        "illumination_steps": steps,
         "illumination_corr_min": threshold,
-        "correlation_b6_even_split": r_even,
-        "correlation_exact_alignment": r_exact,
-        "trace_recovered_b6_rule": bool(r_even >= threshold),
-        "per_step_measured_rgb": per_step,
-        "regional_chromatic_response": _regional_chromatic_response(frames, frame_steps, sequence),
+        "measurement_formulation": "normalised chromaticity r,g,b = C/(R+G+B) per frame",
+        "config_weighting": settings.capture.illumination_region_weighting,
+        "config_min_channel_sum": settings.capture.illumination_min_channel_sum,
+        "repeats": args.repeats,
+        "correlation_summary": summary,
+        "passes": {name: runs[name] for name, _, _ in conditions},
+        "headline": {
+            cond: {w: summary[cond][w]["mean"] for w in ("uniform", "centre")} for cond in summary
+        },
         "note": (
-            "Live check on a real sensor + display. Records aggregate per-frame colour "
-            "means only -- no frames retained, no face required or stored. "
-            "correlation_exact_alignment uses the step actually on screen per frame; "
-            "correlation_b6_even_split reproduces what pqbio.binding.verify's B6 "
-            "actually computes, so the difference is the cost of that documented "
-            "approximation."
+            "Live check on a real sensor + display, three passes on the same hardware in "
+            "the same room: WB/AE locked with the challenge rendered (primary), auto "
+            "WB/AE with it rendered (shows what locking buys), and locked with nothing "
+            "rendered (control, and a genuine no-cast negative for calibration). "
+            "Records aggregate per-frame region colour means only -- no frames retained, "
+            "no face required or stored. correlation_exact_alignment uses the step "
+            "actually on screen per frame; correlation_b6_even_split reproduces what "
+            "pqbio.binding.verify's B6 actually computes, so the difference is the cost "
+            "of that documented approximation."
         ),
     }
     write_json(args.out, result)
-    print(
-        f"\nframes={len(frames)}  r(B6 even split)={r_even:.4f}  "
-        f"r(exact alignment)={r_exact:.4f}  threshold={threshold}\n"
-        f"trace recovered under B6's rule: {r_even >= threshold}\nwrote {args.out}",
-        file=sys.stderr,
-    )
+
+    print("", file=sys.stderr)
+    for cond, by_w in summary.items():
+        u, c = by_w["uniform"], by_w["centre"]
+        u_std = f"{u['std']:.3f}" if u["std"] is not None else "n/a"
+        c_std = f"{c['std']:.3f}" if c["std"] is not None else "n/a"
+        print(
+            f"  {cond:<26} uniform {u['mean']:+.4f} +/-{u_std}  "
+            f"centre {c['mean']:+.4f} +/-{c_std}",
+            file=sys.stderr,
+        )
+    print(f"  threshold={threshold}\nwrote {args.out}", file=sys.stderr)
 
 
 if __name__ == "__main__":

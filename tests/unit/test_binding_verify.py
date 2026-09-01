@@ -16,10 +16,21 @@ import pytest
 
 from pqbio.binding.nonce import NonceStore, issue_challenge
 from pqbio.binding.phash_index import PhashIndex
-from pqbio.binding.verify import check_evidence_reuse, verify_binding
+from pqbio.binding.verify import (
+    check_b6_challenge_correlation,
+    check_evidence_reuse,
+    compute_challenge_correlation,
+    verify_binding,
+)
 from pqbio.capture import CapturedFrame
 from pqbio.capture.bundler import assemble_bundle, sign_bundle
-from pqbio.capture.challenge import estimate_face_box, measure_chromaticity_trace
+from pqbio.capture.challenge import (
+    PALETTE_BGR,
+    PALETTE_NAMES,
+    derive_illumination_sequence,
+    estimate_face_box,
+    measure_chromaticity_trace,
+)
 from pqbio.config import settings
 from pqbio.pqc.keystore import KeyStore
 from pqbio.pqc.sign import get_signer
@@ -261,6 +272,154 @@ def test_b6_passes_when_trace_matches_expected_sequence(tmp_path: Path) -> None:
 
     result = h.verify(bundle)
     assert result.binding_flags[5] is True  # B6
+
+
+def _lit_scene_frame(palette_idx: int, strength: float = 0.18, size: int = 64) -> np.ndarray:
+    """A static scene under a weak coloured cast — what a sensor actually sees.
+
+    `build_bundle`'s solid palette blocks are a degenerate positive: the frame *is* the
+    challenge colour, so the measurement recovers it exactly and B6 scores 1.0. A real
+    capture is a room with its own strong static colour, onto which the screen adds a
+    small amount of light. That is the case the 2026-09-02 live check showed B6 failing
+    on for reasons a solid-colour test can never surface, so it is tested here directly.
+    """
+    base = np.array((70, 95, 140), dtype=np.float32)  # BGR: a warm, red-dominant scene
+    cast = np.array(PALETTE_BGR[palette_idx], dtype=np.float32)
+    lit = base * (1.0 - strength) + cast * strength
+    return np.full((size, size, 3), np.clip(lit, 0, 255).astype(np.uint8))
+
+
+class TestB6Semantics:
+    """B6 under the 2026-09-02 formulation (normalised chromaticity, channel-centred
+    correlation). Green runs alone would not tell us much here: the measurement's
+    semantics changed, so each of these asserts a specific property of the new
+    definition rather than re-checking that the old assertions still hold.
+    """
+
+    def test_passes_on_a_realistically_lit_scene_not_just_solid_colour(
+        self, tmp_path: Path
+    ) -> None:
+        """A static scene with only an 18% cast must still clear the threshold."""
+        h = Harness(tmp_path)
+        expected = derive_illumination_sequence(
+            h.challenge.nonce, settings.binding.illumination_steps
+        )
+        n_frames = 12
+        images = [
+            _lit_scene_frame(expected[min(i * len(expected) // n_frames, len(expected) - 1)])
+            for i in range(n_frames)
+        ]
+        bundle = h.build_bundle_from_images(images)
+
+        r = compute_challenge_correlation(bundle)
+        assert r >= settings.binding.illumination_corr_min, (
+            f"a genuinely lit scene scored {r:.3f}; if this drops below the threshold the "
+            "measurement or the threshold has regressed, not the test fixture"
+        )
+
+    def test_static_scene_colour_does_not_drive_the_score(self, tmp_path: Path) -> None:
+        """Two scenes with very different static colours, the same induced modulation,
+        must score near-identically.
+
+        This is the channel-centring property. Before it, the score was dominated by
+        whatever colour the room happened to be: a red-walled room scored strongly
+        negative against a sequence asking for blue, regardless of whether the challenge
+        was satisfied.
+        """
+        h = Harness(tmp_path)
+        expected = derive_illumination_sequence(
+            h.challenge.nonce, settings.binding.illumination_steps
+        )
+        n_frames = 12
+
+        def build(base_bgr: tuple[int, int, int]) -> float:
+            images = []
+            for i in range(n_frames):
+                step = min(i * len(expected) // n_frames, len(expected) - 1)
+                base = np.array(base_bgr, dtype=np.float32)
+                cast = np.array(PALETTE_BGR[expected[step]], dtype=np.float32)
+                lit = base * 0.82 + cast * 0.18
+                images.append(np.full((64, 64, 3), np.clip(lit, 0, 255).astype(np.uint8)))
+            return compute_challenge_correlation(h.build_bundle_from_images(images))
+
+        red_room = build((40, 60, 160))
+        blue_room = build((160, 60, 40))
+        assert abs(red_room - blue_room) < 0.05
+        assert red_room >= settings.binding.illumination_corr_min
+        assert blue_room >= settings.binding.illumination_corr_min
+
+    def test_static_scene_with_no_modulation_fails(self, tmp_path: Path) -> None:
+        """A strongly coloured but completely unmodulated scene must not pass.
+
+        The mirror of the test above: removing the static offset must not also remove
+        B6's ability to reject. A constant trace has no variance, so `_pearson_r`
+        returns 0.0 and the check fails closed.
+        """
+        h = Harness(tmp_path)
+        images = [np.full((64, 64, 3), (160, 60, 40), dtype=np.uint8) for _ in range(12)]
+        bundle = h.build_bundle_from_images(images)
+
+        assert compute_challenge_correlation(bundle) < settings.binding.illumination_corr_min
+        assert check_b6_challenge_correlation(bundle).passed is False
+
+    def test_capture_made_under_a_different_nonce_is_rejected(self, tmp_path: Path) -> None:
+        """The attack B6 exists to stop: a real, correctly-lit capture — just made under
+        somebody else's challenge. It must fail against *this* nonce's sequence.
+        """
+        h = Harness(tmp_path)
+        real_sequence = derive_illumination_sequence(
+            h.challenge.nonce, settings.binding.illumination_steps
+        )
+        other_sequence = next(
+            seq
+            for seq in (
+                derive_illumination_sequence(bytes([i]) * 32, settings.binding.illumination_steps)
+                for i in range(1, 40)
+            )
+            if seq != real_sequence
+        )
+
+        n_frames = 12
+        images = [
+            _lit_scene_frame(
+                other_sequence[min(i * len(other_sequence) // n_frames, len(other_sequence) - 1)]
+            )
+            for i in range(n_frames)
+        ]
+        bundle = h.build_bundle_from_images(images)
+
+        result = check_b6_challenge_correlation(bundle)
+        assert result.passed is False
+        assert result.reason_code == "BIND_CHALLENGE_UNMET"
+
+    def test_luminance_ramp_alone_does_not_pass(self, tmp_path: Path) -> None:
+        """A capture whose brightness ramps but whose hue never changes must fail.
+
+        This is exactly what the 2026-09-01 live sensor run produced, and exactly what
+        the old formulation could not distinguish from a real challenge response: the
+        per-step means rose monotonically while the channel ratios stayed fixed.
+        """
+        h = Harness(tmp_path)
+        images = []
+        for i in range(12):
+            scale = 0.35 + 0.05 * i  # brightness climbs, hue is constant
+            lit = np.array((70, 95, 140), dtype=np.float32) * scale
+            images.append(np.full((64, 64, 3), np.clip(lit, 0, 255).astype(np.uint8)))
+        bundle = h.build_bundle_from_images(images)
+
+        assert compute_challenge_correlation(bundle) < settings.binding.illumination_corr_min
+
+    def test_expected_trace_is_built_in_chromaticity_space(self) -> None:
+        """Both sides of the correlation must live in the same space. White is the
+        neutral point in chromaticity; under the old formulation it was (1, 1, 1),
+        which is what made the two sides incomparable.
+        """
+        from pqbio.binding.verify import palette_chromaticity
+
+        white_idx = PALETTE_NAMES.index("white")
+        assert palette_chromaticity(white_idx) == pytest.approx((1 / 3, 1 / 3, 1 / 3))
+        red_idx = PALETTE_NAMES.index("red")
+        assert palette_chromaticity(red_idx) == pytest.approx((1.0, 0.0, 0.0))
 
 
 def test_multiple_failures_all_reported_together(tmp_path: Path) -> None:

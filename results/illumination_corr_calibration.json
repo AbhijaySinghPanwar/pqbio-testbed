@@ -1,0 +1,257 @@
+{
+  "KEM_BACKEND": "kyber-py-fallback",
+  "SIG_BACKEND": "dilithium-py-fallback",
+  "by_weighting": {
+    "centre": {
+      "negatives": {
+        "real_no_render_control": {
+          "max": 0.5284567714230307,
+          "mean": 0.006416900409869891,
+          "n": 6
+        },
+        "synthetic_no_cast": {
+          "max": 0.3510736535095111,
+          "mean": 0.00023191122559084454,
+          "n": 200,
+          "p95": 0.20038680183190355,
+          "synthetic": true
+        },
+        "wrong_nonce_on_real_traces": {
+          "max": 0.7481148579451897,
+          "mean": 0.006811835269469137,
+          "n": 192,
+          "p95": 0.5703327845542863
+        }
+      },
+      "positives_by_condition": {
+        "locked_render": {
+          "mean": 0.2623509206828083,
+          "n": 6,
+          "std": 0.24098032561986396
+        },
+        "unlocked_render": {
+          "mean": 0.6765106317532738,
+          "n": 6,
+          "std": 0.3625946081371565
+        },
+        "wb_locked_ae_auto_render": {
+          "mean": 0.5035372676412321,
+          "n": 6,
+          "std": 0.2542585484007517
+        }
+      },
+      "separation_all_negatives": {
+        "auc": 0.8685092127303182,
+        "best_youden": {
+          "fpr": 0.16834170854271358,
+          "threshold": 0.21591355104113252,
+          "tpr": 0.8888888888888888,
+          "youden_j": 0.7205471803461753
+        },
+        "cohens_d": 1.5874575586966984,
+        "lowest_zero_fpr_threshold": 0.8113954895663213,
+        "n_negative": 398,
+        "n_positive": 18,
+        "negative_max": 0.7481148579451897,
+        "negative_mean": 0.0034993869832046767,
+        "negative_std": 0.2747692367954551,
+        "positive_mean": 0.4807996066924381,
+        "positive_min": -0.09890393187606557,
+        "positive_std": 0.32450928500764775,
+        "separable": false
+      },
+      "separation_best_condition": {
+        "auc": 0.8969849246231156,
+        "best_youden": {
+          "fpr": 0.005025125628140704,
+          "threshold": 0.7019998821975199,
+          "tpr": 0.8333333333333334,
+          "youden_j": 0.8283082077051926
+        },
+        "cohens_d": 2.0920906018318437,
+        "lowest_zero_fpr_threshold": 0.8223673844635692,
+        "n_negative": 398,
+        "n_positive": 6,
+        "negative_max": 0.7481148579451897,
+        "negative_mean": 0.0034993869832046767,
+        "negative_std": 0.2747692367954551,
+        "positive_mean": 0.6765106317532738,
+        "positive_min": -0.05241584498980595,
+        "positive_std": 0.3625946081371565,
+        "separable": false
+      },
+      "separation_vs_wrong_nonce_only": {
+        "auc": 0.8260995370370371,
+        "best_youden": {
+          "fpr": 0.296875,
+          "threshold": 0.21591355104113252,
+          "tpr": 0.8888888888888888,
+          "youden_j": 0.5920138888888888
+        },
+        "cohens_d": 1.371653734700904,
+        "lowest_zero_fpr_threshold": 0.8113954895663213,
+        "n_negative": 192,
+        "n_positive": 18,
+        "negative_max": 0.7481148579451897,
+        "negative_mean": 0.006811835269469137,
+        "negative_std": 0.3653987563077414,
+        "positive_mean": 0.4807996066924381,
+        "positive_min": -0.09890393187606557,
+        "positive_std": 0.32450928500764775,
+        "separable": false
+      }
+    },
+    "uniform": {
+      "negatives": {
+        "real_no_render_control": {
+          "max": 0.49754484212526695,
+          "mean": 0.05838164960770842,
+          "n": 6
+        },
+        "synthetic_no_cast": {
+          "max": 0.3510736535095111,
+          "mean": 0.00023191122559084454,
+          "n": 200,
+          "p95": 0.20038680183190355,
+          "synthetic": true
+        },
+        "wrong_nonce_on_real_traces": {
+          "max": 0.6727882503616095,
+          "mean": 0.030452557053768092,
+          "n": 192,
+          "p95": 0.5773721365369918
+        }
+      },
+      "positives_by_condition": {
+        "locked_render": {
+          "mean": 0.36752825643366965,
+          "n": 6,
+          "std": 0.1919617607088465
+        },
+        "unlocked_render": {
+          "mean": 0.6868177273914654,
+          "n": 6,
+          "std": 0.26894421302210225
+        },
+        "wb_locked_ae_auto_render": {
+          "mean": 0.47214487383881504,
+          "n": 6,
+          "std": 0.29118126519365395
+        }
+      },
+      "separation_all_negatives": {
+        "auc": 0.9105248464544947,
+        "best_youden": {
+          "fpr": 0.23366834170854273,
+          "threshold": 0.15916929924098172,
+          "tpr": 0.9444444444444444,
+          "youden_j": 0.7107761027359016
+        },
+        "cohens_d": 1.8465318279420329,
+        "lowest_zero_fpr_threshold": 0.6883415603869181,
+        "n_negative": 398,
+        "n_positive": 18,
+        "negative_max": 0.6727882503616095,
+        "negative_mean": 0.015687344465044963,
+        "negative_std": 0.25864031278477123,
+        "positive_mean": 0.5088302858879833,
+        "positive_min": 0.045036150780612516,
+        "positive_std": 0.2752307968799533,
+        "separable": false
+      },
+      "separation_best_condition": {
+        "auc": 0.9597989949748744,
+        "best_youden": {
+          "fpr": 0.007537688442211055,
+          "threshold": 0.6505085492339489,
+          "tpr": 0.8333333333333334,
+          "youden_j": 0.8257956448911223
+        },
+        "cohens_d": 2.543677423418459,
+        "lowest_zero_fpr_threshold": 0.7895792839365007,
+        "n_negative": 398,
+        "n_positive": 6,
+        "negative_max": 0.6727882503616095,
+        "negative_mean": 0.015687344465044963,
+        "negative_std": 0.25864031278477123,
+        "positive_mean": 0.6868177273914654,
+        "positive_min": 0.15916929924098172,
+        "positive_std": 0.26894421302210225,
+        "separable": false
+      },
+      "separation_vs_wrong_nonce_only": {
+        "auc": 0.8561921296296297,
+        "best_youden": {
+          "fpr": 0.375,
+          "threshold": 0.15916929924098172,
+          "tpr": 0.9444444444444444,
+          "youden_j": 0.5694444444444444
+        },
+        "cohens_d": 1.5311709994509244,
+        "lowest_zero_fpr_threshold": 0.6883415603869181,
+        "n_negative": 192,
+        "n_positive": 18,
+        "negative_max": 0.6727882503616095,
+        "negative_mean": 0.030452557053768092,
+        "negative_std": 0.3456415766605769,
+        "positive_mean": 0.5088302858879833,
+        "positive_min": 0.045036150780612516,
+        "positive_std": 0.2752307968799533,
+        "separable": false
+      }
+    }
+  },
+  "config_hash_sha256": "a4542d57d7d27a682684147c85af1f54e76ec3c1701bab7a534c988178d222c6",
+  "dataset_versions": {
+    "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
+    "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
+    "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
+    "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
+  },
+  "generated_at_utc": "2026-09-01T12:21:30.550957+00:00",
+  "git_commit": "16a3f4dc139f93108e6e6a554a0f17ad40b76829",
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "illumination_steps": 4,
+  "previous_threshold": 0.7,
+  "previous_threshold_note": "set against the pre-2026-09-02 formulation (absolute per-channel brightness vs raw palette RGB); carries no information about the current one",
+  "recommendation": {
+    "at_0_70_legacy": {
+      "fpr_real_control": 0.0,
+      "margin_above_wrong_nonce_max": 0.02721174963839046,
+      "threshold": 0.7,
+      "tpr_all_rendered": 0.2777777777777778,
+      "tpr_best_condition": 0.6666666666666666,
+      "wrong_nonce_max": 0.6727882503616095,
+      "wrong_nonce_p95": 0.5773721365369918
+    },
+    "at_zero_fpr": {
+      "fpr_real_control": 0.0,
+      "margin_above_wrong_nonce_max": 0.015553310025308575,
+      "threshold": 0.6883415603869181,
+      "tpr_all_rendered": 0.3333333333333333,
+      "tpr_best_condition": 0.6666666666666666,
+      "wrong_nonce_max": 0.6727882503616095,
+      "wrong_nonce_p95": 0.5773721365369918
+    },
+    "basis": "lowest threshold with zero false accepts across every measured negative: 6 real no-render controls, 192 wrong-nonce scorings of real sensor traces, and 200 synthetic no-cast traces. Chosen on false-accept rate rather than on Youden J because B6 is one of six ANDed binding checks: a false reject costs a retry, a false accept is the security failure the check exists to prevent (CLAUDE.md, 'Fail closed').",
+    "effective_sample_size_finding": "B6's correlation has roughly `illumination_steps` effective samples per channel, not one per frame: frames within a step are near-identical, so capturing more of them narrows nothing. That is why the null distribution is so wide at the spec'd 4 steps, and it is a property of \u00a75.2's challenge design rather than of the threshold. Measured directly by re-running the live check at 16 steps (results/live_challenge_check_16step.json): the wrong-nonce negative tail falls from p95 0.577 / max 0.673 to p95 0.213 / max 0.360 under uniform weighting. Raising the step count -- not lowering the threshold -- is what buys B6 a usable operating point.",
+    "illumination_corr_min": 0.6883415603869181,
+    "interim": true,
+    "interim_reason": "Derived from one session, one room, one sensor, with no subject at capture distance -- the \u00a76 consent blocker that also blocks the replay corpus. The positive class is 18 captures across 3 lock conditions, not a population. Re-derive from the consented recording session; this value is a floor chosen to fail closed, not a characterised operating point.",
+    "weighting": "uniform"
+  },
+  "seed": 2026,
+  "source_live_check": "results/live_challenge_check.json",
+  "source_live_check_generated_at": "2026-09-01T12:14:30.193365+00:00",
+  "weighting_choice": {
+    "basis": "Cohen's d of rendered captures against all negatives, measured on 6 repeats per condition. Chosen on this number, not on preference: the 4x4 regional diagnostic that motivated the centre-weighted variant showed a much larger per-cell swing, but a larger swing in the signal is not the same as better separation once the periphery's noise is dropped along with its signal.",
+    "centre_cohens_d": 1.5874575586966984,
+    "chosen": "uniform",
+    "uniform_cohens_d": 1.8465318279420329
+  }
+}
