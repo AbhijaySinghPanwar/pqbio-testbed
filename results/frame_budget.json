@@ -1,0 +1,105 @@
+{
+  "KEM_BACKEND": "kyber-py-fallback",
+  "SIG_BACKEND": "dilithium-py-fallback",
+  "candidates": [
+    {
+      "bundle_frame_bytes": 7118086,
+      "bundle_frame_mib": 6.788335800170898,
+      "capture_binding_ms": 3.620000000410073,
+      "capture_wall_time_s": 2.0,
+      "client_side_jpeg_encode_ms": 75.73800000045594,
+      "delta_server_ms_vs_default": 0.0,
+      "fps": 15,
+      "n_frames": 30,
+      "phash_all_frames_ms": 185.73489999926096,
+      "server_side_frame_cost_ms": 189.35489999967103
+    },
+    {
+      "bundle_frame_bytes": 8541897,
+      "bundle_frame_mib": 8.146187782287598,
+      "capture_binding_ms": 4.07309999991412,
+      "capture_wall_time_s": 2.4,
+      "client_side_jpeg_encode_ms": 88.7192000000141,
+      "delta_server_ms_vs_default": 20.421799999894574,
+      "fps": 15,
+      "n_frames": 36,
+      "phash_all_frames_ms": 205.7035999996515,
+      "server_side_frame_cost_ms": 209.7766999995656
+    },
+    {
+      "bundle_frame_bytes": 11388382,
+      "bundle_frame_mib": 10.860807418823242,
+      "capture_binding_ms": 5.586100000073202,
+      "capture_wall_time_s": 3.2,
+      "client_side_jpeg_encode_ms": 114.92989999987913,
+      "delta_server_ms_vs_default": 92.01889999985724,
+      "fps": 15,
+      "n_frames": 48,
+      "phash_all_frames_ms": 275.78769999945507,
+      "server_side_frame_cost_ms": 281.3737999995283
+    },
+    {
+      "bundle_frame_bytes": 11388382,
+      "bundle_frame_mib": 10.860807418823242,
+      "capture_binding_ms": 5.818600000566221,
+      "capture_wall_time_s": 2.0,
+      "client_side_jpeg_encode_ms": 116.84200000036071,
+      "delta_server_ms_vs_default": 97.7193000007901,
+      "fps": 24,
+      "n_frames": 48,
+      "phash_all_frames_ms": 281.2555999998949,
+      "server_side_frame_cost_ms": 287.07420000046113
+    },
+    {
+      "bundle_frame_bytes": 15183003,
+      "bundle_frame_mib": 14.479640007019043,
+      "capture_binding_ms": 7.433100000525883,
+      "capture_wall_time_s": 3.2,
+      "client_side_jpeg_encode_ms": 155.8634000002712,
+      "delta_server_ms_vs_default": 189.0270000012606,
+      "fps": 20,
+      "n_frames": 64,
+      "phash_all_frames_ms": 370.94880000040575,
+      "server_side_frame_cost_ms": 378.38190000093164
+    },
+    {
+      "bundle_frame_bytes": 17081773,
+      "bundle_frame_mib": 16.29044818878174,
+      "capture_binding_ms": 8.603799999946204,
+      "capture_wall_time_s": 3.0,
+      "client_side_jpeg_encode_ms": 176.3753999994151,
+      "delta_server_ms_vs_default": 263.3205000001908,
+      "fps": 24,
+      "n_frames": 72,
+      "phash_all_frames_ms": 444.07159999991563,
+      "server_side_frame_cost_ms": 452.67539999986184
+    }
+  ],
+  "config_hash_sha256": "65021a84ad899b7630815bf8590bdf30a5e3fc055a02681bf2e3aed55694f532",
+  "dataset_versions": {
+    "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
+    "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
+    "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
+    "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
+  },
+  "generated_at_utc": "2026-09-01T12:54:29.807802+00:00",
+  "git_commit": "a194d576de5ab9d320d1815ed32b7cdc1912e203",
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "note": "Frame-count costs measured, not estimated. capture_binding and pHash are the only per-frame server-side costs that scale; both are compared against the ~700 ms of ONNX inference already in the request and against challenge_ttl_s.",
+  "reference_points": {
+    "challenge_ttl_s": 30,
+    "onnx_inference_ms": 700.0,
+    "onnx_inference_source": "PROJECT_SPEC.md \u00a714, 2026-09-01 (SCRFD+ArcFace, CPU)",
+    "request_timeout_s": 10
+  },
+  "resolution": [
+    1280,
+    720
+  ],
+  "seed": 2026
+}

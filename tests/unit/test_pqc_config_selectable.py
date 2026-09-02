@@ -23,13 +23,14 @@ binding:
   nonce_bytes: 32
   challenge_ttl_s: 30
   clock_skew_s: 2
-  illumination_steps: 4
-  illumination_corr_min: 0.70
+  illumination_steps: 12
+  illumination_step_ms: 200
+  illumination_corr_min: 0.60
   phash_hamming_max: 10
   phash_reuse_min_frames: 30
 capture:
-  n_frames: 30
-  fps: 15
+  n_frames: 48
+  fps: 20
   resolution: [1280, 720]
   illumination_region_weighting: uniform
   illumination_min_channel_sum: 12.0

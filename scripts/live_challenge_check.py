@@ -17,7 +17,10 @@ reports is controlled rather than argued:
 2. `unlocked_render` — auto WB/AE, challenge rendered. What locking actually buys.
 3. `wb_locked_ae_auto_render` — WB locked, exposure automatic. The two locks have
    opposite effects and lumping them together hid that; this separates them.
-4. `locked_no_render_control` — WB/AE locked, nothing displayed, identical timing and
+4. `challenge_setpoint_render` — WB and exposure locked, but at the operating point AE
+   reaches *while a challenge step is on screen* rather than at ambient. §14's proposed
+   protocol fix, tested here rather than assumed.
+5. `locked_no_render_control` — WB/AE locked, nothing displayed, identical timing and
    frame budget. The control, and a genuine *no-cast negative* for calibrating
    `illumination_corr_min` against something the sensor really produced.
 
@@ -206,6 +209,73 @@ def _lock_white_balance_and_exposure(
     }
 
 
+def _lock_at_challenge_setpoint(
+    cap: cv2.VideoCapture,
+    sequence: list[int],
+    fullscreen: bool,
+    force_gain: int | None = None,
+) -> dict[str, Any]:
+    """Lock WB and exposure at the operating point auto-exposure reaches *while the
+    challenge is on screen*, rather than at ambient.
+
+    This is the protocol §14 (2026-09-02) proposed and did not test. The reasoning was:
+    locking at ambient pins a dark setpoint because the room is dark, and the screen light
+    that arrives a moment later then has nowhere to go. Rendering a mid-sequence step
+    first, letting AE converge on *that*, and only then locking should keep the stability
+    a lock buys without the darkness it cost.
+
+    A mid-sequence step is used rather than white so the setpoint is representative of the
+    sequence rather than of its brightest member. The window is left painted with that
+    step while locking so AE does not start drifting back the instant it is measured.
+    """
+    display_step = sequence[len(sequence) // 2]
+    try:
+        cv2.namedWindow(WINDOW, cv2.WND_PROP_FULLSCREEN)
+        if fullscreen:
+            cv2.setWindowProperty(WINDOW, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        panel = np.full((1080, 1920, 3), PALETTE_BGR[display_step], dtype=np.uint8)
+        cv2.imshow(WINDOW, panel)
+        cv2.waitKey(1)
+
+        cap.set(cv2.CAP_PROP_AUTO_WB, 1)
+        cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.75)  # auto, so it can find the setpoint
+        for _ in range(30):  # AE needs longer to converge on a big luminance step
+            cap.read()
+            cv2.waitKey(1)
+        lit_samples = [float(f.mean()) for ok, f in (cap.read() for _ in range(10)) if ok]
+        lit_brightness = float(np.mean(lit_samples)) if lit_samples else 0.0
+        exposure_readback = cap.get(cv2.CAP_PROP_EXPOSURE)
+
+        # Freeze here. The exposure index auto converged to is what we pin.
+        cap.set(cv2.CAP_PROP_AUTO_WB, 0)
+        cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+        if exposure_readback is not None and np.isfinite(exposure_readback):
+            cap.set(cv2.CAP_PROP_EXPOSURE, int(round(exposure_readback)))
+        if force_gain is not None:
+            cap.set(cv2.CAP_PROP_GAIN, force_gain)
+        for _ in range(6):
+            cap.read()
+            cv2.waitKey(1)
+        stability = [float(f.mean()) for ok, f in (cap.read() for _ in range(10)) if ok]
+    finally:
+        cv2.destroyWindow(WINDOW)
+        cv2.waitKey(1)
+
+    return {
+        "mode": "challenge_setpoint",
+        "setpoint_step": PALETTE_NAMES[display_step],
+        "brightness_with_challenge_lit": lit_brightness,
+        "exposure_auto_converged_to": float(exposure_readback),
+        "chosen_exposure": (
+            int(round(exposure_readback)) if np.isfinite(exposure_readback) else None
+        ),
+        "gain_requested": force_gain,
+        "brightness_after_lock_mean": float(np.mean(stability)) if stability else None,
+        "brightness_after_lock_std": float(np.std(stability)) if stability else None,
+        "auto_wb_readback": cap.get(cv2.CAP_PROP_AUTO_WB),
+    }
+
+
 def _render_and_capture(
     cap: cv2.VideoCapture,
     sequence: list[int],
@@ -376,7 +446,11 @@ def _capture_pass(
     cast (bad); auto exposure is what reaches an operating point bright enough to see it
     at all on this sensor (necessary). "wb_only" separates the two.
     """
-    if lock in ("full", "wb_only"):
+    if lock == "challenge_setpoint":
+        lock_info = _lock_at_challenge_setpoint(
+            cap, sequence, fullscreen=not args.windowed, force_gain=args.gain
+        )
+    elif lock in ("full", "wb_only"):
         if lock == "full":
             lock_info = _lock_white_balance_and_exposure(
                 cap, force_exposure=args.exposure, force_gain=args.gain
@@ -495,6 +569,7 @@ def main() -> None:
         ("locked_render", "full", True),
         ("unlocked_render", "none", True),
         ("wb_locked_ae_auto_render", "wb_only", True),
+        ("challenge_setpoint_render", "challenge_setpoint", True),
         ("locked_no_render_control", "full", False),
     ]
 

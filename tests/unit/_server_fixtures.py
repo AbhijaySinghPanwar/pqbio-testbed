@@ -201,8 +201,8 @@ class ServerTestClient:
         face crop, alpha-blended per frame toward the palette colour the session's nonce
         derives for that step (simulating the screen's light reflecting on the face — a
         translucent colour wash was measured to keep SCRFD's detection confidence high
-        (~0.77-0.99) while still correlating strongly, r>=0.87 at alpha=0.25, well above
-        `illumination_corr_min`=0.70 — see PROJECT_SPEC.md §14). Frame timestamps are
+        (~0.77-0.99) while still correlating strongly, well above
+        `illumination_corr_min` — see PROJECT_SPEC.md §14). Frame timestamps are
         spaced at the nominal 1/fps interval with a few ms of seeded jitter so
         `injection.py`'s inter-frame timing-jitter feature (std_dt_ns >= 1ms) doesn't
         flag realistic pacing as an instant/file-read artefact.
@@ -210,10 +210,17 @@ class ServerTestClient:
         import time
 
         from pqbio.capture.challenge import PALETTE_BGR, derive_illumination_sequence
+        from pqbio.config import settings
 
         rng = np.random.default_rng(seed)
         base = _quality_pass_crop()
-        expected_indices = derive_illumination_sequence(challenge_obj.nonce, 4)
+        # From config, never a literal: the verifier derives its expected sequence from
+        # settings.binding.illumination_steps, and a hardcoded 4 here silently built
+        # frames for a different challenge than the one being checked when the step
+        # count moved to 12 (§14, 2026-09-03). The genuine flow then REJECTed.
+        expected_indices = derive_illumination_sequence(
+            challenge_obj.nonce, settings.binding.illumination_steps
+        )
         nominal_dt_ns = int(1e9 / fps)
 
         images = []

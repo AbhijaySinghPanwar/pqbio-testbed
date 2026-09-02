@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 import pytest
 
+from pqbio.config import settings
 from pqbio.schemas import canonical_cbor_decode
 
 
@@ -57,7 +58,9 @@ def test_cli_replay_source_produces_valid_signed_bundle(
 
     decoded = canonical_cbor_decode(out_path.read_bytes())
     assert decoded["device_id"] == "cli-demo-device"
-    assert len(decoded["frames"]) == 30  # default settings.capture.n_frames
+    # From config, not a literal: capture.n_frames moved 30 -> 48 when the challenge
+    # went to 12 steps (§14, 2026-09-03), and a hardcoded copy here just breaks.
+    assert len(decoded["frames"]) == settings.capture.n_frames
     assert len(decoded["bundle_digest"]) == 32
     assert len(decoded["signature"]) > 0
     assert len(decoded["capture_binding"]) == 32

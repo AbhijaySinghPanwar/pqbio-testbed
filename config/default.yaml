@@ -7,25 +7,40 @@ binding:
   nonce_bytes: 32
   challenge_ttl_s: 30
   clock_skew_s: 2
-  illumination_steps: 4
-  # INTERIM, and the number is a coincidence -- it was 0.70 before too, but that value was
-  # set against a formulation that no longer exists (absolute per-channel brightness
-  # correlated against raw palette RGB). Re-derived 2026-09-02 by
-  # scripts/calibrate_illumination_corr.py from 24 real captures plus 192 wrong-nonce and
-  # 200 synthetic negatives -> results/illumination_corr_calibration.json.
+  # 12 steps at 200 ms = 2.4 s of capture. Both re-derived 2026-09-03 by
+  # scripts/b6_operating_point.py -> results/b6_operating_point.json, which sweeps the
+  # step count against real captures and reports TPR/FAR across a full threshold sweep.
   #
-  # 0.70 is the lowest round value above the measured zero-false-accept floor of 0.688;
-  # the worst wrong-nonce negative scored 0.673, so the margin below is +0.027. There is
-  # no comparable margin above: measured TPR is 0.33 across all capture conditions
-  # (0.67 in the best one). B6 will false-reject genuine captures at this setting.
+  # Why 12 and not 4: B6's correlation has ~illumination_steps effective samples per
+  # channel, so the step count -- not the frame count, not the threshold -- sets its noise
+  # floor. At 4 steps the genuine and wrong-nonce classes OVERLAP by 0.100: no threshold
+  # separates them. At 12 they separate with room on both sides. 16 is marginally better
+  # (+0.143 vs +0.133 minimum margin) but that gap is inside the measurement's own
+  # standard error (~0.02 on 8 captures) while costing another 0.8 s of capture, so the
+  # cheaper option wins; the selection rule is recorded in the JSON.
+  illumination_steps: 12
+  illumination_step_ms: 200   # was a hardcoded 0.2s default in
+                              # render_challenge_fullscreen -- a magic number, and the
+                              # one the capture frame budget has to cover
+  # 0.60 = the midpoint of the measured gap for the deployed capture protocol (WB locked,
+  # AE auto) at 12 steps under `uniform` weighting: worst negative 0.472, lowest genuine
+  # capture 0.748. Margin below +0.128, margin above +0.148, TPR 1.00, FAR 0.0000.
   #
-  # That is a property of `illumination_steps: 4`, not of this threshold. B6's
-  # correlation has ~`illumination_steps` effective samples per channel regardless of
-  # frame count, so 4 steps leave the null distribution far too wide. Re-running the live
-  # check at 16 steps drops the wrong-nonce tail from max 0.673 to 0.360
-  # (results/illumination_corr_calibration_16step.json), which would support a threshold
-  # near 0.40 with much better TPR. Raise the step count before lowering this.
-  illumination_corr_min: 0.70
+  # Calibrated STRICT ON TPR and permissive on FAR, which is the inverse of the 2026-09-02
+  # derivation and the correction this value exists to record. B6 is one of six ANDed
+  # binding checks: ANDing compounds false rejects and suppresses false accepts, so a link
+  # in that chain must not be tuned to FAR=0 at any TPR cost. B1-B5 are deterministic, so
+  # B6 carries the entire system BPCER budget of §8.1 and its required TPR is the system
+  # target itself (0.95 for 5%), not the sixth root of it.
+  #
+  # Honest limits, both of them. (1) TPR 1.00 on 8 captures does NOT demonstrate 5%
+  # BPCER: the 95% Clopper-Pearson upper bound here is 0.312, and showing 5% needs ~59
+  # clean captures. (2) Those margins come from ONE sitting. Re-running an hour later
+  # with the room lights on gave +0.077 +/- 0.455 for the same condition that had given
+  # +0.775 +/- 0.035, because the screen contributes only ~1.5% of scene light there and
+  # auto-exposure clips 9-10% of pixels. 0.60 is the best available estimate on weak
+  # evidence, not a characterised operating point. See §14 (2026-09-03, both entries).
+  illumination_corr_min: 0.60
   # Both calibrated by scripts/measure_phash_burst_calibration.py — see
   # PROJECT_SPEC.md §14 for the full reasoning and the honest limitation it found.
   phash_hamming_max: 10       # D: per-frame distance floor that still catches every
@@ -34,8 +49,16 @@ binding:
                                # before BIND_EVIDENCE_REUSE fires (out of capture.n_frames)
 
 capture:
-  n_frames: 30
-  fps: 15
+  # 48 @ 20 fps = 2.4 s, which is exactly what 12 steps x 200 ms needs, at 4 frames per
+  # step. Costs measured by scripts/measure_frame_budget.py -> results/frame_budget.json:
+  # +92 ms of server-side per-frame work (pHash + capture_binding) against the ~700 ms of
+  # ONNX inference already in a request, and a 10.86 MiB bundle against 6.79 MiB.
+  # 36 @ 15 fps would also give 2.4 s for +20 ms, but at 3 frames/step with zero slack --
+  # and after the ~60 ms panel/sensor settle each step, only ~2 of those frames are
+  # usable. Under-sampling steps is what put B6 in this state; paying 72 ms to avoid it
+  # is the right trade.
+  n_frames: 48
+  fps: 20
   resolution: [1280, 720]
   # Illumination-challenge measurement (§5.2). Chromaticity is luminance-normalised by
   # definition; these govern how that normalisation is taken. See

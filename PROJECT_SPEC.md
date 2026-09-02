@@ -236,7 +236,7 @@ Two interchangeable sources producing identical bundle structures:
 - `CameraSource` — live webcam.
 - `ReplaySource` — reads a dataset clip and presents it as a camera. This is how labelled attack data goes through the real pipeline rather than being tested on the detectors in isolation.
 
-**Challenge.** The server nonce drives a physical challenge a pre-recorded stream cannot satisfy. Derive a colour sequence from the nonce (`PRF(nonce)` → 4 steps from {red, green, blue, white}, ~200 ms each), display full-screen, and record the per-frame mean chromaticity of the face region. The verifier correlates the measured trace against the expected sequence. This is the mechanism behind deliverable D3 and the strongest signal for replay and injection.
+**Challenge.** The server nonce drives a physical challenge a pre-recorded stream cannot satisfy. Derive a colour sequence from the nonce (`PRF(nonce)` → `binding.illumination_steps` steps from {red, green, blue, white}, `binding.illumination_step_ms` each — 12 × 200 ms, revised from 4 on 2026-09-03, see below), display full-screen, and record the per-frame mean chromaticity of the face region. The verifier correlates the measured trace against the expected sequence. This is the mechanism behind deliverable D3 and the strongest signal for replay and injection.
 
 **What "mean chromaticity" means here, precisely** (tightened 2026-09-02 — the original wording was too loose to implement correctly, and was implemented incorrectly; see §14):
 
@@ -246,7 +246,11 @@ Two interchangeable sources producing identical bundle structures:
 - The correlation is **channel-centred**: each of the three channels has its own mean across frames removed before Pearson. Without this the score is dominated by the static colour of the room rather than by the modulation the challenge induces.
 - The measurement region may be weighted (`capture.illumination_region_weighting`: `uniform` or `centre`). Which one separates better is an empirical question, re-derived by `scripts/calibrate_illumination_corr.py`, not a fixed choice.
 
-**Statistical note on the step count.** The correlation's effective sample size is the number of challenge *steps*, not the number of frames — frames captured within one step are near-identical, so capturing more of them narrows nothing. At the 4 steps specified above the null distribution is wide enough that no threshold separates genuine captures from wrong-nonce replays cleanly on real sensor data (§14, 2026-09-02). Raising `binding.illumination_steps` is the lever that fixes this; the 4 above is retained pending the consented recording session that can re-derive both it and the threshold together.
+**Why 12 steps, and the frame budget that follows.** The correlation's effective sample size is the number of challenge *steps*, not the number of frames — frames captured within one step are near-identical, so capturing more of them narrows nothing. At the 4 steps originally specified, the genuine and wrong-nonce classes **overlap by 0.100** on real sensor data: no threshold separates them, and the choice is not a tuning question. Swept over {4, 8, 12, 16} steps (§14, 2026-09-03 → `results/b6_operating_point.json`), separation appears at 8 and is comfortable at 12.
+
+The capture budget must cover the challenge: `capture.n_frames / capture.fps ≥ illumination_steps × illumination_step_ms`. At 12 × 200 ms that is 2.4 s, met by 48 frames at 20 fps (4 frames per step, ~2 of them usable after the ~60 ms panel-and-sensor settle at each step). This is asserted by a test, not left to a reader — see `tests/unit/test_spec_config_agreement.py`.
+
+**Capture protocol.** Lock white balance; leave exposure automatic. Auto WB spends the capture correcting the very cast the challenge induces. Auto exposure does the opposite job — it is what reaches an operating point bright enough for the cast to register — and on the reference sensor manual exposure cannot reach one. Locking both, and locking at a setpoint chosen while the challenge renders, were each measured and each scored worse (§14, 2026-09-03). `CameraSource._apply_capture_protocol` implements this.
 
 **Evidence bundle:**
 
@@ -541,6 +545,10 @@ State explicitly: PQ overhead = C2 − C1 (absolute ms and %); AI overhead = C3 
 
 All tunables in `config/default.yaml`. No magic numbers in code.
 
+This block and `config/default.yaml` are compared by `tests/unit/test_spec_config_agreement.py`
+— they had silently drifted (`phash_hamming_max` still read 6 here long after §14 moved it
+to 10), so the agreement is now enforced rather than trusted.
+
 ```yaml
 crypto:
   mode: pq                  # classical | pq
@@ -551,14 +559,19 @@ binding:
   nonce_bytes: 32
   challenge_ttl_s: 30
   clock_skew_s: 2
-  illumination_steps: 4
-  illumination_corr_min: 0.70
-  phash_hamming_max: 6
+  illumination_steps: 12          # 4 gave overlapping classes; see §5.2 and §14
+  illumination_step_ms: 200
+  illumination_corr_min: 0.60     # strict on TPR, permissive on FAR -- §14, 2026-09-03
+  phash_hamming_max: 10           # calibrated, §14
+  phash_reuse_min_frames: 30
 
 capture:
-  n_frames: 30
-  fps: 15
+  n_frames: 48                    # 48/20 = 2.4 s, covers 12 x 200 ms
+  fps: 20
   resolution: [1280, 720]
+  illumination_region_weighting: uniform
+  illumination_min_channel_sum: 12.0
+  illumination_centre_grid: 4
 
 detect:
   quality: {min_face_px: 112, min_blur_var: 60.0, max_yaw_deg: 25}
@@ -1575,3 +1588,158 @@ blocks the replay corpus.
 steps (σ ≈ 0.2–0.45 on the positives). Effective sample size accounts for the 4-step case;
 it does not fully account for the residual spread at 16. Not resolved here, and not papered
 over by moving the threshold.
+
+
+### 2026-09-03 — B6 was calibrated backwards for a link in an AND chain
+
+**The error.** The 2026-09-02 recalibration drove B6's false-accept rate to zero and
+accepted whatever true-positive rate fell out — 0.33. That is the right reasoning for a
+check standing alone and the wrong reasoning for one of six ANDed checks. An AND chain
+**compounds false rejects** (a genuine capture must clear all six) and **suppresses false
+accepts** (an attacker must clear all six). So each link should be calibrated *strict on
+TPR and permissive on FAR* — the inverse of what was done. At TPR 0.33, B6 alone rejected
+two thirds of genuine verifications and would have been the dominant term in system BPCER
+(§8.1), while its contribution to system FAR was being optimised at that cost.
+
+**How the BPCER budget actually divides.** Naively, six independent statistical checks
+each need TPR = 0.95^(1/6) = 0.9915 for a 5% system BPCER. That is not this chain: B1–B5
+are *deterministic* predicates on a genuine bundle — valid server signature, within expiry,
+unconsumed nonce, advancing counter, recomputing digest — and reject genuine traffic only
+when something is really wrong. They carry no BPCER budget. So B6 absorbs all of it and
+its required TPR is the system target itself, 0.95, not the sixth root of it. The
+distinction barely moves the number here (0.95 vs 0.9915) but it decides who pays, and it
+will matter the moment a second statistical check joins the chain.
+
+**No threshold fixes this at 4 steps; the step count does.** Swept {4, 8, 12, 16} steps at
+200 ms, 8 repeats × 5 capture conditions, with the same three negative classes as before
+(real no-render controls, wrong-nonce scorings of real traces, synthetic no-cast) —
+`scripts/b6_operating_point.py` → `results/b6_operating_point.json`. For the deployed
+protocol (WB locked, AE auto) under `uniform` weighting:
+
+| steps | wall | lowest genuine | worst negative | gap | threshold | TPR | FAR |
+|---|---|---|---|---|---|---|---|
+| 4 | 0.8 s | 0.544 | 0.644 | **−0.100 (overlap)** | none exists | — | — |
+| 8 | 1.6 s | 0.726 | 0.620 | +0.105 | 0.68 | 1.00 | 0.000 |
+| 12 | 2.4 s | 0.748 | 0.472 | +0.276 | **0.60** | 1.00 | 0.000 |
+| 16 | 3.2 s | 0.653 | 0.368 | +0.285 | 0.52 | 1.00 | 0.000 |
+
+At 4 steps the classes **overlap**: there is no threshold, and that closes the question of
+whether 0.70 or any other value was ever going to work. **12 steps is chosen over 16**
+because their minimum two-sided margins (+0.133 vs +0.143) differ by less than the standard
+error of the estimate (~0.02 on 8 captures) while 16 costs another 0.8 s of capture on
+every verification. The selection rule is in the JSON, not just in this paragraph.
+
+**A methodological correction inside the correction.** The first pass at this sweep pooled
+all four rendered conditions into one positive class and concluded no operating point
+existed at any step count. That was an artefact: most of the apparent variance was
+*between* protocols, not within them (pooled σ ≈ 0.24, per-condition σ ≈ 0.03–0.12).
+A deployment runs one capture protocol, so the positive class is one protocol's captures.
+The first version of the script had also persisted summaries only, so this could not be
+re-derived without the room and the hardware back — it now persists every raw correlation
+and per-frame trace, and `--reanalyse` recomputes from them.
+
+**Frame budget** (`scripts/measure_frame_budget.py` → `results/frame_budget.json`, measured
+against the production JPEG-q90 path, not estimated). 12 × 200 ms needs 2.4 s:
+
+| option | wall | bundle | server per-frame cost | note |
+|---|---|---|---|---|
+| 30 @ 15 (old) | 2.0 s | 6.79 MiB | 190 ms | too short for 12 steps |
+| 36 @ 15 | 2.4 s | 8.15 MiB | +20 ms | 3 frames/step, zero slack |
+| **48 @ 20** | **2.4 s** | **10.86 MiB** | **+92 ms** | 4 frames/step — chosen |
+| 64 @ 20 | 3.2 s | 14.48 MiB | +189 ms | only needed for 16 steps |
+
+48 @ 20 is chosen: after the ~60 ms panel-and-sensor settle at each step, 3 frames/step
+leaves only ~2 usable, and under-sampling steps is precisely what put B6 in this state.
+The +92 ms is server-side per-frame work (pHash dominates) against the ~700 ms of ONNX
+inference already in a request, and 2.4 s of capture against a 30 s challenge TTL — neither
+is close to binding. Shortening the step below 200 ms was rejected for the same
+under-sampling reason.
+
+**§14's own proposed exposure fix was tested and lost.** The 2026-09-02 entry proposed
+locking exposure "at a setpoint chosen while the challenge renders" rather than at ambient.
+Implemented (`_lock_at_challenge_setpoint`) and measured as a fifth condition, it scored
+*worse* than simply leaving AE automatic at every step count — 0.372 vs 0.551 at 4 steps,
+0.615 vs 0.769 at 8, 0.632 vs 0.777 at 12, 0.429 vs 0.750 at 16. It is therefore **not
+implemented in the capture path**, and the condition is kept in the diagnostic script
+because a rejected hypothesis with data behind it is worth more than one quietly dropped.
+
+`CameraSource._apply_capture_protocol` therefore **locks white balance and leaves exposure
+automatic**. The white-balance half is well supported — auto WB spends the capture
+correcting the cast, and locking it beat leaving it in every session. **The exposure half
+is not settled**, and the paragraph below is why.
+
+### 2026-09-03 (later the same evening) — the operating point does not reproduce
+
+Everything above was measured in one sitting. Re-running the live check an hour later, in
+the same room with the lights now on, did not reproduce it: at 12 steps `wb_locked_ae_auto`
+scored **+0.077 ± 0.455** where the sweep had given **+0.775 ± 0.035**, and the no-render
+control (+0.174) scored *higher* than three of the four rendered conditions. That is not a
+small discrepancy and it is not noise around the same mean.
+
+Two things were then measured directly (`scripts/measure_operating_window.py` →
+`results/b6_operating_window.json`), sweeping exposure under a rendered challenge:
+
+1. **Saturation flattens the trace.** At auto-exposure in the brighter room the sensor sat
+   at ~196/255 with **9–10% of pixels clipped**, and in the worst capture the chromaticity
+   trace went flat — per-channel spread **0.00024**, against 0.0116 for a locked capture at
+   138/255 in the same room minutes apart. Once a channel clips, the ratios stop moving and
+   there is nothing left for B6 to correlate.
+2. **The screen contributes ~1.5% of the scene's light here.** Rendering full white versus
+   full black at fixed exposure moves mean brightness from 197.2 to 198.6 —
+   `screen_fraction_of_scene` = 0.012–0.018 across every exposure tested. The challenge is
+   a small perturbation on a large ambient constant, and *that ratio* is the physical
+   quantity B6 depends on. No threshold, step count or lock setting controls it.
+
+**And the measurement is not stably reproducible even within the evening.** Two runs of the
+same sweep, same config, minutes apart: exposure −1 gave **+0.659** and then **−0.304**;
+exposure −6 gave **−0.501** and then **+0.503**. A third run was internally consistent
+(+0.707 / +0.709 at −1, ten of fourteen points clearing 0.60). The difference between the
+erratic and the consistent runs has **not** been isolated — the plausible candidates are
+scene motion in front of the camera and sensor adaptation state between passes, and neither
+was controlled for.
+
+**What this does and does not invalidate.**
+
+- **The 4-step overlap stands.** It was measured with 8 repeats across 5 conditions and the
+  classes overlapped by 0.100. Whatever the run-to-run variance, 4 steps has less signal
+  than 12, and the step-count change is the robust part of this session.
+- **The AND-chain calibration reasoning stands** — it is an argument about how to set a
+  threshold, not a measurement.
+- **The threshold 0.60 does not have the two-sided margin claimed above.** Those margins
+  (+0.128 / +0.148) came from one sitting whose positives had σ ≈ 0.035; the later evening
+  produced σ ≈ 0.455 for the same condition. 0.60 is retained as the best available
+  estimate and is **now on weaker evidence than the tables above imply** — read them as one
+  session's operating point, not as a characterisation.
+- **§5.2's live-webcam DoD item stays open.** The mechanism is demonstrated (the trace is
+  recoverable, and at 12 steps the classes separate in a controlled sitting). Reproducibility
+  across ambient conditions is not, and that is what a deployable threshold would need.
+
+**What B6 is missing, and the recommended next step:** a precondition. Right now a capture
+that is saturated, or one where the screen contributes almost none of the scene's light,
+still produces a correlation — a meaningless number that B6 then thresholds as though it
+meant something, rejecting a genuine user with `BIND_CHALLENGE_UNMET` as if an attack had
+been detected. B6 should first ask *can this capture evaluate the challenge at all* —
+clipped-pixel fraction below a bound, chromaticity spread above a floor, screen contribution
+above a floor — and fail with a distinct reason code when it cannot. That is a check the
+capture client can also evaluate before submitting, and it is the difference between
+"the challenge was not satisfied" and "the challenge could not be measured". Not implemented
+here; recorded as the next piece of work rather than started at the end of a session.
+
+**What the evidence does and does not support.** TPR 1.00 at threshold 0.60 is measured on
+**8 captures**. That does not demonstrate a 5% BPCER: the one-sided 95% Clopper–Pearson
+upper bound on BPCER from 8/8 successes is **0.312**. Demonstrating ≤5% at 95% confidence
+needs ~59 consecutive clean captures. The threshold is *derived* to meet the target; the
+evidence *bounds* it only loosely, and still from one room, one sensor, no subject at
+capture distance. §5.2's live-webcam DoD item is closed on the mechanism — the trace is
+recoverable and B6 clears its threshold with margin on both sides — and remains open on
+population: it has never been run against a human face, which needs the same §6 consent
+that blocks the replay corpus.
+
+**Also fixed here, found while doing it:** §9's config block had silently drifted from
+`config/default.yaml` — `phash_hamming_max` still read 6 there long after an earlier
+amendment moved it to 10, and four `capture.illumination_*` keys added on 2026-09-02 were
+never mirrored in at all. Nothing was comparing them.
+`tests/unit/test_spec_config_agreement.py` now does, including an assertion that the
+capture budget covers the challenge. Separately, the challenge step duration was a
+hardcoded `0.2` default in `render_challenge_fullscreen` — a magic number in the one
+parameter the frame budget turns on — and is now `binding.illumination_step_ms`.

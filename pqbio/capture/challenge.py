@@ -58,7 +58,7 @@ def derive_illumination_sequence(nonce: bytes, steps: int) -> list[int]:
     return [b % len(PALETTE_BGR) for b in stream]
 
 
-def render_challenge_fullscreen(sequence: list[int], step_duration_s: float = 0.2) -> None:
+def render_challenge_fullscreen(sequence: list[int], step_duration_s: float | None = None) -> None:
     """Render the derived colour sequence full-screen, one step at a time.
 
     Requires a display; not exercised in this headless dev environment. Callers on a
@@ -70,6 +70,11 @@ def render_challenge_fullscreen(sequence: list[int], step_duration_s: float = 0.
     """
     import cv2
     import numpy as np
+
+    from pqbio.config import settings
+
+    if step_duration_s is None:
+        step_duration_s = settings.binding.illumination_step_ms / 1000.0
 
     window = "pqbio-illumination-challenge"
     cv2.namedWindow(window, cv2.WND_PROP_FULLSCREEN)

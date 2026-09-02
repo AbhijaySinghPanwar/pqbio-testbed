@@ -1,0 +1,298 @@
+{
+  "KEM_BACKEND": "kyber-py-fallback",
+  "SIG_BACKEND": "dilithium-py-fallback",
+  "config_hash_sha256": "566f3a1f15500aa67311435bdb2ee471e863c7f2ff6cfd1965982c0793781565",
+  "dataset_versions": {
+    "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
+    "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
+    "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
+    "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
+  },
+  "generated_at_utc": "2026-09-01T13:59:21.324740+00:00",
+  "git_commit": "a194d576de5ab9d320d1815ed32b7cdc1912e203",
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "illumination_corr_min": 0.6,
+  "illumination_steps": 12,
+  "note": "Sweeps sensor operating points under a rendered challenge. The protocol question is not 'lock or auto' but 'which operating point' -- auto reaches a good one at low ambient and a saturated one at high ambient, and the chromaticity trace goes flat when it saturates.",
+  "points": [
+    {
+      "_frame_steps_len": 98,
+      "ambient_only_brightness": 195.08745713975696,
+      "chromaticity_spread_mean": 0.007285338109975461,
+      "chromaticity_spread_per_channel": [
+        0.00964623291573791,
+        0.005823188412789266,
+        0.006386593001399206
+      ],
+      "clipped_pixel_fraction": 0.09290407187018843,
+      "correlation": 0.7849367532833478,
+      "label": "auto_exposure",
+      "n_frames": 98,
+      "passes_threshold": true,
+      "scene_brightness_mean": 195.9432668340774,
+      "screen_contribution": 2.913643391927053,
+      "screen_fraction_of_scene": 0.01471528887517882,
+      "screen_lit_brightness": 198.00110053168402
+    },
+    {
+      "_frame_steps_len": 60,
+      "ambient_only_brightness": 153.20562662760415,
+      "chromaticity_spread_mean": 0.007834035811406405,
+      "chromaticity_spread_per_channel": [
+        0.010874450150565401,
+        0.006300383044428843,
+        0.006327274239224974
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.7072868576291468,
+      "label": "exposure_-1",
+      "n_frames": 60,
+      "passes_threshold": true,
+      "scene_brightness_mean": 154.1265379050926,
+      "screen_contribution": 2.2084669325087134,
+      "screen_fraction_of_scene": 0.014210210167680173,
+      "screen_lit_brightness": 155.41409356011286
+    },
+    {
+      "_frame_steps_len": 60,
+      "ambient_only_brightness": 152.76416734483507,
+      "chromaticity_spread_mean": 0.00845510563983252,
+      "chromaticity_spread_per_channel": [
+        0.011976636486412597,
+        0.006455644029203382,
+        0.006933036403881579
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.7113177147585155,
+      "label": "exposure_-2",
+      "n_frames": 60,
+      "passes_threshold": true,
+      "scene_brightness_mean": 154.52264881727436,
+      "screen_contribution": 2.2004054090711804,
+      "screen_fraction_of_scene": 0.014199409387367306,
+      "screen_lit_brightness": 154.96457275390625
+    },
+    {
+      "_frame_steps_len": 71,
+      "ambient_only_brightness": 136.84247382269967,
+      "chromaticity_spread_mean": 0.007747978796052164,
+      "chromaticity_spread_per_channel": [
+        0.010973201323726239,
+        0.006298729622557541,
+        0.005972005441872714
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.7055642576583037,
+      "label": "exposure_-3",
+      "n_frames": 71,
+      "passes_threshold": true,
+      "scene_brightness_mean": 137.48129288316704,
+      "screen_contribution": 2.3766417100694355,
+      "screen_fraction_of_scene": 0.01707123120969711,
+      "screen_lit_brightness": 139.2191155327691
+    },
+    {
+      "_frame_steps_len": 79,
+      "ambient_only_brightness": 122.557392578125,
+      "chromaticity_spread_mean": 0.0072231031260718,
+      "chromaticity_spread_per_channel": [
+        0.01021492018103967,
+        0.00567037245247152,
+        0.005784016744704211
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.6315503321517502,
+      "label": "exposure_-4",
+      "n_frames": 79,
+      "passes_threshold": true,
+      "scene_brightness_mean": 123.56191595793777,
+      "screen_contribution": 1.701016031901034,
+      "screen_fraction_of_scene": 0.013689343449098253,
+      "screen_lit_brightness": 124.25840861002604
+    },
+    {
+      "_frame_steps_len": 95,
+      "ambient_only_brightness": 100.51391913519966,
+      "chromaticity_spread_mean": 0.008169065632074446,
+      "chromaticity_spread_per_channel": [
+        0.011566369756587789,
+        0.0055092192948732735,
+        0.007431607844762274
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.5279701022961584,
+      "label": "exposure_-5",
+      "n_frames": 95,
+      "passes_threshold": false,
+      "scene_brightness_mean": 101.1569511033443,
+      "screen_contribution": 1.870150960286452,
+      "screen_fraction_of_scene": 0.018266034535863826,
+      "screen_lit_brightness": 102.38407009548611
+    },
+    {
+      "_frame_steps_len": 99,
+      "ambient_only_brightness": 53.6265534125434,
+      "chromaticity_spread_mean": 0.00450274654190029,
+      "chromaticity_spread_per_channel": [
+        0.006039704991298842,
+        0.002102539505806535,
+        0.005365995128595491
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": -0.13895928243617933,
+      "label": "exposure_-6",
+      "n_frames": 99,
+      "passes_threshold": false,
+      "scene_brightness_mean": 54.19300928117984,
+      "screen_contribution": 0.9294479709201369,
+      "screen_fraction_of_scene": 0.017036585294938088,
+      "screen_lit_brightness": 54.55600138346354
+    },
+    {
+      "_frame_steps_len": 98,
+      "ambient_only_brightness": 197.19571519639754,
+      "chromaticity_spread_mean": 0.00815990288909102,
+      "chromaticity_spread_per_channel": [
+        0.011306484761451257,
+        0.005667670290096612,
+        0.007505553615725192
+      ],
+      "clipped_pixel_fraction": 0.10015484872627729,
+      "correlation": 0.7529301689188521,
+      "label": "auto_exposure",
+      "n_frames": 98,
+      "passes_threshold": true,
+      "scene_brightness_mean": 198.57385775403912,
+      "screen_contribution": 2.7367514377170323,
+      "screen_fraction_of_scene": 0.013688379300223465,
+      "screen_lit_brightness": 199.93246663411458
+    },
+    {
+      "_frame_steps_len": 60,
+      "ambient_only_brightness": 154.24763549804686,
+      "chromaticity_spread_mean": 0.008492803274372083,
+      "chromaticity_spread_per_channel": [
+        0.011948036543431993,
+        0.006578587103935899,
+        0.006951786175748359
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.7094212472051258,
+      "label": "exposure_-1",
+      "n_frames": 60,
+      "passes_threshold": true,
+      "scene_brightness_mean": 155.39269894748264,
+      "screen_contribution": 2.043878716362883,
+      "screen_fraction_of_scene": 0.01307734925108584,
+      "screen_lit_brightness": 156.29151421440974
+    },
+    {
+      "_frame_steps_len": 60,
+      "ambient_only_brightness": 154.30014377170139,
+      "chromaticity_spread_mean": 0.008518675976613157,
+      "chromaticity_spread_per_channel": [
+        0.01204168074036176,
+        0.006512966409682525,
+        0.007001380779795184
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.7177313459663894,
+      "label": "exposure_-2",
+      "n_frames": 60,
+      "passes_threshold": true,
+      "scene_brightness_mean": 155.53182277199073,
+      "screen_contribution": 2.127397732204855,
+      "screen_fraction_of_scene": 0.013599892395877939,
+      "screen_lit_brightness": 156.42754150390624
+    },
+    {
+      "_frame_steps_len": 72,
+      "ambient_only_brightness": 137.46157592773437,
+      "chromaticity_spread_mean": 0.00811759604796263,
+      "chromaticity_spread_per_channel": [
+        0.011511583272294405,
+        0.006446502995039593,
+        0.006394701876553892
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.6632505419235736,
+      "label": "exposure_-3",
+      "n_frames": 72,
+      "passes_threshold": true,
+      "scene_brightness_mean": 138.7170991271219,
+      "screen_contribution": 1.8604994032118043,
+      "screen_fraction_of_scene": 0.013353945516475885,
+      "screen_lit_brightness": 139.32207533094618
+    },
+    {
+      "_frame_steps_len": 83,
+      "ambient_only_brightness": 122.7080343967014,
+      "chromaticity_spread_mean": 0.007588604111172809,
+      "chromaticity_spread_per_channel": [
+        0.010848513190242088,
+        0.0058420441859396745,
+        0.006075254957336667
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.7059281984443875,
+      "label": "exposure_-4",
+      "n_frames": 83,
+      "passes_threshold": true,
+      "scene_brightness_mean": 124.04402116277613,
+      "screen_contribution": 1.5201110839843608,
+      "screen_fraction_of_scene": 0.012236446725518402,
+      "screen_lit_brightness": 124.22814548068575
+    },
+    {
+      "_frame_steps_len": 99,
+      "ambient_only_brightness": 100.97282009548611,
+      "chromaticity_spread_mean": 0.008009465016115271,
+      "chromaticity_spread_per_channel": [
+        0.011335715371138507,
+        0.0052672156342305826,
+        0.007425464042976724
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.5421315019400136,
+      "label": "exposure_-5",
+      "n_frames": 99,
+      "passes_threshold": false,
+      "scene_brightness_mean": 102.00936930064532,
+      "screen_contribution": 1.697530517578116,
+      "screen_fraction_of_scene": 0.016533794882766423,
+      "screen_lit_brightness": 102.67035061306423
+    },
+    {
+      "_frame_steps_len": 101,
+      "ambient_only_brightness": 53.86215928819445,
+      "chromaticity_spread_mean": 0.004036958789229585,
+      "chromaticity_spread_per_channel": [
+        0.005650124943993543,
+        0.0019969188830668886,
+        0.004463832540628322
+      ],
+      "clipped_pixel_fraction": 0.0,
+      "correlation": 0.06018966221732208,
+      "label": "exposure_-6",
+      "n_frames": 101,
+      "passes_threshold": false,
+      "scene_brightness_mean": 54.43903626495463,
+      "screen_contribution": 0.8934870062933982,
+      "screen_fraction_of_scene": 0.016317714551080807,
+      "screen_lit_brightness": 54.755646294487846
+    }
+  ],
+  "seed": 2026,
+  "step_ms": 200,
+  "usable_window": {
+    "brightness_max": 198.57385775403912,
+    "brightness_min": 123.56191595793777,
+    "max_clipped_fraction_among_passing": 0.10015484872627729,
+    "n_points_passing": 10
+  }
+}

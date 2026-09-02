@@ -32,6 +32,7 @@ class BindingConfig(BaseModel):
     challenge_ttl_s: int
     clock_skew_s: int
     illumination_steps: int
+    illumination_step_ms: int
     illumination_corr_min: float
     phash_hamming_max: int
     phash_reuse_min_frames: int
