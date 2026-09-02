@@ -1,7 +1,7 @@
 {
   "git_commit": "unknown (not a git repository at run time)",
-  "config_hash_sha256": "65021a84ad899b7630815bf8590bdf30a5e3fc055a02681bf2e3aed55694f532",
-  "generated_at_utc": "2026-09-01T12:49:24.872155+00:00",
+  "config_hash_sha256": "c96eb01258bfdd3032d0f2d7e97db2808417f97c0139fb4005616e457b03e06c",
+  "generated_at_utc": "2026-09-02T13:41:46.361735+00:00",
   "scope_note": "Only match/injection/binding/quality signals exist this session \u2014 pad/morph/deepfake/replay are dataset-blocked and not built. Both strategies are compared on the injection corpus only (provenance detection), not full system ACER. See pqbio/detect/fusion.py's module docstring.",
   "n_samples": 40,
   "rule_accuracy": 1.0,
@@ -46,7 +46,7 @@
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.16457880345859244
+      "cascade_fused_score": 0.16457880345859238
     },
     {
       "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_002.cbor",
@@ -142,7 +142,7 @@
       "rule_decision": "ACCEPT",
       "cascade_decision": "ACCEPT",
       "rule_fused_score": 0.0,
-      "cascade_fused_score": 0.16457880345859244
+      "cascade_fused_score": 0.16457880345859238
     },
     {
       "bundle_path": "data/processed/injection_corpus/tier1_injection/sample_008.cbor",

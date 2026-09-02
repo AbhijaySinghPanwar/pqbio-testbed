@@ -9,6 +9,6 @@
 # gitignored; this file is tracked so weight provenance survives even though the
 # weights do not.
 
-8918f760a41000847712c8f5e21425cd6cd1a9365bf1dfbf7e8654619ab98c18  injection_gbm.txt
+026e0945e8509bdf77b1bca23937c30f49e7864f253866ac8750e6ed7d458ae1  injection_gbm.txt
 5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91  insightface/models/buffalo_l/det_10g.onnx
 4c06341c33c2ca1f86781dab0e829f88ad5b64be9fba56e56bc9ebdefc619e43  insightface/models/buffalo_l/w600k_r50.onnx
