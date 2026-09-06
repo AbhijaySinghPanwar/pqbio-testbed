@@ -3,6 +3,10 @@
     "blocked": true,
     "blocker": "B6's threshold (binding.illumination_corr_min = 0.60) and this evaluability floor both rest on captures from a single session, in one room, on one sensor, with no human subject at capture distance. Measured TPR was 1.00 on 8 captures, whose one-sided 95% Clopper-Pearson upper bound on BPCER is 0.312 -- consistent with a true BPCER of 31%. Demonstrating the 5% system BPCER target at 95% confidence needs ~59 consecutive clean captures. UNBLOCKER: the consented multi-capture session -- multiple subjects at capture distance across varied ambient lighting, which \u00a76 gates behind written consent and supervisor approval (the same blocker as the replay corpus). \u00a75.2's live-webcam DoD item closes on that measurement and not before; until then these values are the best available estimate, not a characterised operating point (PROJECT_SPEC.md \u00a714, 2026-09-03/04)"
   },
+  "B6_residual_unmet_after_the_evaluability_gate": {
+    "blocked": true,
+    "blocker": "The evaluability gate has not solved B6's BPCER contamination, only a third of it. At the shipped floor the gate reclassifies 33% of failing rendered captures from BIND_CHALLENGE_UNMET to BIND_CHALLENGE_UNEVALUABLE, while gating 74% of no-render controls -- so roughly two-thirds of real-capture B6 failures are still scored as UNMET, i.e. as challenge-not-answered rather than could-not-measure. Whether that residual is a conservative gate leaving measurable-but-weak captures on the attack side, or genuinely unmet challenges that deserve the code they get, is UNRESOLVED: separating the two needs captures whose ground truth is known independently of the correlation itself, which is the consented multi-capture session. Until then any BPCER figure derived from B6 outcomes carries an unquantified genuine-capture component (PROJECT_SPEC.md \u00a714, 2026-09-04)"
+  },
   "KEM_BACKEND": "kyber-py-fallback",
   "SIG_BACKEND": "dilithium-py-fallback",
   "candidates": {
@@ -133,8 +137,8 @@
     "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
     "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
   },
-  "generated_at_utc": "2026-09-06T06:47:50.522269+00:00",
-  "git_commit": "f05e3b153765b92dbe683f468e585896b1affe77",
+  "generated_at_utc": "2026-09-06T07:05:24.516100+00:00",
+  "git_commit": "a0a873f87d15a2fc223d8d6c56c0ce696b18bd01",
   "hardware": {
     "platform": "Windows-10-10.0.26200-SP0",
     "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",

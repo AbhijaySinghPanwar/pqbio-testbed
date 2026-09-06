@@ -186,7 +186,15 @@ async def run_verify_pipeline(
             return b6_result, injection_score_result
 
         b6, injection_result = await _run_stage("cheap_signals", _stage4)
-        confident_reject = (not b6.passed) or injection_result.decision
+        # `b6.evaluable and not b6.passed`, NOT plain `not b6.passed`. An unevaluable B6
+        # reports passed=False (the two-state view is fail-closed), and treating that as a
+        # confident reject skipped stage 6 -- so an impostor submitting a capture whose
+        # illumination trace happened to be unmeasurable was never scored by `match`, and
+        # came out as CHALLENGE with MISSING_SIGNAL_MATCH. That is a "cannot measure"
+        # outcome skipping a detector that could have produced a positive detection, which
+        # is the masking rule's exact prohibition (§14, 2026-09-05).
+        b6_failed_evaluably = b6.evaluable and not b6.passed
+        confident_reject = b6_failed_evaluably or injection_result.decision
 
         # -------------------------------------------------------------------------
         # Stage 5: evidence-reuse pHash check -> fail fast (as unambiguous as B1-B5)

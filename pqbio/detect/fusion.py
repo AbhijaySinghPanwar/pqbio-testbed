@@ -261,10 +261,6 @@ def fuse_cascade(x: FusionInput, model: CascadeModel | None = None) -> FusionRes
     """
     reasons: list[str] = []
 
-    if not x.quality_passed:
-        return FusionResult(
-            "cascade", 1.0, "REJECT", ["QUALITY_INSUFFICIENT (short-circuit)"], x.missing_signals
-        )
     for code, ok in zip(["B1", "B2", "B3", "B4", "B5", "B6"], x.binding_flags, strict=True):
         if code in x.binding_unevaluable:
             continue  # cannot short-circuit a REJECT on evidence that was never read
@@ -279,6 +275,19 @@ def fuse_cascade(x: FusionInput, model: CascadeModel | None = None) -> FusionRes
     if x.injection_score is not None and x.injection_score >= _thresholds()["injection"]:
         reasons.append(f"injection_score {x.injection_score:.3f} >= threshold (short-circuit)")
         return FusionResult("cascade", 1.0, "REJECT", reasons, x.missing_signals)
+
+    # Quality is checked HERE, not first. `QUALITY_INSUFFICIENT` means the capture could
+    # not be assessed -- face.py is explicit that a bad genuine capture "must never read
+    # as an attack" -- so it is a "cannot evaluate" outcome, and the masking rule (§14,
+    # 2026-09-05) forbids one of those from outranking a positive detection. Running it
+    # first meant a deliberately degraded capture that was ALSO a tier-1 injection
+    # reported only `QUALITY_INSUFFICIENT`, losing the injection attribution that §8.1's
+    # per-attack rates are computed from. The binding and injection checks above are cheap
+    # and had already run, so nothing is paid to consult them.
+    if not x.quality_passed:
+        return FusionResult(
+            "cascade", 1.0, "REJECT", ["QUALITY_INSUFFICIENT (short-circuit)"], x.missing_signals
+        )
 
     # Only now. An unevaluable binding check means part of the evidence could not be read
     # -- it must not mask evidence that WAS read: a statically-injected stream also has a

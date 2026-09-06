@@ -1822,3 +1822,86 @@ outcome must never outrank a positive detection**, only an absence of one.
 this change are correctly *unevaluable* rather than *unmet* — it was a fixture for the
 wrong outcome and now builds a capture lit by a different nonce's sequence, which is
 measurable and genuinely fails the challenge.
+
+
+### 2026-09-05 — the masking rule, and two more places it was already broken
+
+**The rule, stated as a design principle rather than an incident note:**
+
+> **An outcome meaning "cannot evaluate" may outrank an *absence* of detection, but never
+> a *positive* detection. Any gate that returns early must not skip a detector that would
+> have fired.**
+
+The asymmetry is the whole content. "Cannot evaluate" is a statement about the *evidence*,
+not about the subject: it says the system failed to look, so it is entitled to override a
+conclusion drawn from not-looking (an ACCEPT by default) and entitled to nothing else. A
+detector that *did* look and *did* fire has strictly more information, and no gate may
+discard that. The failure mode is quiet by construction — the gate returns a plausible
+outcome, the skipped detector leaves no trace, and only a test that trips the gate *and*
+the detector together can see it.
+
+**The worked example** is B6 (§14, 2026-09-04). Routing `BIND_CHALLENGE_UNEVALUABLE`
+straight to `CHALLENGE` everywhere looked obviously right — an unmeasurable capture is not
+an attack. But a statically-injected stream also has a flat illumination trace, so B6 went
+unevaluable at exactly the moment the injection detector fired, and A6 (tier-1 injection,
+instant capture) turned from `REJECT` into a polite retry. An attacker could have laundered
+a detected injection by making B6 unmeasurable.
+
+**The audit.** Every short-circuit in §5.5's pipeline was then checked — by instrumenting
+the real pipeline and recording which detectors executed, not by reading the code's
+intent, because the original bug was a wiring bug that the code's stated intent did not
+describe.
+
+| # | Short-circuit | Skips | Verdict |
+|---|---|---|---|
+| 1 | Stage 1 crypto: AEAD failure, malformed bundle, bad device signature | everything | **Safe.** Nothing can run before the bundle is decrypted and validated; there is no detector to mask. The failure is itself a positive detection. |
+| 2 | Stage 2 binding B1–B5 fail-fast | quality, B6, injection, reuse, match | **Safe.** B1–B5 are deterministic positive detections (forged signature, expiry, nonce replay, counter regression, digest mismatch), not "cannot evaluate" outcomes, so they are entitled to outrank. *Caveat below.* |
+| 3 | Stage 3 quality gate | — | **Safe in the pipeline.** `prepare_evidence` does not short-circuit: stage 4 runs regardless, and `injection.py` reads the bundle rather than the face crops, so it scores normally on a quality-failed capture. Measured, not assumed. |
+| 4 | Stage 4 `confident_reject` → skips stage 6 heavy models | `match` | **UNSAFE — fixed.** |
+| 5 | Stage 5 evidence-reuse fail-fast | match, fusion | **Safe.** A pHash reuse hit is a positive detection. *Caveat below.* |
+| 6 | `fuse_cascade` quality short-circuit | binding-flag and injection checks | **UNSAFE — fixed.** |
+| 7 | `fuse_cascade` binding / injection short-circuits | later cascade stages | **Safe.** Both are positive detections, and the unevaluable case was already ordered after them (§14, 2026-09-04). |
+
+**Unsafe #4 — stage 4 skipped the identity match on an unevaluable B6.**
+`confident_reject` was `(not b6.passed) or injection_result.decision`. An unevaluable B6
+reports `passed=False` — the two-state view is deliberately fail-closed — so it satisfied
+that predicate and stage 6 was skipped. Measured end to end: a capture with a flat
+illumination trace produced `CHALLENGE` with `MISSING_SIGNAL_MATCH`, having never scored
+the face against the enrolled template. An impostor whose capture happened to be
+unmeasurable was never checked for being an impostor. Now
+`b6.evaluable and not b6.passed`: a *genuine* B6 failure still short-circuits (the outcome
+is already REJECT, so the match score cannot change it), an unevaluable one does not.
+
+**Unsafe #6 — the quality gate masked injection attribution.** `fuse_cascade` returned on
+`not x.quality_passed` before consulting the binding flags or the injection score. A
+degraded capture that was *also* a tier-1 injection reported only
+`QUALITY_INSUFFICIENT (short-circuit)`. Both paths end in `REJECT`, so this was not an
+accept-path hole — but §8.1's per-attack detection rates and the 6-class confusion matrix
+are computed from exactly these reason codes, so the injection detector was being silently
+understated whenever an attacker also degraded the capture. The quality check now runs
+after the binding and injection short-circuits, which are cheap comparisons that had
+already been computed.
+
+**A caveat that applies to #2 and #5, recorded rather than fixed.** Both raise
+`PipelineRejection` carrying only their own reason code, so when an injected bundle *also*
+fails B4 or hits the reuse index, the injection attribution is lost the same way #6 lost
+it. This does not violate the rule — a positive detection is outranking another positive
+detection, not being masked by a "cannot evaluate" — and the decision is `REJECT` either
+way. It is the same §8.1 attribution weakness in a place where the rule does not forbid
+it, and it is worth closing when the remaining detectors exist and per-attack rates start
+carrying weight.
+
+**Latency.** Cheapest-first ordering is unchanged; nothing new runs on the happy path. The
+one real cost is that fix #4 now runs the heavy-models stage in the case it used to skip —
+B6 unevaluable with nothing else firing — which is **p50 251.6 ms** on the current
+in-process benchmark (`results/latency.json`). That is the price of not silently skipping
+the identity check on a capture heading for `CHALLENGE`, and it is paid only in that case.
+The #6 reorder moves only in-memory comparisons inside a stage whose total is p50 0.33 ms,
+so it is not measurable.
+
+**What would have caught these earlier.** Not review — all three read as obviously correct.
+The shape that works is the one that caught the original: **a capture that trips the gate
+AND would trip a detector, asserting the detection survives**
+(`tests/unit/test_shortcircuit_masking.py`). One such test per gate, asserting on observed
+detector execution rather than on the predicate's expression, since a predicate test passes
+happily while the wiring is wrong.

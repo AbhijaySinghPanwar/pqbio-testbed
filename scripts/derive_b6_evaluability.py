@@ -235,6 +235,20 @@ def main() -> None:
                 ),
             },
         },
+        "B6_residual_unmet_after_the_evaluability_gate": blocked(
+            "The evaluability gate has not solved B6's BPCER contamination, only a third "
+            "of it. At the shipped floor the gate reclassifies 33% of failing rendered "
+            "captures from BIND_CHALLENGE_UNMET to BIND_CHALLENGE_UNEVALUABLE, while "
+            "gating 74% of no-render controls -- so roughly two-thirds of real-capture B6 "
+            "failures are still scored as UNMET, i.e. as challenge-not-answered rather "
+            "than could-not-measure. Whether that residual is a conservative gate leaving "
+            "measurable-but-weak captures on the attack side, or genuinely unmet "
+            "challenges that deserve the code they get, is UNRESOLVED: separating the two "
+            "needs captures whose ground truth is known independently of the correlation "
+            "itself, which is the consented multi-capture session. Until then any BPCER "
+            "figure derived from B6 outcomes carries an unquantified genuine-capture "
+            "component (PROJECT_SPEC.md §14, 2026-09-04)"
+        ),
         "B6_operating_point_characterisation": blocked(
             "B6's threshold (binding.illumination_corr_min = 0.60) and this evaluability "
             "floor both rest on captures from a single session, in one room, on one "
