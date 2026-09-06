@@ -1,6 +1,6 @@
 # Evaluation report (PROJECT_SPEC.md §8)
 
-*git `4cee4683e1f5` · config `ff38ecf43267` · Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41 / x86_64 · KEM=liboqs SIG=liboqs · seed=2026 · generated 2026-09-06T18:41:33.933832+00:00*
+*git `2b0008a8b489` · config `ff38ecf43267` · Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41 / x86_64 · KEM=liboqs SIG=liboqs · seed=2026 · generated 2026-09-06T19:24:19.445967+00:00*
 
 ---
 
@@ -43,10 +43,33 @@ _n=40 — Only match/injection/binding/quality signals exist this session — pa
 |---|---|
 | deepfake | BLOCKED — no deepfake detector implemented -- pqbio/detect/deepfake.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14) |
 | injection_tier1 | 1.0000 |
-| morph_dmad | {'acer': 0.1395698051948052, 'apcer': 0.11038961038961038, 'auc_roc': 0.9295454545454546, 'bpcer': 0.16875, 'cross_method_generalisation': {'train_landmark_alpha__test_spliced_jpeg': {'acer': 0.20296266233766233, 'apcer': 0.3246753246753247, 'auc_roc': 0.8842532467532467, 'bpcer': 0.08125, 'eer': 0.18125000000000002, 'eer_threshold': 0.00041465725129747943, 'far_achieved': 0.01, 'n_attack': 77, 'n_genuine': 160, 'tdr_at_far_1pct': 0.15625, 'threshold': 0.5}, 'train_spliced_jpeg__test_landmark_alpha': {'acer': 0.10434253246753246, 'apcer': 0.06493506493506493, 'auc_roc': 0.9598214285714286, 'bpcer': 0.14375, 'eer': 0.09999999999999998, 'eer_threshold': 0.7528852890296254, 'far_achieved': 0.01, 'n_attack': 77, 'n_genuine': 160, 'tdr_at_far_1pct': 0.65625, 'threshold': 0.5}}, 'eer': 0.13749999999999996, 'eer_threshold': 0.6417689809764262, 'far_achieved': 0.01, 'model_path': 'morph_dmad_gbm.txt', 'n_attack': 154, 'n_dropped_no_features': 0, 'n_genuine': 160, 'n_test': 314, 'n_train': 475, 'setting': 'dmad', 'tdr_at_far_1pct': 0.15, 'threshold': 0.5} |
-| morph_smad | {'acer': 0.2461038961038961, 'apcer': 0.2922077922077922, 'auc_roc': 0.8368912337662339, 'bpcer': 0.2, 'cross_method_generalisation': {'train_landmark_alpha__test_spliced_jpeg': {'acer': 0.4764204545454545, 'apcer': 0.9090909090909091, 'auc_roc': 0.5856331168831168, 'bpcer': 0.04375, 'eer': 0.43125, 'eer_threshold': 0.0018653737853725303, 'far_achieved': 0.01, 'n_attack': 77, 'n_genuine': 160, 'tdr_at_far_1pct': 0.0125, 'threshold': 0.5}, 'train_spliced_jpeg__test_landmark_alpha': {'acer': 0.39801136363636364, 'apcer': 0.7272727272727273, 'auc_roc': 0.7637987012987013, 'bpcer': 0.06875, 'eer': 0.33766233766233766, 'eer_threshold': 0.12965899760450694, 'far_achieved': 0.01, 'n_attack': 77, 'n_genuine': 160, 'tdr_at_far_1pct': 0.15, 'threshold': 0.5}}, 'eer': 0.24375000000000002, 'eer_threshold': 0.40992054028307695, 'far_achieved': 0.01, 'model_path': 'morph_smad_gbm.txt', 'n_attack': 154, 'n_dropped_no_features': 0, 'n_genuine': 160, 'n_test': 314, 'n_train': 475, 'setting': 'smad', 'tdr_at_far_1pct': 0.04375, 'threshold': 0.5} |
+| morph_dmad | {'acer': 0.1395698051948052, 'apcer': 0.11038961038961038, 'auc_roc': 0.9295454545454546, 'bpcer': 0.16875, 'eer': 0.13749999999999996, 'eer_threshold': 0.6417689809764262, 'far_achieved': 0.01, 'model_path': 'morph_dmad_gbm.txt', 'n_attack': 154, 'n_dropped_no_features': 0, 'n_genuine': 160, 'n_test': 314, 'n_train': 475, 'setting': 'dmad', 'tdr_at_far_1pct': 0.15, 'threshold': 0.5} |
+| morph_smad | {'acer': 0.2461038961038961, 'apcer': 0.2922077922077922, 'auc_roc': 0.8368912337662339, 'bpcer': 0.2, 'eer': 0.24375000000000002, 'eer_threshold': 0.40992054028307695, 'far_achieved': 0.01, 'model_path': 'morph_smad_gbm.txt', 'n_attack': 154, 'n_dropped_no_features': 0, 'n_genuine': 160, 'n_test': 314, 'n_train': 475, 'setting': 'smad', 'tdr_at_far_1pct': 0.04375, 'threshold': 0.5} |
 | presentation | BLOCKED — no presentation detector implemented -- pqbio/detect/pad.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14) |
 | replay | BLOCKED — no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed. Replay-Attack/MSU-MFSD are unlicensed (§6), and the self-recorded alternative is blocked on human subjects rather than hardware: §6 requires written consent and supervisor approval to record anyone, and a subject-disjoint split needs at least two consenting subjects. The capture rig itself is verified working (camera, display, WB/exposure lock -- PROJECT_SPEC.md §14, 2026-09-01) |
+
+### T4b — MMPMR (morph only)
+
+_Threshold: `match_cosine_min` = 0.38._
+
+| Morph method | n | MMPMR (verifies as ALL contributors) | Verifies as ANY contributor | Mean min similarity |
+|---|---|---|---|---|
+| landmark_alpha | 195 | 0.1077 | 0.4615 | 0.2341 |
+| spliced_jpeg | 195 | 0.0205 | 0.7231 | 0.1575 |
+| **all methods** | 390 | **0.0641** | 0.5923 |  |
+
+**Read this before the morph rows of T1/T4.** MMPMR is 0.0641 at `match_cosine_min` = 0.38: most of these morphs do not verify as both contributors, so they would not have fooled the matcher in the first place and the detection metrics largely describe the detection of failed attacks. Cause and consequences in §12 item 8.
+
+### T4c — Morph cross-method generalisation
+
+AUC near 0.5 means the detector learned the *generator*, not morphing. Compare against the within-corpus rows of T1: the gap is the honest number (§12 item 9).
+
+| Setting | Train → test | ACER | EER | AUC-ROC | APCER |
+|---|---|---|---|---|---|
+| DMAD | train landmark_alpha → test spliced_jpeg | 0.2030 | 0.1813 | 0.8843 | 0.3247 |
+| DMAD | train spliced_jpeg → test landmark_alpha | 0.1043 | 0.1000 | 0.9598 | 0.0649 |
+| SMAD | train landmark_alpha → test spliced_jpeg | 0.4764 | 0.4313 | 0.5856 | 0.9091 |
+| SMAD | train spliced_jpeg → test landmark_alpha | 0.3980 | 0.3377 | 0.7638 | 0.7273 |
 
 ### T5 — Crypto micro-benchmarks and artefact sizes
 

@@ -140,6 +140,108 @@ def render_t4(accuracy: dict[str, Any] | None) -> str:
     return f"{title}\n{_markdown_table(['Attack type', 'Detection rate'], rows)}\n"
 
 
+def render_t4b_mmpmr(accuracy: dict[str, Any] | None) -> str:
+    """MMPMR — §8.1's morph-only metric, and the one to read before any morph ACER.
+
+    MMPMR asks whether the *attack works*: does a morph verify as **every** contributing
+    identity against the enrolled template? A corpus whose MMPMR is low is a corpus of
+    morphs the matcher would have rejected anyway, and its detection numbers describe the
+    detection of failed attacks. That is why this renders immediately after T4 and carries
+    the warning inline rather than in a footnote.
+    """
+    title = "### T4b — MMPMR (morph only)\n"
+    section = accuracy.get("mmpmr") if accuracy else None
+    if section is None:
+        return f"{title}\nBLOCKED — results/accuracy.json not found\n"
+    if is_blocked(section):
+        return f"{title}\nBLOCKED — {section['blocker']}\n"
+
+    threshold = section.get("match_cosine_min")
+    rows = []
+    for method, stats in section.get("by_method", {}).items():
+        rows.append(
+            [
+                method,
+                str(stats.get("n_morphs", "")),
+                _fmt(stats.get("mmpmr")),
+                _fmt(stats.get("any_contributor_match_rate")),
+                _fmt(stats.get("min_similarity_mean")),
+            ]
+        )
+    overall = section.get("overall")
+    if overall:
+        rows.append(
+            [
+                "**all methods**",
+                str(overall.get("n_morphs", "")),
+                f"**{_fmt(overall.get('mmpmr'))}**",
+                _fmt(overall.get("any_contributor_match_rate")),
+                "",
+            ]
+        )
+
+    table = _markdown_table(
+        [
+            "Morph method",
+            "n",
+            "MMPMR (verifies as ALL contributors)",
+            "Verifies as ANY contributor",
+            "Mean min similarity",
+        ],
+        rows,
+    )
+    caveat = ""
+    if overall and isinstance(overall.get("mmpmr"), (int, float)) and overall["mmpmr"] < 0.5:
+        caveat = (
+            f"\n**Read this before the morph rows of T1/T4.** MMPMR is "
+            f"{_fmt(overall['mmpmr'])} at `match_cosine_min` = {threshold}: most of these "
+            "morphs do not verify as both contributors, so they would not have fooled the "
+            "matcher in the first place and the detection metrics largely describe the "
+            "detection of failed attacks. Cause and consequences in §12 item 8.\n"
+        )
+    return f"{title}\n_Threshold: `match_cosine_min` = {threshold}._\n\n{table}\n{caveat}"
+
+
+def render_morph_cross_method(accuracy: dict[str, Any] | None) -> str:
+    """Train on one morph generator, test on the other — the §12 generalisation number.
+
+    Cross-*dataset* evaluation is impossible with one self-generated corpus; this is the
+    closest available proxy, and it is where a morph detector's honest number lives.
+    """
+    title = "### T4c — Morph cross-method generalisation\n"
+    section = accuracy.get("morph_cross_method_generalisation") if accuracy else None
+    if section is None:
+        return f"{title}\nBLOCKED — results/accuracy.json not found\n"
+    if is_blocked(section):
+        return f"{title}\nBLOCKED — {section['blocker']}\n"
+
+    rows = []
+    for setting, pairings in section.items():
+        if not isinstance(pairings, dict):
+            continue
+        for pairing, metrics in pairings.items():
+            if is_blocked(metrics):
+                rows.append([setting.upper(), pairing, "BLOCKED", "", "", ""])
+                continue
+            rows.append(
+                [
+                    setting.upper(),
+                    pairing.replace("train_", "train ").replace("__test_", " → test "),
+                    _fmt(metrics.get("acer")),
+                    _fmt(metrics.get("eer")),
+                    _fmt(metrics.get("auc_roc")),
+                    _fmt(metrics.get("apcer")),
+                ]
+            )
+    table = _markdown_table(["Setting", "Train → test", "ACER", "EER", "AUC-ROC", "APCER"], rows)
+    return (
+        f"{title}\nAUC near 0.5 means the detector learned the *generator*, not morphing. "
+        "Compare against the within-corpus rows of T1: the gap is the honest number "
+        "(§12 item 9).\n\n"
+        f"{table}\n"
+    )
+
+
 def render_t5(pqc_micro: dict[str, Any] | None) -> str:
     title = "### T5 — Crypto micro-benchmarks and artefact sizes\n"
     if pqc_micro is None:
@@ -484,6 +586,8 @@ def generate_report(out_path: Path = RESULTS_DIR / "report.md") -> Path:
         render_t2(accuracy),
         render_t3(accuracy),
         render_t4(accuracy),
+        render_t4b_mmpmr(accuracy),
+        render_morph_cross_method(accuracy),
         render_t5(pqc_micro),
         render_t6(overhead),
         render_t7(loadgen),
