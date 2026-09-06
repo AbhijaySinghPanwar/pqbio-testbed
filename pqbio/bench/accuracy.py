@@ -139,6 +139,122 @@ def per_attack_detection_rate(
     return result
 
 
+# Reason codes that name an attack type, most specific first. Order IS the precedence:
+# a decision carrying several is attributed to the first match here.
+#
+# The ordering principle is *specificity of attribution*, not severity. A detector that
+# examined the media and named an attack type outranks a binding check that inferred one
+# from protocol evidence, because the detector's answer is about what the sample IS while
+# the binding check's is about what the sample FAILED TO DO.
+ATTACK_CODE_PRECEDENCE: tuple[tuple[str, str], ...] = (
+    # 1. Detector verdicts. Only injection exists this session; the other four slots are
+    #    listed so the order is fixed before those detectors arrive rather than being
+    #    decided ad hoc when they do (§6/§14 -- pad, morph, deepfake, replay are
+    #    dataset-blocked).
+    ("PAD_DETECTED", "presentation"),
+    ("MORPH_DETECTED", "morph"),
+    ("DEEPFAKE_DETECTED", "deepfake"),
+    ("REPLAY_DETECTED", "replay"),
+    ("INJECTION_DETECTED", "injection"),
+    # 2. Binding-derived attributions. Resubmitted media is a replay by definition, and a
+    #    stream that cannot answer a fresh challenge is §5.2's canonical replay signal.
+    ("BIND_EVIDENCE_REUSE", "replay"),
+    ("BIND_CHALLENGE_UNMET", "replay"),
+)
+
+# Codes that are rejections but name no attack class. Forcing these into one of the six
+# would invent an attribution the system never made.
+NON_ATTRIBUTING_REJECTION_CODES: frozenset[str] = frozenset(
+    {
+        "CRYPTO_AEAD_FAILED",
+        "CRYPTO_MALFORMED_BUNDLE",
+        "CRYPTO_DEVICE_SIG_INVALID",
+        "BIND_CHALLENGE_FORGED",
+        "BIND_EXPIRED",
+        "BIND_NONCE_REPLAY",
+        "BIND_COUNTER_REGRESSION",
+        "BIND_DIGEST_MISMATCH",
+        "QUALITY_INSUFFICIENT",
+        "BIND_CHALLENGE_UNEVALUABLE",
+    }
+)
+
+
+def predicted_attack_class(reason_codes: Sequence[str]) -> str | None:
+    """Collapse a decision's reason codes to one 6-class label, or `None`.
+
+    Since 2026-09-06 a rejected decision carries *every* code determined up to the
+    rejection point, not only the triggering one (§14) -- which is what §8.1's per-attack
+    rates needed, and which makes a single-label matrix ambiguous unless the collapse is
+    defined. It is defined by `ATTACK_CODE_PRECEDENCE`, in that order.
+
+    `None` means "rejected, but the system named no attack type": a forged signature, an
+    expired challenge, a counter regression, a quality failure. Those are real rejections
+    and belong in the report, but they are **not** one of the six classes and are counted
+    separately by `classify_decisions` rather than being folded into the nearest-looking
+    one. `BIND_CHALLENGE_UNEVALUABLE` is also `None` -- it is not a rejection at all
+    (§14, 2026-09-04) and maps to CHALLENGE.
+
+    `TRIGGER_PREFIX`-marked entries are ignored here: which code *ended* the request is a
+    different question from which attack the system attributed it to, and the prefixed
+    copy would otherwise double-count.
+    """
+    present = {c for c in reason_codes if not c.startswith("REJECTED_BY:")}
+    for code, label in ATTACK_CODE_PRECEDENCE:
+        if code in present:
+            return label
+    return None
+
+
+def classify_decisions(
+    decisions: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Map decisions to 6-class predicted labels, keeping the collapse auditable.
+
+    Returns the per-decision labels alongside a tally of how often the collapse actually
+    discarded a competing attribution. That tally is the point: a precedence order applied
+    silently is indistinguishable from a bug, and if `multi_attribution_count` is large the
+    matrix is hiding most of what the system found.
+
+    Each decision needs `decision` and `reason_codes`.
+    """
+    labels: list[str | None] = []
+    multi: list[dict[str, Any]] = []
+    non_attributing = 0
+
+    for d in decisions:
+        codes = list(d.get("reason_codes", []))
+        outcome = d.get("decision")
+        if outcome != "REJECT":
+            labels.append("bona_fide")
+            continue
+        matched = [
+            label
+            for code, label in ATTACK_CODE_PRECEDENCE
+            if code in {c for c in codes if not c.startswith("REJECTED_BY:")}
+        ]
+        chosen = predicted_attack_class(codes)
+        labels.append(chosen)
+        if chosen is None:
+            non_attributing += 1
+        if len(set(matched)) > 1:
+            multi.append({"chosen": chosen, "also_matched": sorted(set(matched) - {chosen})})
+
+    return {
+        "labels": labels,
+        "multi_attribution_count": len(multi),
+        "multi_attribution_detail": multi,
+        "non_attributing_rejections": non_attributing,
+        "precedence": [list(pair) for pair in ATTACK_CODE_PRECEDENCE],
+        "note": (
+            "Single-label collapse of multi-code decisions, by ATTACK_CODE_PRECEDENCE. "
+            "Rejections naming no attack type are labelled None and counted in "
+            "non_attributing_rejections -- they are excluded from the 6-class matrix "
+            "rather than folded into the nearest class."
+        ),
+    }
+
+
 def confusion_matrix_6class(
     true_labels: Sequence[str],
     predicted_labels: Sequence[str],

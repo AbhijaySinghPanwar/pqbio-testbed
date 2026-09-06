@@ -493,6 +493,36 @@ Each adversary class generates labelled traffic through the real client and serv
 | 6-class confusion matrix (bona fide + 5 attacks) | system |
 | DET curve | detectors + fused system |
 
+**Reading the 6-class matrix when a decision carries several reason codes.** Since
+2026-09-06 a rejected decision carries *every* code determined up to the rejection point,
+not only the one that triggered it (§14) — a sample can be both an injection and a
+counter-replay. The matrix is single-label, so the collapse is defined rather than left to
+whichever code happened to be first:
+
+1. **A documented precedence order** (`pqbio.bench.accuracy.ATTACK_CODE_PRECEDENCE`), applied
+   in this order: `PAD_DETECTED` → presentation, `MORPH_DETECTED` → morph,
+   `DEEPFAKE_DETECTED` → deepfake, `REPLAY_DETECTED` → replay, `INJECTION_DETECTED` →
+   injection, then `BIND_EVIDENCE_REUSE` → replay, `BIND_CHALLENGE_UNMET` → replay. The
+   ordering principle is **specificity of attribution, not severity**: a detector that
+   examined the media and named an attack outranks a binding check that inferred one from
+   protocol evidence, because the detector's answer is about what the sample *is* while the
+   binding check's is about what it *failed to do*.
+2. **Rejections that name no attack type are excluded, not folded in.** A forged signature,
+   an expired challenge, a nonce replay, a counter regression, a quality failure — these are
+   real rejections, but none of them is one of the six classes, and assigning them to the
+   nearest-looking one would invent an attribution the system never made. They are counted
+   in `non_attributing_rejections` and reported alongside the matrix.
+   `BIND_CHALLENGE_UNEVALUABLE` is likewise excluded; it is not a rejection at all.
+3. **The collapse is auditable.** `classify_decisions` returns `multi_attribution_count`
+   and the discarded competing labels, so it is visible how often the single-label view
+   hid a second finding. A precedence order applied silently is indistinguishable from a
+   bug; if that count is large, the matrix is hiding most of what the system found and the
+   per-attack rates should be read instead.
+
+Every cell of the matrix therefore counts samples whose predicted class is not `None`, and
+the matrix's total is **not** the sample count — the difference is
+`non_attributing_rejections`, which must be reported with it.
+
 Intra-dataset **and** cross-dataset for D1 and D3.
 
 ### 8.2 Performance
@@ -1905,3 +1935,72 @@ AND would trip a detector, asserting the detection survives**
 (`tests/unit/test_shortcircuit_masking.py`). One such test per gate, asserting on observed
 detector execution rather than on the predicate's expression, since a predicate test passes
 happily while the wiring is wrong.
+
+
+### 2026-09-06 — rejections were discarding results they had already computed
+
+The 2026-09-05 audit recorded stages 2 and 5 as rule-compliant-but-lossy: they raise
+`PipelineRejection` carrying only their own code, so an injected bundle that also fails B4
+or hits the reuse index loses the injection attribution. The decision is `REJECT` either
+way, so it was never a security hole. It was a **measurement** hole, and §8.1's numbers are
+the deliverable — so it is fixed before the evaluation runs rather than discovered in the
+matrix afterwards.
+
+**What was lost.** The handler did `reason_codes = rejection.reason_codes` and
+`detector_scores = {}` — a wholesale replacement. A reuse rejection at stage 5 therefore
+threw away B1–B6's outcomes *and* the injection score, all of which stage 4 had already
+computed and paid for. Measured before the fix, a resubmitted-media rejection reported
+exactly `['BIND_EVIDENCE_REUSE']` with no detector scores at all.
+
+**What it carries now.** Every code determined up to the rejection point, in stage order,
+with the triggering codes additionally repeated under a `REJECTED_BY:` prefix so "what
+ended this request" stays recoverable now that "what was known about it" is also present.
+The bare code stays in the list, so existing membership checks and metric consumers are
+unaffected. The same reuse rejection now reports `BIND_EVIDENCE_REUSE`, `B1_OK`…`B6_OK`,
+`REJECTED_BY:BIND_EVIDENCE_REUSE`, and an injection score.
+
+**Cheapest-first ordering is untouched, and this is worth being precise about**: nothing
+extra is computed and no stage moved. The change is that results already in hand are not
+thrown away on the way out. Happy-path latency is unchanged — the accumulation is a handful
+of list appends inside stages that already existed.
+
+**Consequence for §8.1, resolved there rather than left implicit.** Multi-code decisions
+make a single-label matrix ambiguous. §8.1 now documents the precedence order, the
+exclusion of rejections that name no attack class, and a `multi_attribution_count` so the
+collapse is auditable rather than silent. The ordering principle is specificity of
+attribution, not severity.
+
+**One more discarded result, found by the same audit.** The accept path wrapped
+`update_counter` in `contextlib.suppress(ValueError)` to tolerate the documented TOCTOU
+race against a concurrent accepted request for the same device. Suppressing it kept the
+decision honest — the request really was accepted — but left the failed advance invisible
+to the audit log: a determined outcome dropped before reaching the decision object, the
+same defect class as the discarded reason codes. It now appends `COUNTER_ADVANCE_RACE`.
+The race itself is still not resolved; it is merely no longer silent.
+
+**Paths audited for discarded results** (same instrumented approach as 2026-09-05 —
+observing what reached the decision object, not reading intent):
+
+| Path | Verdict |
+|---|---|
+| Stage 1 crypto rejection | **Safe.** Nothing has been computed yet; there is no result to discard. |
+| Stage 2 B1–B5 rejection | **Was unsafe — fixed.** Passing B1–B5 outcomes now survive. |
+| Stage 5 reuse rejection | **Was unsafe — fixed.** B1–B6 and the injection score now survive. |
+| Success path reason codes | **Safe.** B1–B6, reuse, missing signals and fusion reasons were already assembled in full. |
+| Success path detector scores | **Safe.** Injection and match both reach the decision; a skipped match is reported as `MISSING_SIGNAL_MATCH` rather than omitted. |
+| Quality verdict on a later rejection | **Was unsafe — fixed.** `QUALITY_INSUFFICIENT` is now recorded when determined, not only when fusion happens to reach it. |
+| `advance_counter` ValueError suppression | **Was unsafe — fixed.** Now `COUNTER_ADVANCE_RACE`. |
+| `frame_hashes` Exception suppression | **Safe.** Guards hashing a bundle that stage 1 never decoded; no computed result is dropped. |
+| Audit log persistence | **Safe, verified by test.** `store.py` serialises the decision whole; it never truncated the list, so the fix propagates without a storage change. |
+
+**A note on fix #4 from 2026-09-05, which deserves stating more sharply than it was.** The
+unevaluable-B6 path that skipped the identity match was not merely an accidental
+reachability. `BIND_CHALLENGE_UNEVALUABLE` is **not randomly distributed**: it correlates
+with bright ambient light and low screen contribution (§12 item 8), which are conditions an
+attacker can simply arrange — verify next to a window, or at arm's length from a small
+screen. The skipped match was therefore *deliberately* reachable by an impostor, not just
+theoretically reachable. It terminated in `CHALLENGE` rather than `ACCEPT`, so it was never
+an authentication bypass and no identity was ever wrongly confirmed; but "an attacker can
+choose the lighting that makes a detector not run" is the part worth stating plainly,
+because it generalises: **any evaluability gate is an attacker-influenceable input, and
+anything conditioned on one inherits that.**

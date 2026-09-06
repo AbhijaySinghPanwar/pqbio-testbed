@@ -116,6 +116,8 @@ class TestUnevaluableB6DoesNotSkipHeavyModels:
         exactly a wiring bug, so this asserts on observed execution rather than on the
         expression.
         """
+        import tempfile
+        from pathlib import Path
         from uuid import uuid4
 
         from _server_fixtures import ServerTestClient
@@ -135,7 +137,14 @@ class TestUnevaluableB6DoesNotSkipHeavyModels:
 
         match_mod.MatchDetector.score = _record  # type: ignore[assignment]
         try:
-            with TestClient(create_app()) as client:
+            # A fresh data dir: the pHash reuse index persists between tests and the
+            # fixtures build byte-identical frames, so on a shared dir stage 5 rejects
+            # this bundle as reused and stage 6 never runs -- the test would fail for a
+            # reason unrelated to what it asserts.
+            with (
+                tempfile.TemporaryDirectory() as tmp,
+                TestClient(create_app(data_dir=Path(tmp) / "data")) as client,
+            ):
                 stc = ServerTestClient(client, device_id=f"dev-{uuid4().hex[:8]}")
                 stc.enroll()
                 session_id, challenge_obj = stc.challenge()

@@ -98,8 +98,27 @@ class PipelineContext:
     cascade_model: CascadeModel | None = None
 
 
+TRIGGER_PREFIX = "REJECTED_BY:"
+"""Marks which code actually caused a rejection, as distinct from codes merely observed.
+
+A rejected decision now carries *everything determined up to the rejection point*, not
+just the code that fired -- so `reason_codes` alone can no longer say which one ended the
+request. Each triggering code also appears once more with this prefix. The bare code stays
+in the list, so membership tests and metric consumers that look for `BIND_EVIDENCE_REUSE`
+keep working unchanged; anything that needs the distinction reads the prefixed entries.
+"""
+
+
 class PipelineRejection(Exception):
-    """Raised internally to short-circuit straight to a signed REJECT decision."""
+    """Raised internally to short-circuit straight to a signed REJECT decision.
+
+    Carries only the *triggering* codes. Everything the pipeline had already determined
+    before this point is merged in by the handler -- see `_determined` below. Discarding
+    those was a real defect: an injected bundle that also hit the reuse index was filed
+    as `BIND_EVIDENCE_REUSE` alone, and the injection detector's positive result -- which
+    had already been computed -- never reached §8.1's per-attack rates or the audit log
+    (§14, 2026-09-05/06).
+    """
 
     def __init__(self, reason_codes: list[str]) -> None:
         super().__init__(", ".join(reason_codes))
@@ -128,6 +147,14 @@ async def run_verify_pipeline(
 
     reason_codes: list[str] = []
     device_id = "unknown"
+
+    # Everything determined so far, accumulated as each stage completes. On the success
+    # path these are re-derived below from the same objects; on the rejection path they
+    # are all that survives, and before 2026-09-06 none of it did. Cheapest-first
+    # ordering is untouched -- nothing extra is computed, results already in hand are
+    # simply not thrown away.
+    determined_codes: list[str] = []
+    determined_scores: dict[str, float] = {}
 
     try:
         # -------------------------------------------------------------------------
@@ -165,6 +192,7 @@ async def run_verify_pipeline(
             ]
 
         checks_b1_5 = await _run_stage("binding_fail_fast", _stage2)
+        determined_codes.extend(c.reason_code for c in checks_b1_5)
         failed_b1_5 = [c.reason_code for c in checks_b1_5 if not c.passed]
         if failed_b1_5:
             raise PipelineRejection(failed_b1_5)
@@ -175,6 +203,8 @@ async def run_verify_pipeline(
         prepared_evidence: PreparedEvidence = await _run_stage(
             "quality_face", prepare_evidence, bundle
         )
+        if not prepared_evidence.quality.passed:
+            determined_codes.append("QUALITY_INSUFFICIENT")
 
         # -------------------------------------------------------------------------
         # Stage 4: cheap signals (injection heuristics, challenge correlation B6)
@@ -186,6 +216,10 @@ async def run_verify_pipeline(
             return b6_result, injection_score_result
 
         b6, injection_result = await _run_stage("cheap_signals", _stage4)
+        determined_codes.append(b6.reason_code)
+        determined_scores["injection"] = injection_result.score
+        if injection_result.decision:
+            determined_codes.append("INJECTION_DETECTED")
         # `b6.evaluable and not b6.passed`, NOT plain `not b6.passed`. An unevaluable B6
         # reports passed=False (the two-state view is fail-closed), and treating that as a
         # confident reject skipped stage 6 -- so an impostor submitting a capture whose
@@ -202,6 +236,7 @@ async def run_verify_pipeline(
         reuse_check = await _run_stage(
             "evidence_reuse", check_evidence_reuse, bundle, ctx.phash_index
         )
+        determined_codes.append(reuse_check.reason_code)
         if not reuse_check.passed:
             raise PipelineRejection([reuse_check.reason_code])
 
@@ -220,6 +255,8 @@ async def run_verify_pipeline(
                 return detector.score(prepared_evidence).score
 
             match_score = await _run_stage("heavy_models", _stage6)
+            if match_score is not None:
+                determined_scores["match"] = match_score
         else:
             stage_latency_ms["heavy_models"] = 0.0  # skipped by the stage-4 short-circuit
 
@@ -301,17 +338,34 @@ async def run_verify_pipeline(
             # single-UPDATE consume) -- SqliteKeyStore.update_counter raises ValueError
             # on a regression rather than corrupting state, so the race fails loud
             # rather than silently, but does not yet resolve to a clean reason code.
-            with contextlib.suppress(ValueError):
+            # The ValueError is recorded, not merely swallowed. Suppressing it kept the
+            # decision honest (the request really was accepted) but left the failed
+            # advance invisible to the audit log -- a determined outcome dropped before
+            # reaching the decision object, which is the same defect class as the
+            # discarded reason codes above (§14, 2026-09-06).
+            try:
                 await _run_stage(
                     "advance_counter", ctx.keystore.update_counter, device_id, bundle.counter
                 )
+            except ValueError:
+                reason_codes.append("COUNTER_ADVANCE_RACE")
         else:
             stage_latency_ms["record_evidence"] = 0.0
             stage_latency_ms["advance_counter"] = 0.0
 
     except PipelineRejection as rejection:
-        reason_codes = rejection.reason_codes
-        detector_scores = {}
+        # Merge, never replace. The triggering codes come first and are additionally
+        # marked with TRIGGER_PREFIX, so "what ended this request" stays recoverable now
+        # that "what was known about it" is also present. `dict.fromkeys` dedupes while
+        # preserving order -- a triggering code is already in `determined_codes` when the
+        # stage that raised had recorded it first.
+        reason_codes = list(
+            dict.fromkeys(
+                [*rejection.reason_codes, *determined_codes]
+                + [f"{TRIGGER_PREFIX}{code}" for code in rejection.reason_codes]
+            )
+        )
+        detector_scores = determined_scores
         decision_outcome = "REJECT"
         fused_score = 1.0
 
