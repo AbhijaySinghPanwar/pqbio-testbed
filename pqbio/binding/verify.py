@@ -53,6 +53,19 @@ class CheckResult:
     check: str  # "B1".."B6"
     passed: bool
     reason_code: str  # the table's failure code, or "<check>_OK" when passed
+    evaluable: bool = True
+    """False when the check could not be evaluated at all, as distinct from evaluated and
+    failed.
+
+    Modelled on `pqbio.detect.face`'s `QUALITY_INSUFFICIENT`: a capture the system cannot
+    measure is a third outcome, not an attack. B6 is currently the only check that can be
+    unevaluable -- B1-B5 are deterministic predicates that are always decidable on a
+    well-formed bundle.
+
+    An unevaluable check still reports `passed=False`, so any caller that only knows about
+    the two-state world fails closed. Callers that route the third outcome read
+    `evaluable` (or `BindingVerificationResult.binding_flags_tristate`).
+    """
 
 
 @dataclass(frozen=True)
@@ -70,9 +83,43 @@ class BindingVerificationResult:
 
     @property
     def binding_flags(self) -> tuple[bool, bool, bool, bool, bool, bool]:
-        """6-bit feature vector, B1..B6 order — Module D's fusion input (§5.4)."""
+        """6-bit feature vector, B1..B6 order — Module D's fusion input (§5.4).
+
+        An unevaluable check reads `False` here. That is the fail-closed reading and it is
+        deliberately lossy: anything consuming this alone cannot tell "attack" from
+        "could not measure". Use `binding_flags_tristate` where that distinction matters,
+        which is everywhere a decision is made about a user.
+        """
         c1, c2, c3, c4, c5, c6 = self.checks
         return (c1.passed, c2.passed, c3.passed, c4.passed, c5.passed, c6.passed)
+
+    @property
+    def binding_flags_tristate(
+        self,
+    ) -> tuple[bool | None, bool | None, bool | None, bool | None, bool | None, bool | None]:
+        """B1..B6 as pass / fail / `None` = could not be evaluated.
+
+        `None` uses the same convention as `pqbio.detect.fusion`'s missing detector
+        scores: never benign, never an attack, never silently defaulted. A check that
+        could not run must not be scored as either.
+        """
+        return tuple(  # type: ignore[return-value]
+            (c.passed if c.evaluable else None) for c in self.checks
+        )
+
+    @property
+    def unevaluable_checks(self) -> list[str]:
+        """Names of checks that could not be evaluated, in B1..B6 order."""
+        return [c.check for c in self.checks if not c.evaluable]
+
+    @property
+    def any_unevaluable(self) -> bool:
+        """True when at least one check could not be evaluated.
+
+        Module E maps this to `CHALLENGE` (retry with a fresh nonce), never `REJECT` —
+        see `pqbio.server.decision.binding_outcome`.
+        """
+        return any(not c.evaluable for c in self.checks)
 
     @property
     def reason_codes(self) -> list[str]:
@@ -248,10 +295,86 @@ def compute_challenge_correlation(bundle: EvidenceBundle) -> float:
     return _channel_centred_pearson(measured_trace, expected_trace)
 
 
+def challenge_trace_spread(bundle: EvidenceBundle) -> float | None:
+    """Mean per-channel standard deviation of the bundle's chromaticity trace, or `None`
+    when the bundle carries no well-formed trace at all.
+
+    B6's signal amplitude: how much the measured chromaticity actually moved over the
+    capture. The challenge's entire premise is that it makes this move, so a trace that
+    sits still carries no information about whether the challenge was satisfied — the
+    correlation computed from it is a ratio of noise to noise.
+
+    **`None` is not the same as a low spread, and the difference is a security one.** A
+    *present but static* trace means a real sensor looked at a real scene and the
+    challenge did not register — a genuine user in a bad room. A *missing or malformed*
+    trace means the bundle does not contain what the protocol requires, which is a
+    protocol violation and stays an attack (`BIND_CHALLENGE_UNMET`). Routing it to
+    "unevaluable" would hand an attacker a retry loop by simply omitting the field.
+    """
+    try:
+        trace = bundle.challenge_signal.illumination_trace
+    except AttributeError:
+        return None
+    if not trace or len(trace) < 6 or len(trace) % 3 != 0:
+        return None
+    arr = np.asarray(trace, dtype=float).reshape(-1, 3)
+    if not np.isfinite(arr).all():
+        return None
+    return float(arr.std(axis=0).mean())
+
+
+def check_b6_evaluable(bundle: EvidenceBundle) -> CheckResult | None:
+    """Can this capture evaluate the illumination challenge at all?
+
+    Returns `None` when it can, and an unevaluable `CheckResult` when it cannot. Runs
+    **before** the correlation: a capture that fails here never reaches
+    `compute_challenge_correlation`, because the number that would come back means
+    nothing.
+
+    **Why this exists.** B6 has an operating envelope and had no way to tell whether it
+    was inside it. Two live sessions in the same room produced +0.775 ± 0.035 and
+    +0.077 ± 0.455 for the same capture condition, because in the second the display
+    contributed roughly 1.5% of the scene's light. B6 thresholded the resulting noise as
+    though it were a measurement and returned `BIND_CHALLENGE_UNMET` — an attack code —
+    for a genuine user (PROJECT_SPEC.md §14, 2026-09-03/04).
+
+    **The one precondition that survived measurement** is the trace's spread, against
+    `binding.illumination_min_trace_spread`. Two other candidates were evaluated on the
+    same held captures and dropped: clipped-pixel fraction (the only two clipped captures
+    both *passed* the correlation) and screen-contribution fraction (the classes overlap
+    and are inverted). Shipping either would have been a gate firing at random — see
+    `scripts/derive_b6_evaluability.py` and `results/b6_evaluability.json`.
+
+    At the shipped floor this gates none of the 97 held captures that passed the
+    correlation, with the lowest of them at 0.00226 against a floor of 0.0015.
+    """
+    try:
+        spread = challenge_trace_spread(bundle)
+    except Exception:
+        return None  # let the correlation path fail this closed as UNMET
+
+    if spread is None:
+        # Absent or malformed trace: a protocol violation, not an unmeasurable capture.
+        # Falls through to the correlation, which fails it closed as UNMET.
+        return None
+
+    if spread < settings.binding.illumination_min_trace_spread:
+        return CheckResult("B6", False, "BIND_CHALLENGE_UNEVALUABLE", evaluable=False)
+    return None
+
+
 def check_b6_challenge_correlation(bundle: EvidenceBundle) -> CheckResult:
     """B6: the measured challenge signal correlates with the expectation derived from
-    the nonce, at or above `illumination_corr_min` (config, default Pearson r >= 0.70).
+    the nonce, at or above `illumination_corr_min`.
+
+    Gated by `check_b6_evaluable` first — "the challenge was not satisfied" and "the
+    challenge could not be measured" are different answers and get different reason
+    codes. Only the first is evidence of an attack.
     """
+    unevaluable = check_b6_evaluable(bundle)
+    if unevaluable is not None:
+        return unevaluable
+
     try:
         r = compute_challenge_correlation(bundle)
         passed = r >= settings.binding.illumination_corr_min

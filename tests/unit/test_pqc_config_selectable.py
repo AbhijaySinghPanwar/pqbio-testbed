@@ -26,6 +26,7 @@ binding:
   illumination_steps: 12
   illumination_step_ms: 200
   illumination_corr_min: 0.60
+  illumination_min_trace_spread: 0.0015
   phash_hamming_max: 10
   phash_reuse_min_frames: 30
 capture:

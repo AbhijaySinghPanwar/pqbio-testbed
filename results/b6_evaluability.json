@@ -1,0 +1,158 @@
+{
+  "B6_operating_point_characterisation": {
+    "blocked": true,
+    "blocker": "B6's threshold (binding.illumination_corr_min = 0.60) and this evaluability floor both rest on captures from a single session, in one room, on one sensor, with no human subject at capture distance. Measured TPR was 1.00 on 8 captures, whose one-sided 95% Clopper-Pearson upper bound on BPCER is 0.312 -- consistent with a true BPCER of 31%. Demonstrating the 5% system BPCER target at 95% confidence needs ~59 consecutive clean captures. UNBLOCKER: the consented multi-capture session -- multiple subjects at capture distance across varied ambient lighting, which \u00a76 gates behind written consent and supervisor approval (the same blocker as the replay corpus). \u00a75.2's live-webcam DoD item closes on that measurement and not before; until then these values are the best available estimate, not a characterised operating point (PROJECT_SPEC.md \u00a714, 2026-09-03/04)"
+  },
+  "KEM_BACKEND": "kyber-py-fallback",
+  "SIG_BACKEND": "dilithium-py-fallback",
+  "candidates": {
+    "chromaticity_trace_spread": {
+      "chosen": {
+        "false_gate_rate_on_passing_captures": 0.0,
+        "floor": 0.0015,
+        "gated_rate_on_no_render_controls": 0.7368421052631579,
+        "margin_below_lowest_passing_capture": 0.0007646109504578576,
+        "reclassified_rate_on_failing_captures": 0.3333333333333333
+      },
+      "floor_table": [
+        {
+          "false_gate_rate_on_passing_captures": 0.0,
+          "floor": 0.0005,
+          "gated_rate_on_no_render_controls": 0.5,
+          "margin_below_lowest_passing_capture": 0.0017646109504578576,
+          "reclassified_rate_on_failing_captures": 0.18840579710144928
+        },
+        {
+          "false_gate_rate_on_passing_captures": 0.0,
+          "floor": 0.001,
+          "gated_rate_on_no_render_controls": 0.6052631578947368,
+          "margin_below_lowest_passing_capture": 0.0012646109504578576,
+          "reclassified_rate_on_failing_captures": 0.2608695652173913
+        },
+        {
+          "false_gate_rate_on_passing_captures": 0.0,
+          "floor": 0.0012,
+          "gated_rate_on_no_render_controls": 0.6842105263157895,
+          "margin_below_lowest_passing_capture": 0.0010646109504578577,
+          "reclassified_rate_on_failing_captures": 0.30434782608695654
+        },
+        {
+          "false_gate_rate_on_passing_captures": 0.0,
+          "floor": 0.0015,
+          "gated_rate_on_no_render_controls": 0.7368421052631579,
+          "margin_below_lowest_passing_capture": 0.0007646109504578576,
+          "reclassified_rate_on_failing_captures": 0.3333333333333333
+        },
+        {
+          "false_gate_rate_on_passing_captures": 0.0,
+          "floor": 0.0018,
+          "gated_rate_on_no_render_controls": 0.7894736842105263,
+          "margin_below_lowest_passing_capture": 0.00046461095045785767,
+          "reclassified_rate_on_failing_captures": 0.42028985507246375
+        },
+        {
+          "false_gate_rate_on_passing_captures": 0.0,
+          "floor": 0.002,
+          "gated_rate_on_no_render_controls": 0.7894736842105263,
+          "margin_below_lowest_passing_capture": 0.0002646109504578576,
+          "reclassified_rate_on_failing_captures": 0.43478260869565216
+        },
+        {
+          "false_gate_rate_on_passing_captures": 0.0,
+          "floor": 0.0022,
+          "gated_rate_on_no_render_controls": 0.7894736842105263,
+          "margin_below_lowest_passing_capture": 6.461095045785748e-05,
+          "reclassified_rate_on_failing_captures": 0.463768115942029
+        },
+        {
+          "false_gate_rate_on_passing_captures": 0.020618556701030927,
+          "floor": 0.0025,
+          "gated_rate_on_no_render_controls": 0.8157894736842105,
+          "margin_below_lowest_passing_capture": -0.00023538904954214243,
+          "reclassified_rate_on_failing_captures": 0.4782608695652174
+        },
+        {
+          "false_gate_rate_on_passing_captures": 0.05154639175257732,
+          "floor": 0.003,
+          "gated_rate_on_no_render_controls": 0.868421052631579,
+          "margin_below_lowest_passing_capture": -0.0007353890495421424,
+          "reclassified_rate_on_failing_captures": 0.5217391304347826
+        }
+      ],
+      "selection_rule": "highest floor that gates none of the captures which passed the correlation, keeping a margin of at least half the floor beneath the lowest of them; among those, the one reclassifying most failing captures",
+      "separation_on_rendered": {
+        "direction": "gate rejects below a floor",
+        "failed_max": 0.030421880650157284,
+        "failed_min": 0.0001374005202498649,
+        "fully_separable": false,
+        "gap": -0.028157269699699426,
+        "n_failed_correlation": 69,
+        "n_passed_correlation": 97,
+        "passed_max": 0.012572904907212292,
+        "passed_min": 0.0022646109504578576
+      },
+      "shipped": true
+    },
+    "clipped_pixel_fraction": {
+      "dropped_because": "it does not discriminate, and points the wrong way. The only two clipped captures held (9.29% and 10.02% clipped, at 196-199/255) both PASSED the correlation, at r=+0.785 and +0.753, while every capture that failed had zero clipping. An earlier \u00a714 note attributing a flat trace to saturation is corrected by this: high brightness and a flat trace do co-occur, but clipping fraction is not what distinguishes them, and trace spread measures the thing directly anyway",
+      "n_samples": 14,
+      "separation_on_rendered": {
+        "direction": "gate rejects above a limit",
+        "failed_max": 0.0,
+        "failed_min": 0.0,
+        "fully_separable": false,
+        "gap": -0.10015484872627729,
+        "n_failed_correlation": 4,
+        "n_passed_correlation": 10,
+        "passed_max": 0.10015484872627729,
+        "passed_min": 0.0
+      },
+      "shipped": false
+    },
+    "screen_contribution_fraction": {
+      "dropped_because": "the classes overlap and are inverted: captures that passed the correlation ran 0.0122-0.0171 screen fraction, those that failed 0.0163-0.0183. It also costs an extra white/black probe at capture start. Shipping it would be a gate firing at random",
+      "n_samples": 14,
+      "separation_on_rendered": {
+        "direction": "gate rejects below a floor",
+        "failed_max": 0.018266034535863826,
+        "failed_min": 0.016317714551080807,
+        "fully_separable": false,
+        "gap": -0.006029587810345424,
+        "n_failed_correlation": 4,
+        "n_passed_correlation": 10,
+        "passed_max": 0.01707123120969711,
+        "passed_min": 0.012236446725518402
+      },
+      "shipped": false
+    }
+  },
+  "config_hash_sha256": "ff38ecf4326769b20cc45d5fb2861d49ecf434334c087d5e176b166fb4273714",
+  "dataset_versions": {
+    "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
+    "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
+    "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
+    "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
+  },
+  "generated_at_utc": "2026-09-06T06:47:50.522269+00:00",
+  "git_commit": "f05e3b153765b92dbe683f468e585896b1affe77",
+  "hardware": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "python_implementation": "CPython",
+    "python_version": "3.11.9"
+  },
+  "illumination_corr_min": 0.6,
+  "note": "Derived entirely from persisted captures; this script measures nothing new. The shipped floor is binding.illumination_min_trace_spread.",
+  "population": {
+    "no_render_controls": 38,
+    "rendered_captures": 166,
+    "rendered_failing_correlation": 69,
+    "rendered_passing_correlation": 97,
+    "sources": [
+      "b6_operating_point.json",
+      "live_challenge_check.json",
+      "b6_operating_window.json"
+    ]
+  },
+  "seed": 2026
+}

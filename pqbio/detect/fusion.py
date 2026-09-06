@@ -94,6 +94,15 @@ class FusionInput:
     quality_passed: bool
     binding_flags: tuple[bool, bool, bool, bool, bool, bool]  # B1..B6
     n_frames: int
+    binding_unevaluable: tuple[str, ...] = ()
+    """Binding checks that could not be evaluated, as distinct from evaluated and failed.
+
+    Same contract as the `None` detector scores above: never benign, never an attack. A
+    check in here reads `False` in `binding_flags` (that vector is fail-closed and cannot
+    express a third state), so fusion must consult this before treating a `False` flag as
+    evidence of an attack. B6 is currently the only check that can appear here — see
+    `pqbio.binding.verify.check_b6_evaluable`.
+    """
 
     @property
     def missing_signals(self) -> list[str]:
@@ -106,7 +115,16 @@ class FusionInput:
             self.replay_score,
             self.injection_score,
         ]
-        return [n for n, v in zip(names, values, strict=True) if v is None]
+        missing = [n for n, v in zip(names, values, strict=True) if v is None]
+        # An unevaluable binding check is a missing signal in exactly the sense this
+        # property means: something the pipeline could not measure, which must not be
+        # scored as either outcome.
+        missing.extend(f"binding_{c}" for c in self.binding_unevaluable)
+        return missing
+
+    @property
+    def has_unevaluable_binding(self) -> bool:
+        return bool(self.binding_unevaluable)
 
 
 @dataclass(frozen=True)
@@ -158,6 +176,11 @@ def fuse_rule(x: FusionInput) -> FusionResult:
 
     binding_codes = ["B1", "B2", "B3", "B4", "B5", "B6"]
     for code, ok in zip(binding_codes, x.binding_flags, strict=True):
+        if code in x.binding_unevaluable:
+            # Recorded, never counted as a trigger. Treating "could not measure" as an
+            # attack is what sent genuine users out as BIND_CHALLENGE_UNMET (§14).
+            reasons.append(f"binding check {code} could not be evaluated")
+            continue
         if not ok:
             reasons.append(f"binding check {code} failed")
             triggered = True
@@ -166,7 +189,15 @@ def fuse_rule(x: FusionInput) -> FusionResult:
         reasons.append("no detector, quality, or binding check triggered")
 
     fused_score = 1.0 if triggered else 0.0
-    decision = decide_policy(fused_score).decision
+    if triggered:
+        decision = decide_policy(fused_score).decision
+    elif x.has_unevaluable_binding:
+        # Nothing indicted this capture, but part of the evidence could not be read.
+        # Neither ACCEPT (unverified) nor REJECT (not an attacker) is honest: ask again.
+        decision = "CHALLENGE"
+        fused_score = 0.5
+    else:
+        decision = decide_policy(fused_score).decision
     return FusionResult(
         strategy="rule",
         fused_score=fused_score,
@@ -203,10 +234,21 @@ class CascadeModel:
 
 
 def _cascade_features(x: FusionInput) -> list[float]:
+    """Feature vector for the cascade's logistic-regression stage.
+
+    An unevaluable binding check encodes as 1.0 ("as if it passed") rather than 0.0
+    because 0.0 is the trained model's signal for *failed*, and a capture that could not
+    be measured is not evidence of failure. In practice the model never sees one:
+    `fuse_cascade` returns CHALLENGE before scoring when anything is unevaluable. This
+    keeps the encoding honest for any caller that reaches the features directly.
+    """
     return [
         x.injection_score if x.injection_score is not None else 0.0,
         0.0 if x.quality_passed else 1.0,
-        *[1.0 if ok else 0.0 for ok in x.binding_flags],
+        *[
+            1.0 if (ok or code in x.binding_unevaluable) else 0.0
+            for code, ok in zip(["B1", "B2", "B3", "B4", "B5", "B6"], x.binding_flags, strict=True)
+        ],
     ]
 
 
@@ -224,6 +266,8 @@ def fuse_cascade(x: FusionInput, model: CascadeModel | None = None) -> FusionRes
             "cascade", 1.0, "REJECT", ["QUALITY_INSUFFICIENT (short-circuit)"], x.missing_signals
         )
     for code, ok in zip(["B1", "B2", "B3", "B4", "B5", "B6"], x.binding_flags, strict=True):
+        if code in x.binding_unevaluable:
+            continue  # cannot short-circuit a REJECT on evidence that was never read
         if not ok:
             return FusionResult(
                 "cascade",
@@ -235,6 +279,25 @@ def fuse_cascade(x: FusionInput, model: CascadeModel | None = None) -> FusionRes
     if x.injection_score is not None and x.injection_score >= _thresholds()["injection"]:
         reasons.append(f"injection_score {x.injection_score:.3f} >= threshold (short-circuit)")
         return FusionResult("cascade", 1.0, "REJECT", reasons, x.missing_signals)
+
+    # Only now. An unevaluable binding check means part of the evidence could not be read
+    # -- it must not mask evidence that WAS read: a statically-injected stream also has a
+    # flat illumination trace, so ordering this before the injection check would have
+    # turned a detected attack into a polite retry (caught by
+    # tests/security/test_server_adversary_classes.py::test_a6_...).
+    if x.has_unevaluable_binding:
+        return FusionResult(
+            "cascade",
+            0.5,
+            "CHALLENGE",
+            [
+                "binding checks "
+                + ", ".join(x.binding_unevaluable)
+                + " could not be evaluated and nothing else indicted this capture; "
+                "retry with a fresh nonce"
+            ],
+            x.missing_signals,
+        )
 
     if model is not None:
         fused_score = model.predict_proba(x)

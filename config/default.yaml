@@ -41,6 +41,22 @@ binding:
   # auto-exposure clips 9-10% of pixels. 0.60 is the best available estimate on weak
   # evidence, not a characterised operating point. See §14 (2026-09-03, both entries).
   illumination_corr_min: 0.60
+  # Evaluability floor (2026-09-04). B6 must first ask whether a capture CAN measure the
+  # challenge before asking whether it did -- below this, the per-channel standard
+  # deviation of the chromaticity trace is at the sensor's noise level and the
+  # correlation is a meaningless number that would be thresholded as if it meant
+  # something, rejecting a genuine user as an attacker.
+  #
+  # Derived from 166 rendered captures already held (scripts/derive_b6_evaluability.py ->
+  # results/b6_evaluability.json). At 0.0015: ZERO of the 97 captures that passed the
+  # correlation are gated, with the lowest-spread passing capture at 0.00226 -- a margin
+  # of +0.00076, 51% of the floor. It reclassifies 33% of failing rendered captures from
+  # "attack" to "retry", and gates 74% of no-render controls.
+  #
+  # Two other candidates were measured and DROPPED, see §14: clipping fraction (the two
+  # clipped captures both PASSED, at r=+0.785/+0.753) and screen-contribution fraction
+  # (usable 0.0122-0.0171 vs unusable 0.0163-0.0183 -- overlapping and inverted).
+  illumination_min_trace_spread: 0.0015
   # Both calibrated by scripts/measure_phash_burst_calibration.py — see
   # PROJECT_SPEC.md §14 for the full reasoning and the honest limitation it found.
   phash_hamming_max: 10       # D: per-frame distance floor that still catches every

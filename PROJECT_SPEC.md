@@ -295,7 +295,12 @@ issued_at, expires_at (default +30 s), server_sig (ML-DSA-65)
 | B3 | Nonce was issued and not yet consumed; consumption is atomic | `BIND_NONCE_REPLAY` |
 | B4 | Device counter strictly greater than last seen | `BIND_COUNTER_REGRESSION` |
 | B5 | `capture_binding` recomputes from nonce, txn_hash and frame hashes | `BIND_DIGEST_MISMATCH` |
-| B6 | Challenge signal correlates with expectation (default r ≥ 0.7) | `BIND_CHALLENGE_UNMET` |
+| B6 | Challenge signal correlates with expectation (`binding.illumination_corr_min`) | `BIND_CHALLENGE_UNMET` |
+| B6-pre | **Evaluability:** the capture can measure the challenge at all — trace spread ≥ `binding.illumination_min_trace_spread`. Runs *before* B6's correlation; a capture failing it never reaches the correlation | `BIND_CHALLENGE_UNEVALUABLE` |
+
+**B6 has three outcomes, not two.** Pass, failed, and *could not be evaluated* — modelled on Module D's `QUALITY_INSUFFICIENT` (§5.4). An unmeasurable capture is not an attack, and calling it one both wrongs the user and corrupts §8.1's per-attack rates, which are computed from these outcomes. `BIND_CHALLENGE_UNEVALUABLE` propagates as `None` in the tristate binding flags Module D consumes (never benign, never an attack — the same contract as a missing detector score) and maps to `CHALLENGE` in §5.5's policy, never `REJECT`. A *missing or malformed* trace is a different thing again: that is a protocol violation and stays `BIND_CHALLENGE_UNMET`, so an attacker cannot buy a retry loop by omitting the field.
+
+B1–B5 are deterministic predicates and are always evaluable on a well-formed bundle; B6 is the only statistical check, which is also why it carries the whole BPCER budget (§14, 2026-09-03).
 
 **Seen-evidence index.** Perceptual hashes of every accepted bundle's frames, in SQLite with a BK-tree for Hamming lookup. Reject if any frame is within distance 6 of a stored hash (`BIND_EVIDENCE_REUSE`). B1–B5 stop resubmission of the same *message*; this stops resubmission of the same *media* under a fresh, correctly signed session — which is what "prevent reuse of previously captured biometric evidence" actually requires.
 
@@ -562,6 +567,7 @@ binding:
   illumination_steps: 12          # 4 gave overlapping classes; see §5.2 and §14
   illumination_step_ms: 200
   illumination_corr_min: 0.60     # strict on TPR, permissive on FAR -- §14, 2026-09-03
+  illumination_min_trace_spread: 0.0015  # evaluability floor -- §14, 2026-09-04
   phash_hamming_max: 10           # calibrated, §14
   phash_reuse_min_frames: 30
 
@@ -636,6 +642,7 @@ Friday integration demo every week. The system must be demoable end-to-end from 
 5. **Demographic fairness.** Error rates likely vary by skin tone, age and gender. Report per-group BPCER if dataset metadata allows; if not, state that it was not measurable.
 6. **Single-machine benchmarks.** Throughput reflects one host. Report the hardware precisely.
 7. **Illumination challenge assumes a screen.** Kiosk capture devices without a controllable display need a different freshness primitive.
+8. **The illumination challenge has an operating envelope, and it is narrower than it looks.** The mechanism requires the display to be a *material fraction of the scene's illumination*. Measured on the reference sensor: in a dimly lit room the challenge was recoverable and B6 scored +0.775 ± 0.035; in the same room an hour later with the lights on, the display contributed **~1.5%** of scene brightness, the measured chromaticity trace flattened to a per-channel spread of 0.0002 against 0.0116, and the same capture condition scored **+0.077 ± 0.455** (§14, 2026-09-03). No threshold, step count or exposure setting recovers a signal that is not there. **Implication:** bright ambient light, outdoor capture, and small-screen-at-arm's-length capture may all sit outside the envelope, and the population that falls outside it is not random — it correlates with where and how people verify. A deployment must therefore *detect* the condition rather than fail the user: B6's evaluability precondition (§5.3) returns `BIND_CHALLENGE_UNEVALUABLE`, which maps to `CHALLENGE`, not `REJECT`. The envelope's boundary has been measured on **one sensor in one room** and is not characterised; a deployment on other hardware must re-derive it.
 
 ---
 
@@ -1743,3 +1750,75 @@ never mirrored in at all. Nothing was comparing them.
 capture budget covers the challenge. Separately, the challenge step duration was a
 hardcoded `0.2` default in `render_challenge_fullscreen` — a magic number in the one
 parameter the frame budget turns on — and is now `binding.illumination_step_ms`.
+
+
+### 2026-09-04 — B6 could not tell whether it was inside its own operating envelope
+
+The previous two entries left B6 with a threshold and no way to know when the threshold
+was meaningless. That is the gap this closes, and it is a different gap from the one that
+kept being re-litigated: **the problem was never the threshold.**
+
+**What was actually wrong.** The sweep and the live check disagreed (+0.775 ± 0.035 versus
++0.077 ± 0.455 for the same capture condition) because they sampled different physics, not
+because either was mismeasured. In the second room the display contributed ~1.5% of scene
+illumination and the chromaticity trace flattened to sensor noise. B6 computed a
+correlation from that noise, thresholded it, and returned `BIND_CHALLENGE_UNMET` — an
+attack reason code — for a genuine user in a brightly lit room.
+
+**The precondition, derived from held captures rather than intuition.** Three candidates
+were named; **one survived**, measured on 166 rendered captures and 38 no-render controls
+already on disk (`scripts/derive_b6_evaluability.py` → `results/b6_evaluability.json`; no
+new capture was taken).
+
+| candidate | verdict | evidence |
+|---|---|---|
+| **chromaticity trace spread** | **shipped**, floor 0.0015 | gates **0 of 97** captures that passed the correlation; lowest of them 0.00226, a margin of +0.00076 (51% of the floor); reclassifies 33% of failing rendered captures from "attack" to "retry"; gates 74% of no-render controls |
+| clipped-pixel fraction | **dropped** | does not discriminate, and points the *wrong way*: the only two clipped captures held (9.29% and 10.02%, at 196–199/255) both **passed**, at r = +0.785 and +0.753, while every capture that failed had zero clipping |
+| screen-contribution fraction | **dropped** | classes overlap and are inverted — passing 0.0122–0.0171, failing 0.0163–0.0183 — and it costs an extra white/black probe at capture start |
+
+The clipping result **corrects the 2026-09-03 entry above**, which attributed the flat
+trace to saturation. High brightness and a flat trace do co-occur, but clipping fraction is
+not what separates them; trace spread measures the thing directly. Shipping either dropped
+candidate would have been a gate firing at random, which is worse than no gate.
+
+**The floor was chosen to protect the true positives, not to maximise reclassification.**
+Higher floors reclassify more (0.0022 → 46%) but crowd the lowest passing capture; 0.0025
+starts gating genuine captures outright. The rule is: highest floor that gates none of the
+passing captures while keeping a margin of at least half the floor beneath the lowest of
+them. That is in the JSON, not only here.
+
+**A distinction that took a test failure to find.** A *present but static* trace is
+unevaluable — a real sensor looked at a real scene and the cast did not register. A
+*missing or malformed* trace is a protocol violation and stays `BIND_CHALLENGE_UNMET`. If
+absence routed to unevaluable, an attacker could omit the field and get an endless
+`CHALLENGE` retry loop instead of a `REJECT`. An attacker can still reach `CHALLENGE` by
+submitting a flat trace, but that is a loop they can never convert into an `ACCEPT`; it
+costs them attempts rather than buying them anything.
+
+**Evidence weight for the threshold itself, restated because it keeps mattering.**
+`illumination_corr_min = 0.60` rests on **one sitting**. Measured TPR was 1.00 on **8
+captures**, whose one-sided 95% Clopper–Pearson upper bound on BPCER is **0.312** — the
+data is consistent with a true BPCER of 31%. Demonstrating ≤5% at 95% confidence needs
+**~59 consecutive clean captures**. **§5.2's live-webcam DoD item closes on that
+measurement and not before**, and that measurement needs the consented multi-capture
+session that §6 currently blocks — the same blocker as the replay corpus. Until then the
+number stands as the best available estimate, not as a characterised operating point.
+
+**The third outcome had to be stopped from masking the second.** The first version routed
+any unevaluable check straight to `CHALLENGE`, everywhere. A security test caught what that
+costs: a **statically-injected stream also has a flat illumination trace**, so B6 goes
+unevaluable at precisely the moment the injection detector fires, and A6 (tier-1 injection,
+instant capture) turned from `REJECT` into a polite retry. An attacker could have laundered
+a detected injection by making B6 unmeasurable — exactly backwards.
+
+The rule is now: unevaluable routes to `CHALLENGE` **only when nothing else indicted the
+capture**. In the cascade it is evaluated after the quality, binding and injection
+short-circuits rather than before them; in `decision.binding_outcome` it guards `ACCEPT`
+and deliberately leaves `REJECT` alone, because a `REJECT` that survived fusion was driven
+by evidence that *was* read. The general shape is worth stating: **a "cannot measure"
+outcome must never outrank a positive detection**, only an absence of one.
+
+**Also updated:** `TestB6Semantics`'s negative fixture used flat grey frames, which since
+this change are correctly *unevaluable* rather than *unmet* — it was a fixture for the
+wrong outcome and now builds a capture lit by a different nonce's sequence, which is
+measurable and genuinely fails the challenge.

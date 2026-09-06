@@ -10,6 +10,7 @@ for every request, not optimised around, since that's the whole point of measuri
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
@@ -39,6 +40,39 @@ def load_model_versions() -> dict[str, str]:
             if digest and rel_path:
                 versions[rel_path] = f"sha256:{digest}"
     return versions
+
+
+def binding_outcome(
+    proposed: DecisionOutcome, unevaluable_checks: Sequence[str]
+) -> DecisionOutcome:
+    """Force `CHALLENGE` when part of the binding evidence could not be evaluated.
+
+    An unevaluable check means the system could not read the evidence, not that the
+    evidence was bad. `REJECT` would record a genuine user as an attacker, which is not
+    only wrong for them: §8.1's per-attack detection rates and the 6-class confusion
+    matrix are computed from these outcomes, so every misfiled genuine capture corrupts
+    the numbers the report is built on. `ACCEPT` would be worse -- it would pass a capture
+    on evidence nobody read.
+
+    `CHALLENGE` (retry with a fresh nonce, §5.5) is the honest third answer, and it is the
+    outcome the challenge-response design already has for exactly this situation.
+
+    **This guards `ACCEPT` only, and deliberately does not override `REJECT`.** Fusion has
+    already routed the unevaluable-only case to `CHALLENGE` before reaching here, so a
+    `REJECT` arriving with an unevaluable check attached was driven by *other* evidence
+    that was read -- a failed B3, a quality failure, an injection score over threshold. A
+    statically-injected stream has a flat illumination trace too, so overriding `REJECT`
+    here would let an attacker convert a detected injection into a polite retry by making
+    B6 unevaluable, which is exactly backwards.
+
+    An attacker can still reach `CHALLENGE` by submitting a flat trace that nothing else
+    indicts, but that is a loop they can never convert into an `ACCEPT`; it costs them
+    attempts rather than buying them anything. The reason code stays in the receipt either
+    way.
+    """
+    if unevaluable_checks and proposed == "ACCEPT":
+        return "CHALLENGE"
+    return proposed
 
 
 def build_and_sign_decision(

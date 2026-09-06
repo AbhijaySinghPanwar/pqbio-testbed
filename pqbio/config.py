@@ -34,6 +34,7 @@ class BindingConfig(BaseModel):
     illumination_steps: int
     illumination_step_ms: int
     illumination_corr_min: float
+    illumination_min_trace_spread: float
     phash_hamming_max: int
     phash_reuse_min_frames: int
 

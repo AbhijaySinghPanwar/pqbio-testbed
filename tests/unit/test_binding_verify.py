@@ -17,6 +17,7 @@ import pytest
 from pqbio.binding.nonce import NonceStore, issue_challenge
 from pqbio.binding.phash_index import PhashIndex
 from pqbio.binding.verify import (
+    challenge_trace_spread,
     check_b6_challenge_correlation,
     check_evidence_reuse,
     compute_challenge_correlation,
@@ -34,7 +35,7 @@ from pqbio.capture.challenge import (
 from pqbio.config import settings
 from pqbio.pqc.keystore import KeyStore
 from pqbio.pqc.sign import get_signer
-from pqbio.schemas import FrameMeta, Txn
+from pqbio.schemas import ChallengeSignal, FrameMeta, Txn
 
 
 def _synthetic_frame(seed: int, size: int = 128) -> np.ndarray:
@@ -101,13 +102,21 @@ class Harness:
         )
         images = []
         for i in range(n_frames):
+            step = min(i * len(expected) // n_frames, len(expected) - 1)
             if satisfy_b6:
                 from pqbio.capture.challenge import PALETTE_BGR
 
-                step = min(i * len(expected) // n_frames, len(expected) - 1)
                 img = np.full((64, 64, 3), PALETTE_BGR[expected[step]], dtype=np.uint8)
             else:
-                img = _synthetic_frame(seed=i)
+                # A capture lit by a DIFFERENT nonce's sequence, not flat grey frames.
+                # Flat frames have no chromaticity movement, so since 2026-09-04 they are
+                # correctly UNEVALUABLE rather than UNMET -- which made this a fixture for
+                # the wrong outcome. A wrong-sequence capture is measurable and genuinely
+                # fails the challenge, which is what a B6 negative is supposed to be.
+                from pqbio.capture.challenge import PALETTE_BGR
+
+                wrong = [(idx + 1) % len(PALETTE_BGR) for idx in expected]
+                img = np.full((64, 64, 3), PALETTE_BGR[wrong[step]], dtype=np.uint8)
             images.append(img)
         return self.build_bundle_from_images(images, counter=counter)
 
@@ -420,6 +429,162 @@ class TestB6Semantics:
         assert palette_chromaticity(white_idx) == pytest.approx((1 / 3, 1 / 3, 1 / 3))
         red_idx = PALETTE_NAMES.index("red")
         assert palette_chromaticity(red_idx) == pytest.approx((1.0, 0.0, 0.0))
+
+
+class TestB6Evaluability:
+    """B6's evaluability precondition (§5.3, §14 2026-09-04).
+
+    "The challenge was not satisfied" and "the challenge could not be measured" are
+    different answers. Before this gate existed, a capture the sensor could not measure
+    came out as `BIND_CHALLENGE_UNMET` -- an attack code on a genuine user -- because the
+    correlation was computed from noise and thresholded as though it meant something.
+    """
+
+    def _bundle_from_trace(self, h: Harness, trace: list[float], n_frames: int = 12):
+        """A signed bundle carrying an arbitrary illumination trace.
+
+        Built through the real assembly path so the bundle is genuinely well-formed;
+        only the trace is substituted, because the trace is what the gate reads.
+        """
+        images = [_synthetic_frame(seed=i) for i in range(n_frames)]
+        bundle = h.build_bundle_from_images(images)
+        return bundle.model_copy(
+            update={"challenge_signal": ChallengeSignal(illumination_trace=trace)}
+        )
+
+    def test_saturated_capture_is_unevaluable_not_unmet(self, tmp_path: Path) -> None:
+        """The case this gate was built for.
+
+        A real capture at ~190/255 in a brightly lit room measured a per-channel spread of
+        0.00021 (PROJECT_SPEC.md §14, 2026-09-03): the trace did not move, so there was
+        nothing to correlate. It must come back UNEVALUABLE, not UNMET.
+        """
+        h = Harness(tmp_path)
+        # Reproduces the measured shape: a static scene chromaticity with sensor-noise
+        # jitter far below the configured floor.
+        rng = np.random.default_rng(7)
+        base = np.array([0.366, 0.332, 0.302])
+        frames = base[None, :] + rng.normal(0.0, 0.0002, size=(12, 3))
+        frames = frames / frames.sum(axis=1, keepdims=True)
+        bundle = self._bundle_from_trace(h, [float(v) for v in frames.ravel()])
+
+        spread = challenge_trace_spread(bundle)
+        assert spread < settings.binding.illumination_min_trace_spread
+
+        result = check_b6_challenge_correlation(bundle)
+        assert result.passed is False
+        assert result.evaluable is False
+        assert result.reason_code == "BIND_CHALLENGE_UNEVALUABLE"
+        assert result.reason_code != "BIND_CHALLENGE_UNMET"
+
+    def test_a_measurable_capture_that_fails_is_still_unmet(self, tmp_path: Path) -> None:
+        """The gate must not swallow real failures.
+
+        A trace that moves plenty but moves the wrong way is a capture the system CAN
+        measure and which did not satisfy the challenge -- that is an attack signal and
+        must keep its attack code.
+        """
+        h = Harness(tmp_path)
+        rng = np.random.default_rng(11)
+        # Large, structured excursions: unambiguously above the evaluability floor.
+        frames = np.array([0.33, 0.33, 0.34]) + rng.normal(0.0, 0.05, size=(12, 3))
+        frames = np.clip(frames, 1e-6, None)
+        frames = frames / frames.sum(axis=1, keepdims=True)
+        bundle = self._bundle_from_trace(h, [float(v) for v in frames.ravel()])
+
+        assert challenge_trace_spread(bundle) >= settings.binding.illumination_min_trace_spread
+        result = check_b6_challenge_correlation(bundle)
+        assert result.evaluable is True
+        assert result.passed is False
+        assert result.reason_code == "BIND_CHALLENGE_UNMET"
+
+    def test_a_genuine_passing_capture_is_not_gated(self, tmp_path: Path) -> None:
+        """The number that must stay zero: the gate never fires on a capture B6 can read.
+
+        On the 97 held captures that passed the correlation, the lowest spread was 0.00226
+        against a floor of 0.0015 (`results/b6_evaluability.json`). A regression that
+        raised the floor past that would start rejecting genuine users, so a passing
+        fixture is asserted to be evaluable here rather than only asserted to pass.
+        """
+        h = Harness(tmp_path)
+        expected = derive_illumination_sequence(
+            h.challenge.nonce, settings.binding.illumination_steps
+        )
+        n_frames = 12
+        images = [
+            _lit_scene_frame(expected[min(i * len(expected) // n_frames, len(expected) - 1)])
+            for i in range(n_frames)
+        ]
+        bundle = h.build_bundle_from_images(images)
+
+        result = check_b6_challenge_correlation(bundle)
+        assert result.evaluable is True
+        assert result.passed is True
+
+    def test_the_gate_runs_before_the_correlation(self, tmp_path: Path) -> None:
+        """A capture failing the gate must never reach `compute_challenge_correlation`.
+
+        Ordering is the point, not an optimisation: the correlation on an unevaluable
+        trace is a ratio of noise to noise, and computing it invites someone to log or
+        threshold it later.
+        """
+        h = Harness(tmp_path)
+        flat = [1 / 3, 1 / 3, 1 / 3] * 12  # perfectly static: spread exactly 0
+        bundle = self._bundle_from_trace(h, flat)
+
+        called = False
+
+        def _boom(_bundle):  # pragma: no cover - must not run
+            nonlocal called
+            called = True
+            return 1.0
+
+        import pqbio.binding.verify as verify_mod
+
+        original = verify_mod.compute_challenge_correlation
+        verify_mod.compute_challenge_correlation = _boom  # type: ignore[assignment]
+        try:
+            result = verify_mod.check_b6_challenge_correlation(bundle)
+        finally:
+            verify_mod.compute_challenge_correlation = original  # type: ignore[assignment]
+
+        assert called is False
+        assert result.reason_code == "BIND_CHALLENGE_UNEVALUABLE"
+
+    def test_missing_or_malformed_trace_stays_an_attack_code(self, tmp_path: Path) -> None:
+        """A bundle with no usable trace is a protocol violation, not a bad room.
+
+        The distinction is a security one and it points the opposite way to intuition: if
+        an absent trace routed to UNEVALUABLE, an attacker could omit the field and get an
+        endless CHALLENGE retry loop instead of a REJECT. Only a *present but static*
+        trace -- a real sensor that genuinely could not see the cast -- is unevaluable.
+        """
+        h = Harness(tmp_path)
+        bundle = h.build_bundle()
+
+        for broken in (
+            bundle.model_copy(update={"challenge_signal": None}),
+            self._bundle_from_trace(h, []),
+            self._bundle_from_trace(h, [0.5, 0.5]),  # not a multiple of 3
+        ):
+            assert challenge_trace_spread(broken) is None
+            result = check_b6_challenge_correlation(broken)
+            assert result.passed is False
+            assert result.evaluable is True
+            assert result.reason_code == "BIND_CHALLENGE_UNMET"
+
+    def test_result_exposes_the_third_state_distinctly(self, tmp_path: Path) -> None:
+        """`binding_flags` stays fail-closed; `binding_flags_tristate` carries the truth."""
+        h = Harness(tmp_path)
+        flat = [1 / 3, 1 / 3, 1 / 3] * 12
+        bundle = self._bundle_from_trace(h, flat)
+        result = h.verify(bundle)
+
+        assert result.binding_flags[5] is False  # lossy view: reads as a failure
+        assert result.binding_flags_tristate[5] is None  # truthful view
+        assert result.unevaluable_checks == ["B6"]
+        assert result.any_unevaluable is True
+        assert "BIND_CHALLENGE_UNEVALUABLE" in result.reason_codes
 
 
 def test_multiple_failures_all_reported_together(tmp_path: Path) -> None:

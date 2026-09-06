@@ -79,7 +79,7 @@ from pqbio.detect.match import MatchDetector
 from pqbio.pqc.aead import AEADDecryptionError, decrypt
 from pqbio.pqc.sign import Signer
 from pqbio.schemas import Decision, EvidenceBundle, canonical_cbor_decode, sha256
-from pqbio.server.decision import build_and_sign_decision
+from pqbio.server.decision import binding_outcome, build_and_sign_decision
 from pqbio.server.store import AuditLog, SessionStore, SqliteKeyStore
 
 
@@ -228,6 +228,9 @@ async def run_verify_pipeline(
                 c5.passed,
                 b6.passed,
             )
+            # B6 is the only check that can be unevaluable; B1-B5 are deterministic
+            # predicates that are always decidable on a well-formed bundle.
+            unevaluable = tuple(c.check for c in (*checks_b1_5, b6) if not c.evaluable)
             fusion_input = FusionInput(
                 match_score=match_score,
                 pad_score=None,
@@ -238,6 +241,7 @@ async def run_verify_pipeline(
                 quality_passed=prepared_evidence.quality.passed,
                 binding_flags=binding_flags,
                 n_frames=len(bundle.frame_meta),
+                binding_unevaluable=unevaluable,
             )
             strategy = settings.detect.fusion.strategy
             fusion_result = (
@@ -259,7 +263,9 @@ async def run_verify_pipeline(
         if match_score is not None:
             detector_scores["match"] = match_score
 
-        decision_outcome = fusion_result.decision
+        # An unevaluable binding check can never come out as REJECT: the evidence was
+        # not read, so there is nothing to reject on. See decision.binding_outcome.
+        decision_outcome = binding_outcome(fusion_result.decision, fusion_input.binding_unevaluable)
         fused_score = fusion_result.fused_score
 
         # -------------------------------------------------------------------------
