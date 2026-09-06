@@ -2,6 +2,16 @@
 # models/checksums.txt ARE tracked; the weight binaries themselves are not)
 data/raw/
 data/processed/
+# Server runtime state (devices/sessions/nonces/phash/audit). Every one of these is
+# created on startup if absent -- app.py's _lifespan mkdirs the data dir and each store's
+# constructor runs CREATE TABLE IF NOT EXISTS -- so nothing needs them committed.
+#
+# They were tracked until 2026-09-06, and it cost a debugging session: the pHash reuse
+# index accumulated across every local run, grew the BK-tree enough to slow the
+# evidence_reuse stage, and failed the p99 concurrency test with no code change behind it.
+# Committed runtime state also means one developer's accepted bundles silently become
+# another's "already reused".
+data/server_state/
 models/*.pt
 models/*.onnx
 models/*.pth

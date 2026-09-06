@@ -109,15 +109,13 @@ class TestUnevaluableB6DoesNotSkipHeavyModels:
         assert confident(passed, False) is False
         assert confident(unevaluable, True) is True  # injection still short-circuits
 
-    def test_pipeline_runs_match_when_b6_is_unevaluable(self) -> None:
+    def test_pipeline_runs_match_when_b6_is_unevaluable(self, fresh_server_data_dir) -> None:  # type: ignore[no-untyped-def]
         """End-to-end through the real server: the detector actually executes.
 
         A predicate test can pass while the wiring is wrong, and the original B6 bug was
         exactly a wiring bug, so this asserts on observed execution rather than on the
         expression.
         """
-        import tempfile
-        from pathlib import Path
         from uuid import uuid4
 
         from _server_fixtures import ServerTestClient
@@ -137,14 +135,7 @@ class TestUnevaluableB6DoesNotSkipHeavyModels:
 
         match_mod.MatchDetector.score = _record  # type: ignore[assignment]
         try:
-            # A fresh data dir: the pHash reuse index persists between tests and the
-            # fixtures build byte-identical frames, so on a shared dir stage 5 rejects
-            # this bundle as reused and stage 6 never runs -- the test would fail for a
-            # reason unrelated to what it asserts.
-            with (
-                tempfile.TemporaryDirectory() as tmp,
-                TestClient(create_app(data_dir=Path(tmp) / "data")) as client,
-            ):
+            with TestClient(create_app(data_dir=fresh_server_data_dir)) as client:
                 stc = ServerTestClient(client, device_id=f"dev-{uuid4().hex[:8]}")
                 stc.enroll()
                 session_id, challenge_obj = stc.challenge()

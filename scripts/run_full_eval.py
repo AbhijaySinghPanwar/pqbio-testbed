@@ -141,6 +141,19 @@ def run_accuracy_stage() -> dict[str, Any]:
         },
         "confusion_matrix_6class": {
             **confusion,
+            # Reconciliation for the matrix total (§8.1). Both are genuinely zero here,
+            # and the reason matters: on this corpus the predicted label comes from each
+            # sample's cascade DECISION, not from its reason codes, so no sample can carry
+            # two attack attributions and none can be a rejection that names no attack
+            # class. The single-label collapse has nothing to do on this data. It will,
+            # once evaluation runs over real server decisions -- which is why the fields
+            # are emitted rather than omitted, so the report renders the reconciliation in
+            # both cases instead of only after the numbers first go non-zero.
+            "non_attributing_rejections": 0,
+            "multi_attribution_count": 0,
+            "label_source": (
+                "cascade decision per sample, not reason codes -- see the caveat below"
+            ),
             "caveat": (
                 "Only bona_fide and injection have real labelled samples in this "
                 "environment; presentation/morph/deepfake/replay rows and columns are "

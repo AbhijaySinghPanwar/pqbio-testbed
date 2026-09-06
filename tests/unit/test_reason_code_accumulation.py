@@ -15,8 +15,6 @@ rejection, and how the survivors collapse to one label.
 from __future__ import annotations
 
 import json
-import tempfile
-from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -143,18 +141,11 @@ class TestRejectionCarriesWhatWasDetermined:
     """End to end on the real server. The reuse case is the one from §14's caveat."""
 
     @pytest.fixture
-    def client(self):  # type: ignore[no-untyped-def]
-        """A fresh data dir per test.
-
-        The pHash reuse index persists, and the fixtures build byte-identical frames every
-        time, so a shared dir means the very first genuine bundle is already "reused" --
-        the seed step of the reuse test would fail for reasons that have nothing to do
-        with what it is testing.
-        """
-        with (
-            tempfile.TemporaryDirectory() as tmp,
-            TestClient(create_app(data_dir=Path(tmp) / "data")) as c,
-        ):
+    def client(self, fresh_server_data_dir):  # type: ignore[no-untyped-def]
+        """Needs a dir no earlier test wrote to, not merely an isolated one: the reuse
+        test seeds the pHash index itself and then expects the hit, which only means
+        something if nothing else put those frames there first."""
+        with TestClient(create_app(data_dir=fresh_server_data_dir)) as c:
             yield c
 
     def test_reuse_rejection_keeps_the_binding_and_injection_results(self, client) -> None:  # type: ignore[no-untyped-def]

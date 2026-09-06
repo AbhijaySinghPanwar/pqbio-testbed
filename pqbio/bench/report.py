@@ -426,7 +426,40 @@ def render_f4_confusion_matrix(accuracy: dict[str, Any] | None) -> str:
     fig.savefig(out_path, dpi=150)
     plt.close(fig)
     caveat = section.get("caveat", "")
-    return f"### F4 — 6-class confusion matrix\n\n![Confusion matrix]({out_path.relative_to(RESULTS_DIR).as_posix()})\n\n_{caveat}_\n"
+
+    # Reconciliation, printed WITH the matrix rather than as a field somewhere else.
+    # Since 2026-09-06 a rejected decision carries every code determined up to the
+    # rejection point, so the single-label collapse (§8.1) drops rejections that name no
+    # attack class -- which makes the matrix total smaller than the sample count. A
+    # matrix that does not sum to the number of samples reads as an arithmetic error
+    # unless the missing rows are accounted for immediately beside it.
+    total = int(np.asarray(matrix).sum())
+    non_attributing = section.get("non_attributing_rejections")
+    multi = section.get("multi_attribution_count")
+    lines = [f"Samples counted in the matrix: **{total}**"]
+    if non_attributing is not None:
+        lines.append(
+            f"Rejections excluded (named no attack class): **{non_attributing}** — "
+            "forged signature, expiry, nonce replay, counter regression, quality "
+            "failure, unevaluable challenge. Excluded rather than folded into the "
+            "nearest class, which would invent an attribution the system never made "
+            "(§8.1)."
+        )
+        lines.append(f"Total decisions: **{total + int(non_attributing)}**")
+    if multi is not None:
+        lines.append(
+            f"Decisions carrying more than one attack attribution: **{multi}** — "
+            "collapsed to a single label by ATTACK_CODE_PRECEDENCE. A large count here "
+            "means this matrix is hiding most of what the system found, and the "
+            "per-attack rates (T4) should be read instead."
+        )
+    reconciliation = "\n\n".join(lines)
+
+    return (
+        f"### F4 — 6-class confusion matrix\n\n"
+        f"![Confusion matrix]({out_path.relative_to(RESULTS_DIR).as_posix()})\n\n"
+        f"{reconciliation}\n\n_{caveat}_\n"
+    )
 
 
 # ----------------------------------------------------------------------------------
