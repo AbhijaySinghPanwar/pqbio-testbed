@@ -10,7 +10,7 @@ Built and unit-tested (`tests/unit/test_bench_accuracy.py`, against synthetic sc
 distributions with an analytically known answer) before any real detector's scores are
 run through it -- an explicit instruction for this build: verify the metric
 implementations independently of whether the numbers they will eventually report are
-good or bad. Four of six detectors (pad/morph/deepfake/replay) don't exist and three of
+good or bad. Three of six detectors (pad/deepfake/replay) don't exist and three of
 four datasets are unlicensed (§6/§14) -- most cells these functions could fill are
 `pqbio.bench._common.blocked(...)`, not because the functions are unfinished, but
 because there is nothing real to hand them yet.

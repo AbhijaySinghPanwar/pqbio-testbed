@@ -2,21 +2,18 @@
 
 Every metric this evaluation could not produce, where it would have appeared, and what would need to change to unblock it. Generated from the `blocked` markers in `results/*.json` -- not maintained by hand.
 
-_Generated 2026-09-06T10:26:45.359968+00:00_
+_Generated 2026-09-06T18:47:44.829496+00:00_
 
 
 ---
 
-**19 blocked entries.**
+**17 blocked entries.**
 
 - **`accuracy.json` → `T1_per_detector_accuracy_intra_dataset.deepfake`**
   no deepfake detector implemented -- pqbio/detect/deepfake.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
 
 - **`accuracy.json` → `T1_per_detector_accuracy_intra_dataset.match`**
   no labelled genuine/impostor pair dataset exists to compute match FAR/FRR (§6)
-
-- **`accuracy.json` → `T1_per_detector_accuracy_intra_dataset.morph`**
-  no morph detector implemented -- pqbio/detect/morph.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
 
 - **`accuracy.json` → `T1_per_detector_accuracy_intra_dataset.pad`**
   no pad detector implemented -- pqbio/detect/pad.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
@@ -33,7 +30,10 @@ _Generated 2026-09-06T10:26:45.359968+00:00_
 - **`accuracy.json` → `T2_per_detector_accuracy_cross_dataset.match`**
   only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6)
 
-- **`accuracy.json` → `T2_per_detector_accuracy_cross_dataset.morph`**
+- **`accuracy.json` → `T2_per_detector_accuracy_cross_dataset.morph_dmad`**
+  only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6)
+
+- **`accuracy.json` → `T2_per_detector_accuracy_cross_dataset.morph_smad`**
   only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6)
 
 - **`accuracy.json` → `T2_per_detector_accuracy_cross_dataset.pad`**
@@ -45,17 +45,11 @@ _Generated 2026-09-06T10:26:45.359968+00:00_
 - **`accuracy.json` → `T4_per_attack_detection_rate.deepfake`**
   no deepfake detector implemented -- pqbio/detect/deepfake.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
 
-- **`accuracy.json` → `T4_per_attack_detection_rate.morph`**
-  no morph detector implemented -- pqbio/detect/morph.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
-
 - **`accuracy.json` → `T4_per_attack_detection_rate.presentation`**
   no presentation detector implemented -- pqbio/detect/pad.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
 
 - **`accuracy.json` → `T4_per_attack_detection_rate.replay`**
   no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed. Replay-Attack/MSU-MFSD are unlicensed (§6), and the self-recorded alternative is blocked on human subjects rather than hardware: §6 requires written consent and supervisor approval to record anyone, and a subject-disjoint split needs at least two consenting subjects. The capture rig itself is verified working (camera, display, WB/exposure lock -- PROJECT_SPEC.md §14, 2026-09-01)
-
-- **`accuracy.json` → `mmpmr`**
-  MMPMR is morph-only (§8.1); no morph detector and no morph dataset exist (§6/§14)
 
 - **`b6_evaluability.json` → `B6_operating_point_characterisation`**
   B6's threshold (binding.illumination_corr_min = 0.60) and this evaluability floor both rest on captures from a single session, in one room, on one sensor, with no human subject at capture distance. Measured TPR was 1.00 on 8 captures, whose one-sided 95% Clopper-Pearson upper bound on BPCER is 0.312 -- consistent with a true BPCER of 31%. Demonstrating the 5% system BPCER target at 95% confidence needs ~59 consecutive clean captures. UNBLOCKER: the consented multi-capture session -- multiple subjects at capture distance across varied ambient lighting, which §6 gates behind written consent and supervisor approval (the same blocker as the replay corpus). §5.2's live-webcam DoD item closes on that measurement and not before; until then these values are the best available estimate, not a characterised operating point (PROJECT_SPEC.md §14, 2026-09-03/04)
@@ -75,7 +69,7 @@ Crypto figures produced on the `kyber-py`/`dilithium-py` fallback are **supersed
 
 | Result file | KEM backend | SIG backend | Generated |
 |---|---|---|---|
-| `accuracy.json` | liboqs | liboqs | 2026-09-06T10:26:43 |
+| `accuracy.json` | liboqs | liboqs | 2026-09-06T18:41:33 |
 | `b6_evaluability.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-06T07:05:24 |
 | `b6_operating_point.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T13:42:59 |
 | `b6_operating_window.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T13:59:21 |
@@ -84,17 +78,17 @@ Crypto figures produced on the `kyber-py`/`dilithium-py` fallback are **supersed
 | `frame_budget.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T12:54:29 |
 | `illumination_corr_calibration.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T12:21:30 |
 | `illumination_corr_calibration_16step.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T12:20:27 |
-| `latency.json` | liboqs | liboqs | 2026-08-31T18:53:44 |
+| `latency.json` | liboqs | liboqs | 2026-09-06T18:42:56 |
 | `live_challenge_check.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T13:53:34 |
 | `live_challenge_check_16step.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T12:19:58 |
-| `loadgen.json` | liboqs | liboqs | 2026-08-31T19:19:04 |
+| `loadgen.json` | liboqs | liboqs | 2026-09-06T18:44:34 |
 | `loadgen_fallback_controlled.json` | kyber-py-fallback | dilithium-py-fallback | 2026-08-31T19:21:14 |
-| `overhead_ablation.json` | liboqs | liboqs | 2026-08-31T18:59:03 |
+| `overhead_ablation.json` | liboqs | liboqs | 2026-09-06T18:47:42 |
 | `phash_burst_calibration.json` | — | — | 2026-08-31T09:33:14 |
 | `phash_robustness.json` | — | — | 2026-08-31T06:42:36 |
-| `pqc_micro.json` | liboqs | liboqs | 2026-08-31T18:59:03 |
+| `pqc_micro.json` | liboqs | liboqs | 2026-09-06T18:47:42 |
 | `pqc_micro_fallback.json` | kyber-py-fallback | dilithium-py-fallback | 2026-08-31T13:27:07 |
-| `resources.json` | liboqs | liboqs | 2026-08-31T18:57:18 |
+| `resources.json` | liboqs | liboqs | 2026-09-06T18:45:55 |
 
 
 ---

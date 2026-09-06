@@ -133,11 +133,17 @@ def run_accuracy_stage() -> dict[str, Any]:
         )
 
     def morph_cell(setting: str) -> dict[str, Any]:
+        """One T1 row: headline metrics only.
+
+        The cross-method sub-table deliberately does NOT go in here. A T1 cell is one row
+        of a rendered table, and nesting a dict-of-dicts inside it dumps raw Python into
+        the report. It gets its own top-level block instead, which is also where a reader
+        looking for the §12 generalisation number would go looking.
+        """
         if is_blocked(morph_result):
             return morph_result
-        cell = dict(morph_result.get(setting, {}))
+        cell = {k: v for k, v in morph_result.get(setting, {}).items() if not isinstance(v, dict)}
         cell["setting"] = setting
-        cell["cross_method_generalisation"] = morph_result.get(f"{setting}_cross_method")
         return cell
 
     detector_names = ["pad", "deepfake", "replay"]
@@ -191,6 +197,13 @@ def run_accuracy_stage() -> dict[str, Any]:
                 "structurally zero, not measured-and-found-zero (§14)."
             ),
         },
+        "morph_cross_method_generalisation": (
+            morph_result
+            if is_blocked(morph_result)
+            else {
+                setting: morph_result.get(f"{setting}_cross_method") for setting in ("smad", "dmad")
+            }
+        ),
         "det_curve": {"injection": det_curve},
         "mmpmr": (
             morph_result

@@ -1521,6 +1521,8 @@ is actually needed is two consenting people and an afternoon.
 Consequence for §8.3: C3 still runs **one of six detectors** (injection), so the AI
 overhead term and the 798x AI:PQ ratio remain the provisional lower bound described in
 the liboqs amendment above. Nothing about this session changed them.
+*(Superseded 2026-09-06: morph landed, so C3 now runs **two of six detectors** and the
+ratio moved to 2327x — see that date's amendment.)*
 
 
 ### 2026-09-02 — B6's measurement was a spec defect, and fixing it exposed a second one
@@ -2069,6 +2071,22 @@ This is not fixable by tuning: the most similar pairing available among 399 LFW 
 reaches cosine 0.365, and a blend of two people who look that different resembles neither.
 Raising it needs a source with deliberate look-alike pairs, which is what the licensed
 corpora provide and what makes them worth the paperwork.
+
+**§8.3's overhead ratio moved, and the detector count belongs next to it.** With morph in
+stage 6, C3 now runs **two of six detectors** (injection + morph S-MAD):
+
+| term | one detector (2026-09-01) | two detectors (2026-09-06) |
+|---|---|---|
+| PQ overhead C2−C1 | 0.88 ms (+8.1%) | 0.34 ms (+3.8%) |
+| AI overhead C3−C2 | 703.8 ms | **784.5 ms** |
+| **AI:PQ ratio** | **798x** *(one of six detectors)* | **2327x** *(two of six detectors)* |
+
+Two cautions on reading that jump. The AI term rose by 81 ms, which is the morph
+detector's real cost and the only part of the change attributable to this session. The
+ratio nearly tripled largely because the **PQ** term fell to 0.34 ms — run-to-run variation
+on a sub-millisecond measurement, not a crypto improvement. Quoting "2327x" without the
+detector count attached is exactly the misreading the count is there to prevent: it is
+still a **lower bound**, and it will keep rising as the remaining four detectors land.
 
 **Integration.** `morph.py` runs in pipeline stage 6 in the **S-MAD** setting. D-MAD is the
 better detector and is deliberately *not* wired into `/v1/verify`: that endpoint receives a

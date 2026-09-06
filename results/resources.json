@@ -1,15 +1,15 @@
 {
   "KEM_BACKEND": "liboqs",
   "SIG_BACKEND": "liboqs",
-  "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
+  "config_hash_sha256": "ff38ecf4326769b20cc45d5fb2861d49ecf434334c087d5e176b166fb4273714",
   "cpu_rss": {
     "cpu_count_logical": 16,
-    "cpu_percent_mean": 1417.194451294698,
-    "cpu_percent_peak": 1572.0,
+    "cpu_percent_mean": 1421.1854858548586,
+    "cpu_percent_peak": 1574.8,
     "interval_s": 0.1,
-    "n_samples": 811,
-    "rss_peak_bytes": 1045848064,
-    "rss_steady_state_bytes": 1045716992.0
+    "n_samples": 813,
+    "rss_peak_bytes": 1015242752,
+    "rss_steady_state_bytes": 1015111680
   },
   "dataset_versions": {
     "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
@@ -17,8 +17,8 @@
     "morph": "BLOCKED -- unlicensed (FRLL-Morphs/SMDD, \u00a76)",
     "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
   },
-  "generated_at_utc": "2026-08-31T18:57:18.579003+00:00",
-  "git_commit": "95e4e6a2a6682a03a1548ecf7db71d90585c6ce0",
+  "generated_at_utc": "2026-09-06T18:45:55.892392+00:00",
+  "git_commit": "4cee4683e1f59c3e38aa572c24d30dcded2188a4",
   "gpu": {
     "blocked": true,
     "blocker": "no GPU / NVML unavailable in this environment: NVML Shared Library Not Found"
@@ -33,7 +33,7 @@
   "workload_result": {
     "KEM_BACKEND": "liboqs",
     "SIG_BACKEND": "liboqs",
-    "config_hash_sha256": "2b8a593b59375f031e953753fd5e2f53b40546399372c14974cd20dbb3338880",
+    "config_hash_sha256": "ff38ecf4326769b20cc45d5fb2861d49ecf434334c087d5e176b166fb4273714",
     "dataset_versions": {
       "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
       "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
@@ -41,34 +41,34 @@
       "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
     },
     "decision_outcomes": {
-      "ACCEPT": 22,
-      "REJECT": 18
+      "ACCEPT": 23,
+      "REJECT": 17
     },
     "end_to_end_client_observed": {
-      "max_ms": 971.0897550000368,
-      "mean_ms": 712.6398752249984,
-      "min_ms": 453.0470569999352,
+      "max_ms": 1001.7879050001284,
+      "mean_ms": 767.3818829999846,
+      "min_ms": 472.5890130002881,
       "n": 40,
-      "p50_ms": 782.880976499996,
-      "p95_ms": 911.6042861500999,
-      "p99_ms": 955.8159073200574
+      "p50_ms": 921.9671544997254,
+      "p95_ms": 1000.1650906999203,
+      "p99_ms": 1001.6661321799984
     },
-    "fallback_ml_dsa_signing_cost": {
-      "backend": "liboqs",
-      "iterations": 1000,
-      "max_ms": 1.1063640000088526,
-      "mean_ms": 0.1144452169999397,
-      "min_ms": 0.04816699998855256,
-      "p95_ms": 0.24427230000298983,
-      "source": "results/pqc_micro.json"
-    },
-    "generated_at_utc": "2026-08-31T18:57:18.497352+00:00",
-    "git_commit": "95e4e6a2a6682a03a1548ecf7db71d90585c6ce0",
+    "generated_at_utc": "2026-09-06T18:45:55.847685+00:00",
+    "git_commit": "4cee4683e1f59c3e38aa572c24d30dcded2188a4",
     "hardware": {
       "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
       "processor": "x86_64",
       "python_implementation": "CPython",
       "python_version": "3.11.16"
+    },
+    "ml_dsa_signing_cost": {
+      "backend": "liboqs",
+      "iterations": 1000,
+      "max_ms": 0.7235020000280201,
+      "mean_ms": 0.11845179800195638,
+      "min_ms": 0.04861599995820143,
+      "p95_ms": 0.265294600035304,
+      "source": "results/pqc_micro.json"
     },
     "n_frames_per_bundle": 8,
     "n_requests": 40,
@@ -76,94 +76,94 @@
     "seed": null,
     "stage_breakdown": {
       "advance_counter": {
-        "max_ms": 16.268350000018472,
-        "mean_ms": 5.134059574992023,
+        "max_ms": 10.753080000085902,
+        "mean_ms": 3.7932270000055723,
         "min_ms": 0.0,
         "n": 40,
-        "p50_ms": 5.933459000033281,
-        "p95_ms": 14.37924644996542,
-        "p99_ms": 15.722617929982334
+        "p50_ms": 6.014452000044912,
+        "p95_ms": 6.9603823500074204,
+        "p99_ms": 9.4168619999391
       },
       "binding_fail_fast": {
-        "max_ms": 15.42905899998459,
-        "mean_ms": 8.126097875000937,
-        "min_ms": 6.043639000040457,
+        "max_ms": 11.59297999993214,
+        "mean_ms": 7.272573274985916,
+        "min_ms": 6.348539000100573,
         "n": 40,
-        "p50_ms": 7.654086499996993,
-        "p95_ms": 12.855463599970557,
-        "p99_ms": 15.062250740008949
+        "p50_ms": 7.029492999890863,
+        "p95_ms": 8.41766755024764,
+        "p99_ms": 10.787667439840332
       },
       "cheap_signals": {
-        "max_ms": 17.71918299994013,
-        "mean_ms": 12.377895100006242,
-        "min_ms": 7.97199100003354,
+        "max_ms": 14.551886999925046,
+        "mean_ms": 9.934785925020151,
+        "min_ms": 8.002462000149535,
         "n": 40,
-        "p50_ms": 12.707698999975037,
-        "p95_ms": 17.164749550016722,
-        "p99_ms": 17.57042607999665
+        "p50_ms": 8.935073499969803,
+        "p95_ms": 13.414185449755676,
+        "p99_ms": 14.313606750024519
       },
       "crypto": {
-        "max_ms": 7.209056000078817,
-        "mean_ms": 3.8578844749920904,
-        "min_ms": 2.49248800002988,
+        "max_ms": 4.991060000065772,
+        "mean_ms": 2.943842424929244,
+        "min_ms": 2.217711999946914,
         "n": 40,
-        "p50_ms": 3.428356499966867,
-        "p95_ms": 6.118800899946561,
-        "p99_ms": 7.107976580048216
+        "p50_ms": 2.870063999807826,
+        "p95_ms": 3.777206049971936,
+        "p99_ms": 4.681729550111413
       },
       "evidence_reuse": {
-        "max_ms": 19.09203700006401,
-        "mean_ms": 14.432727775003684,
-        "min_ms": 10.32698899996376,
+        "max_ms": 15.463134000128775,
+        "mean_ms": 12.364163774986991,
+        "min_ms": 9.67145000004166,
         "n": 40,
-        "p50_ms": 14.560645500068858,
-        "p95_ms": 17.61100860005058,
-        "p99_ms": 18.70724116001611
+        "p50_ms": 11.75118600008318,
+        "p95_ms": 15.162427449945426,
+        "p99_ms": 15.366720930142037
       },
       "fusion": {
-        "max_ms": 1.2202860000343208,
-        "mean_ms": 0.394869025005562,
-        "min_ms": 0.10727999995197024,
+        "max_ms": 0.4916470002171991,
+        "mean_ms": 0.3154400750077002,
+        "min_ms": 0.17766500013749464,
         "n": 40,
-        "p50_ms": 0.37335249999159714,
-        "p95_ms": 0.5885565500705062,
-        "p99_ms": 1.0765515000048251
+        "p50_ms": 0.30834349990982446,
+        "p95_ms": 0.4557245498972406,
+        "p99_ms": 0.48716317010530474
       },
       "heavy_models": {
-        "max_ms": 333.40379900005246,
-        "mean_ms": 159.44890584999882,
+        "max_ms": 458.84038899976076,
+        "mean_ms": 241.11925882498326,
         "min_ms": 0.0,
         "n": 40,
-        "p50_ms": 256.5941475000386,
-        "p95_ms": 314.12115475000064,
-        "p99_ms": 327.36246109999684
+        "p50_ms": 398.2760094997957,
+        "p95_ms": 454.97855025016634,
+        "p99_ms": 457.870113069971
       },
       "quality_face": {
-        "max_ms": 579.7888520000924,
-        "mean_ms": 454.2089029750002,
-        "min_ms": 377.511979000019,
+        "max_ms": 494.7227140000905,
+        "mean_ms": 438.018189800016,
+        "min_ms": 385.2686499999436,
         "n": 40,
-        "p50_ms": 442.70412999998143,
-        "p95_ms": 526.3665365000151,
-        "p99_ms": 559.7757512300666
+        "p50_ms": 440.97055600013846,
+        "p95_ms": 483.5800372004087,
+        "p99_ms": 490.5273537400444
       },
       "record_evidence": {
-        "max_ms": 58.22627300005934,
-        "mean_ms": 21.86013894999661,
+        "max_ms": 47.1938069999851,
+        "mean_ms": 20.712454799968327,
         "min_ms": 0.0,
         "n": 40,
-        "p50_ms": 28.928562499970667,
-        "p95_ms": 49.148100899918724,
-        "p99_ms": 57.572854520032024
+        "p50_ms": 31.950751999829663,
+        "p95_ms": 41.0448251501748,
+        "p99_ms": 45.00392618994283
       },
       "sign_audit": {
-        "max_ms": 8.58158200003345,
-        "mean_ms": 4.931247225012214,
-        "min_ms": 3.67434399998956,
+        "max_ms": 5.284391999794025,
+        "mean_ms": 4.271519274993807,
+        "min_ms": 3.409565999845654,
         "n": 40,
-        "p50_ms": 4.627937999998721,
-        "p95_ms": 6.955542500014643,
-        "p99_ms": 8.042700670040404
+        "p50_ms": 4.2863414998919325,
+        "p95_ms": 5.1576324500274495,
+        "p99_ms": 5.2743506699289355
       }
     }
   }
