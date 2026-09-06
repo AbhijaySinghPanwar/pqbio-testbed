@@ -91,6 +91,7 @@
   "config_hash_sha256": "ff38ecf4326769b20cc45d5fb2861d49ecf434334c087d5e176b166fb4273714",
   "confusion_matrix_6class": {
     "caveat": "Only bona_fide and injection have real labelled samples in this environment; presentation/morph/deepfake/replay rows and columns are structurally zero, not measured-and-found-zero (\u00a714).",
+    "label_source": "cascade decision per sample, not reason codes -- see the caveat below",
     "labels": [
       "bona_fide",
       "presentation",
@@ -148,7 +149,9 @@
         0,
         20
       ]
-    ]
+    ],
+    "multi_attribution_count": 0,
+    "non_attributing_rejections": 0
   },
   "dataset_versions": {
     "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
@@ -178,8 +181,8 @@
       ]
     }
   },
-  "generated_at_utc": "2026-09-06T07:09:25.085798+00:00",
-  "git_commit": "d2af344fbbe2f1448ed83b3a45101eceefea3b51",
+  "generated_at_utc": "2026-09-06T10:26:43.376122+00:00",
+  "git_commit": "d07c40953ff9fd71b9cd1fe4b176689faa2dbc16",
   "hardware": {
     "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
     "processor": "x86_64",

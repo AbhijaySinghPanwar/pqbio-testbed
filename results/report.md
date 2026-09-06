@@ -1,6 +1,6 @@
 # Evaluation report (PROJECT_SPEC.md §8)
 
-*git `d2af344fbbe2` · config `ff38ecf43267` · Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41 / x86_64 · KEM=liboqs SIG=liboqs · seed=2026 · generated 2026-09-06T07:09:25.085798+00:00*
+*git `d07c40953ff9` · config `ff38ecf43267` · Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41 / x86_64 · KEM=liboqs SIG=liboqs · seed=2026 · generated 2026-09-06T10:26:43.376122+00:00*
 
 ---
 
@@ -128,6 +128,14 @@ _Only one real (ACER, p95) pair exists (injection); this plot cannot yet show th
 ### F4 — 6-class confusion matrix
 
 ![Confusion matrix](figures/f4_confusion_matrix.png)
+
+Samples counted in the matrix: **40**
+
+Rejections excluded (named no attack class): **0** — forged signature, expiry, nonce replay, counter regression, quality failure, unevaluable challenge. Excluded rather than folded into the nearest class, which would invent an attribution the system never made (§8.1).
+
+Total decisions: **40**
+
+Decisions carrying more than one attack attribution: **0** — collapsed to a single label by ATTACK_CODE_PRECEDENCE. A large count here means this matrix is hiding most of what the system found, and the per-attack rates (T4) should be read instead.
 
 _Only bona_fide and injection have real labelled samples in this environment; presentation/morph/deepfake/replay rows and columns are structurally zero, not measured-and-found-zero (§14)._
 
