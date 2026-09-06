@@ -2,12 +2,12 @@
 
 Every metric this evaluation could not produce, where it would have appeared, and what would need to change to unblock it. Generated from the `blocked` markers in `results/*.json` -- not maintained by hand.
 
-_Generated 2026-09-02T13:41:48.871865+00:00_
+_Generated 2026-09-06T06:49:00.526620+00:00_
 
 
 ---
 
-**17 blocked entries.**
+**18 blocked entries.**
 
 - **`accuracy.json` → `T1_per_detector_accuracy_intra_dataset.deepfake`**
   no deepfake detector implemented -- pqbio/detect/deepfake.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
@@ -57,6 +57,9 @@ _Generated 2026-09-02T13:41:48.871865+00:00_
 - **`accuracy.json` → `mmpmr`**
   MMPMR is morph-only (§8.1); no morph detector and no morph dataset exist (§6/§14)
 
+- **`b6_evaluability.json` → `B6_operating_point_characterisation`**
+  B6's threshold (binding.illumination_corr_min = 0.60) and this evaluability floor both rest on captures from a single session, in one room, on one sensor, with no human subject at capture distance. Measured TPR was 1.00 on 8 captures, whose one-sided 95% Clopper-Pearson upper bound on BPCER is 0.312 -- consistent with a true BPCER of 31%. Demonstrating the 5% system BPCER target at 95% confidence needs ~59 consecutive clean captures. UNBLOCKER: the consented multi-capture session -- multiple subjects at capture distance across varied ambient lighting, which §6 gates behind written consent and supervisor approval (the same blocker as the replay corpus). §5.2's live-webcam DoD item closes on that measurement and not before; until then these values are the best available estimate, not a characterised operating point (PROJECT_SPEC.md §14, 2026-09-03/04)
+
 - **`resources.json` → `gpu`**
   no GPU / NVML unavailable in this environment: NVML Shared Library Not Found
 
@@ -69,7 +72,8 @@ Crypto figures produced on the `kyber-py`/`dilithium-py` fallback are **supersed
 
 | Result file | KEM backend | SIG backend | Generated |
 |---|---|---|---|
-| `accuracy.json` | liboqs | liboqs | 2026-09-02T13:41:46 |
+| `accuracy.json` | liboqs | liboqs | 2026-09-06T06:48:57 |
+| `b6_evaluability.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-06T06:47:50 |
 | `b6_operating_point.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T13:42:59 |
 | `b6_operating_window.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T13:59:21 |
 | `backend_cross_check.json` | liboqs | liboqs | 2026-08-31T18:48:56 |
