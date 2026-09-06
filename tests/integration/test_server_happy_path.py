@@ -44,11 +44,14 @@ def test_happy_path_end_to_end_accepts_genuine_evidence(app_client):
     assert failed_binding_codes == []
     assert "B6_OK" in decision.reason_codes
     assert "REUSE_OK" in decision.reason_codes
-    # four of six detectors don't exist yet -- absent, never defaulted to benign
-    for name in ("PAD", "MORPH", "DEEPFAKE", "REPLAY"):
+    # Three of six detectors still don't exist -- absent, never defaulted to benign.
+    # MORPH left this list on 2026-09-06 when morph.py landed; the three that remain are
+    # dataset-blocked (§6), not unimplemented by choice.
+    for name in ("PAD", "DEEPFAKE", "REPLAY"):
         assert f"MISSING_SIGNAL_{name}" in decision.reason_codes
-    assert "match" in decision.detector_scores
-    assert "injection" in decision.detector_scores
+    assert "MISSING_SIGNAL_MORPH" not in decision.reason_codes
+    for scored in ("match", "injection", "morph"):
+        assert scored in decision.detector_scores
     assert decision.receipt_signature != b""
 
 

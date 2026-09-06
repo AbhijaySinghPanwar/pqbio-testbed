@@ -24,12 +24,15 @@ sys.path.insert(0, str(REPO_ROOT))
 from pqbio.bench._common import (  # noqa: E402
     RESULTS_DIR,
     blocked,
+    is_blocked,
     print_progress,
     run_metadata,
     write_json,
 )
 
 MANIFEST_PATH = REPO_ROOT / "data" / "manifests" / "injection_corpus_manifest.json"
+MORPH_MANIFEST_PATH = REPO_ROOT / "data" / "manifests" / "morph_corpus_manifest.json"
+MORPH_CORPUS_DIR = REPO_ROOT / "data" / "processed" / "morph_corpus"
 SEED = 2026
 
 
@@ -113,18 +116,45 @@ def run_accuracy_stage() -> dict[str, Any]:
     ]
     confusion = acc.confusion_matrix_6class(true_labels, predicted_labels)
 
-    detector_names = ["pad", "morph", "deepfake", "replay"]
+    # --- morph (D2) -----------------------------------------------------------------
+    # The corpus is never committed (LFW-derived, see data/LICENCES.md), so a checkout
+    # without it must BLOCK rather than crash or silently skip the detector.
+    morph_result: dict[str, Any]
+    if MORPH_MANIFEST_PATH.is_file() and MORPH_CORPUS_DIR.is_dir():
+        from pqbio.detect.morph_eval import train_and_evaluate as morph_train_and_evaluate
+
+        morph_result = morph_train_and_evaluate(MORPH_MANIFEST_PATH, MORPH_CORPUS_DIR)
+        write_json(RESULTS_DIR / "detectors" / "morph" / "results.json", morph_result)
+    else:
+        morph_result = blocked(
+            "morph corpus not present -- regenerate with scripts/make_morph_corpus.py. "
+            "It is LFW-derived and deliberately not committed (data/LICENCES.md); the "
+            "manifest is, so this is a one-command rebuild, not a missing dependency"
+        )
+
+    def morph_cell(setting: str) -> dict[str, Any]:
+        if is_blocked(morph_result):
+            return morph_result
+        cell = dict(morph_result.get(setting, {}))
+        cell["setting"] = setting
+        cell["cross_method_generalisation"] = morph_result.get(f"{setting}_cross_method")
+        return cell
+
+    detector_names = ["pad", "deepfake", "replay"]
     return {
         **run_metadata(seed=SEED),
         "T1_per_detector_accuracy_intra_dataset": {
             "injection": injection_report,
+            "morph_smad": morph_cell("smad"),
+            "morph_dmad": morph_cell("dmad"),
             **{name: no_detector(name, name) for name in detector_names},
             "match": blocked(
                 "no labelled genuine/impostor pair dataset exists to compute match FAR/FRR (§6)"
             ),
         },
         "T2_per_detector_accuracy_cross_dataset": {
-            name: only_one_dataset for name in [*detector_names, "injection", "match"]
+            name: only_one_dataset
+            for name in [*detector_names, "injection", "match", "morph_smad", "morph_dmad"]
         },
         "T3_fusion_strategy_comparison": {
             "rule_accuracy": fusion_comparison["rule_accuracy"],
@@ -135,7 +165,8 @@ def run_accuracy_stage() -> dict[str, Any]:
         "T4_per_attack_detection_rate": {
             **per_attack,
             "presentation": no_detector("presentation", "pad"),
-            "morph": no_detector("morph", "morph"),
+            "morph_smad": morph_cell("smad"),
+            "morph_dmad": morph_cell("dmad"),
             "deepfake": no_detector("deepfake", "deepfake"),
             "replay": no_detector("replay", "replay"),
         },
@@ -161,8 +192,13 @@ def run_accuracy_stage() -> dict[str, Any]:
             ),
         },
         "det_curve": {"injection": det_curve},
-        "mmpmr": blocked(
-            "MMPMR is morph-only (§8.1); no morph detector and no morph dataset exist (§6/§14)"
+        "mmpmr": (
+            morph_result
+            if is_blocked(morph_result)
+            else morph_result.get(
+                "mmpmr",
+                blocked("morph evaluation produced no MMPMR block"),
+            )
         ),
         "caveat": (
             "Every non-BLOCKED number here is measured on the self-generated synthetic "

@@ -117,19 +117,49 @@ def test_a2_presentation_attack_reaches_pipeline_as_missing_signal(app_client):
 
 
 # --------------------------------------------------------------------------------------
-# A3 -- Morph (enrolment image blended from two identities) -- BLOCKED, no morph.py
+# A3 -- Morph (enrolment image blended from two identities) -- SCORED as of 2026-09-06
 # --------------------------------------------------------------------------------------
 
 
-def test_a3_morph_reaches_pipeline_as_missing_signal(app_client):
-    """BLOCKED: no morph detector exists, and this environment has only one real
-    photographed identity (no second face to blend a morph from -- see module
-    docstring). Confirms a normal enrolment + verification still reports
-    `MISSING_SIGNAL_MORPH` rather than pretending morph-liveness was checked.
+def test_a3_morph_is_scored_not_reported_missing(app_client):
+    """No longer blocked: `morph.py` exists and runs in stage 6, so a verification must
+    now carry a real morph score instead of `MISSING_SIGNAL_MORPH`.
+
+    This test used to assert the opposite, and the inversion is the point -- it was the
+    standing marker that D2 had no detector. Its replacement is the marker that D2 has
+    one and that the pipeline actually reaches it.
+
+    **S-MAD, not D-MAD**: /v1/verify receives a live capture and no document image, so
+    there is no suspect/reference pair to differentiate. See pipeline.py stage 6.
     """
     stc = ServerTestClient(app_client)
     decision = stc.full_genuine_flow(n_frames=30)
-    assert "MISSING_SIGNAL_MORPH" in decision.reason_codes
+
+    assert "MISSING_SIGNAL_MORPH" not in decision.reason_codes
+    assert (
+        "morph" in decision.detector_scores
+    ), "stage 6 must produce a morph score for a capture that reaches the heavy models"
+    score = decision.detector_scores["morph"]
+    assert 0.0 <= score <= 1.0
+
+
+def test_a3_morph_score_is_skipped_not_faked_on_a_confident_reject(app_client):
+    """The cascade may skip stage 6, and when it does the morph score must be reported
+    absent rather than defaulted -- the same contract every other missing detector has
+    (fusion.py's module docstring: never `0.0` meaning "verified benign").
+    """
+    from _server_fixtures import _quality_pass_crop
+
+    stc = ServerTestClient(app_client)
+    stc.enroll()
+    session_id, challenge_obj = stc.challenge()
+    keys = stc.handshake(session_id)
+    bundle = stc.build_instant_bundle(session_id, challenge_obj, _quality_pass_crop(), n_frames=30)
+    decision = stc.verify(session_id, bundle, keys)
+
+    assert decision.decision == "REJECT"
+    if "morph" not in decision.detector_scores:
+        assert "MISSING_SIGNAL_MORPH" in decision.reason_codes
 
 
 # --------------------------------------------------------------------------------------

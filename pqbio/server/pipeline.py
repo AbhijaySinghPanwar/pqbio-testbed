@@ -76,6 +76,7 @@ from pqbio.detect.face import PreparedEvidence, prepare_evidence
 from pqbio.detect.fusion import CascadeModel, FusionInput, FusionResult, fuse_cascade, fuse_rule
 from pqbio.detect.injection import InjectionDetector
 from pqbio.detect.match import MatchDetector
+from pqbio.detect.morph import MorphDetector
 from pqbio.pqc.aead import AEADDecryptionError, decrypt
 from pqbio.pqc.sign import Signer
 from pqbio.schemas import Decision, EvidenceBundle, canonical_cbor_decode, sha256
@@ -94,6 +95,7 @@ class PipelineContext:
     server_pk: bytes
     server_sk: bytes
     injection_detector: InjectionDetector
+    morph_detector: MorphDetector
     executor: ThreadPoolExecutor
     cascade_model: CascadeModel | None = None
 
@@ -241,22 +243,42 @@ async def run_verify_pipeline(
             raise PipelineRejection([reuse_check.reason_code])
 
         # -------------------------------------------------------------------------
-        # Stage 6: heavy models (this session: match only) -- skipped on confident_reject
+        # Stage 6: heavy models (this session: match + morph S-MAD) -- skipped on
+        # confident_reject
+        #
+        # **S-MAD, not D-MAD, and the reason is where morphs actually enter this system.**
+        # D-MAD compares a suspect *document* photo against a trusted live capture, and it
+        # is the stronger setting (§5.4, and measured: see results/detectors/morph). But
+        # /v1/verify receives a live capture bundle and nothing else -- there is no
+        # document image in this request to be the suspect. A morph reaches this system at
+        # *enrolment*, where a document photo is submitted, or through an injected frame
+        # here. Only the second is in this pipeline's reach, and only S-MAD can score it,
+        # since the single submitted image is both the suspect and the only capture there
+        # is. Wiring D-MAD in here would mean comparing an image with itself and calling
+        # the result a differential.
         # -------------------------------------------------------------------------
         match_score: float | None = None
+        morph_score: float | None = None
         if not confident_reject:
 
-            def _stage6() -> float | None:
+            def _stage6() -> tuple[float | None, float | None]:
+                if not prepared_evidence.quality.passed:
+                    return None, None
                 template_bytes = ctx.keystore.get_face_template(device_id)
-                if template_bytes is None or not prepared_evidence.quality.passed:
-                    return None
-                enrolled = np.frombuffer(template_bytes, dtype=np.float32)
-                detector = MatchDetector(enrolled_template=enrolled)
-                return detector.score(prepared_evidence).score
+                match_value: float | None = None
+                if template_bytes is not None:
+                    enrolled = np.frombuffer(template_bytes, dtype=np.float32)
+                    match_value = (
+                        MatchDetector(enrolled_template=enrolled).score(prepared_evidence).score
+                    )
+                morph_value = ctx.morph_detector.score(prepared_evidence).score
+                return match_value, morph_value
 
-            match_score = await _run_stage("heavy_models", _stage6)
+            match_score, morph_score = await _run_stage("heavy_models", _stage6)
             if match_score is not None:
                 determined_scores["match"] = match_score
+            if morph_score is not None:
+                determined_scores["morph"] = morph_score
         else:
             stage_latency_ms["heavy_models"] = 0.0  # skipped by the stage-4 short-circuit
 
@@ -279,7 +301,7 @@ async def run_verify_pipeline(
             fusion_input = FusionInput(
                 match_score=match_score,
                 pad_score=None,
-                morph_score=None,
+                morph_score=morph_score,
                 deepfake_score=None,
                 replay_score=None,
                 injection_score=injection_result.score,
@@ -307,6 +329,8 @@ async def run_verify_pipeline(
         detector_scores = {"injection": injection_result.score}
         if match_score is not None:
             detector_scores["match"] = match_score
+        if morph_score is not None:
+            detector_scores["morph"] = morph_score
 
         # An unevaluable binding check can never come out as REJECT: the evidence was
         # not read, so there is nothing to reject on. See decision.binding_outcome.

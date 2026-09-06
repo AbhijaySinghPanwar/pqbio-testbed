@@ -266,6 +266,7 @@ async def verify(req: VerifyRequest, request: Request) -> VerifyResponse:
         server_pk=state.server_sig_pk,
         server_sk=state.server_sig_sk,
         injection_detector=state.injection_detector,
+        morph_detector=state.morph_detector,
         executor=state.executor,
         cascade_model=state.cascade_model,
     )

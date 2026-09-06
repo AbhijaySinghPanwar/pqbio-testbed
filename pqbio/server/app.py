@@ -25,6 +25,7 @@ from pqbio.detect.face import CHECKSUMS_PATH, MODELS_DIR, _load_checksums, _sha2
 from pqbio.detect.fusion import DEFAULT_CASCADE_MODEL_PATH, CascadeModel
 from pqbio.detect.injection import DEFAULT_MODEL_PATH as INJECTION_MODEL_PATH
 from pqbio.detect.injection import InjectionDetector
+from pqbio.detect.morph import MorphDetector
 from pqbio.pqc.kem import get_kem
 from pqbio.pqc.sign import get_signer
 from pqbio.server.store import AuditLog, SessionStore, SqliteKeyStore
@@ -88,6 +89,10 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.injection_detector = InjectionDetector(
         model_path=INJECTION_MODEL_PATH if INJECTION_MODEL_PATH.is_file() else None
     )
+    # S-MAD: see pipeline.py stage 6 for why the differential setting cannot be used at
+    # /v1/verify. Falls back to an unscored 0.0 with an explicit reason when the model
+    # file is absent, exactly as the injection detector does.
+    app.state.morph_detector = MorphDetector(setting="smad")
 
     app.state.cascade_model = None
     if DEFAULT_CASCADE_MODEL_PATH.is_file():

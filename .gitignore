@@ -23,6 +23,8 @@ models/insightface/
 # pqbio.detect.injection's / pqbio.detect.fusion's training paths) — named explicitly
 # since checksums.txt is also a models/*.txt file and must stay tracked.
 models/injection_gbm.txt
+models/morph_smad_gbm.txt
+models/morph_dmad_gbm.txt
 models/fusion_cascade_lr.json
 
 # Secrets / env
