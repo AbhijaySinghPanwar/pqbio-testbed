@@ -1,6 +1,6 @@
 # Evaluation report (PROJECT_SPEC.md §8)
 
-*git `1f053b407df6` · config `ff38ecf43267` · Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41 / x86_64 · KEM=liboqs SIG=liboqs · seed=2026 · generated 2026-09-06T06:48:57.852429+00:00*
+*git `d2af344fbbe2` · config `ff38ecf43267` · Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41 / x86_64 · KEM=liboqs SIG=liboqs · seed=2026 · generated 2026-09-06T07:09:25.085798+00:00*
 
 ---
 

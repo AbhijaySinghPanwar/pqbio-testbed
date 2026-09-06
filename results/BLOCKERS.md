@@ -2,12 +2,12 @@
 
 Every metric this evaluation could not produce, where it would have appeared, and what would need to change to unblock it. Generated from the `blocked` markers in `results/*.json` -- not maintained by hand.
 
-_Generated 2026-09-06T06:49:00.526620+00:00_
+_Generated 2026-09-06T07:09:26.888479+00:00_
 
 
 ---
 
-**18 blocked entries.**
+**19 blocked entries.**
 
 - **`accuracy.json` → `T1_per_detector_accuracy_intra_dataset.deepfake`**
   no deepfake detector implemented -- pqbio/detect/deepfake.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14)
@@ -60,6 +60,9 @@ _Generated 2026-09-06T06:49:00.526620+00:00_
 - **`b6_evaluability.json` → `B6_operating_point_characterisation`**
   B6's threshold (binding.illumination_corr_min = 0.60) and this evaluability floor both rest on captures from a single session, in one room, on one sensor, with no human subject at capture distance. Measured TPR was 1.00 on 8 captures, whose one-sided 95% Clopper-Pearson upper bound on BPCER is 0.312 -- consistent with a true BPCER of 31%. Demonstrating the 5% system BPCER target at 95% confidence needs ~59 consecutive clean captures. UNBLOCKER: the consented multi-capture session -- multiple subjects at capture distance across varied ambient lighting, which §6 gates behind written consent and supervisor approval (the same blocker as the replay corpus). §5.2's live-webcam DoD item closes on that measurement and not before; until then these values are the best available estimate, not a characterised operating point (PROJECT_SPEC.md §14, 2026-09-03/04)
 
+- **`b6_evaluability.json` → `B6_residual_unmet_after_the_evaluability_gate`**
+  The evaluability gate has not solved B6's BPCER contamination, only a third of it. At the shipped floor the gate reclassifies 33% of failing rendered captures from BIND_CHALLENGE_UNMET to BIND_CHALLENGE_UNEVALUABLE, while gating 74% of no-render controls -- so roughly two-thirds of real-capture B6 failures are still scored as UNMET, i.e. as challenge-not-answered rather than could-not-measure. Whether that residual is a conservative gate leaving measurable-but-weak captures on the attack side, or genuinely unmet challenges that deserve the code they get, is UNRESOLVED: separating the two needs captures whose ground truth is known independently of the correlation itself, which is the consented multi-capture session. Until then any BPCER figure derived from B6 outcomes carries an unquantified genuine-capture component (PROJECT_SPEC.md §14, 2026-09-04)
+
 - **`resources.json` → `gpu`**
   no GPU / NVML unavailable in this environment: NVML Shared Library Not Found
 
@@ -72,8 +75,8 @@ Crypto figures produced on the `kyber-py`/`dilithium-py` fallback are **supersed
 
 | Result file | KEM backend | SIG backend | Generated |
 |---|---|---|---|
-| `accuracy.json` | liboqs | liboqs | 2026-09-06T06:48:57 |
-| `b6_evaluability.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-06T06:47:50 |
+| `accuracy.json` | liboqs | liboqs | 2026-09-06T07:09:25 |
+| `b6_evaluability.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-06T07:05:24 |
 | `b6_operating_point.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T13:42:59 |
 | `b6_operating_window.json` | kyber-py-fallback | dilithium-py-fallback | 2026-09-01T13:59:21 |
 | `backend_cross_check.json` | liboqs | liboqs | 2026-08-31T18:48:56 |
