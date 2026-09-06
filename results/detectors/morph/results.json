@@ -1,140 +1,140 @@
 {
-  "seed": 2026,
-  "corpus_manifest": "morph_corpus_manifest.json",
   "corpus_counts": {
-    "identities_usable": 399,
-    "morphs": 390,
     "bona_fide": 399,
-    "live_reference": 399,
     "by_method": {
       "landmark_alpha": 195,
       "spliced_jpeg": 195
+    },
+    "identities_usable": 399,
+    "live_reference": 399,
+    "morphs": 390
+  },
+  "corpus_manifest": "morph_corpus_manifest.json",
+  "dmad": {
+    "acer": 0.1395698051948052,
+    "apcer": 0.11038961038961038,
+    "auc_roc": 0.9295454545454546,
+    "bpcer": 0.16875,
+    "eer": 0.13749999999999996,
+    "eer_threshold": 0.6417689809764262,
+    "far_achieved": 0.01,
+    "model_path": "morph_dmad_gbm.txt",
+    "n_attack": 154,
+    "n_dropped_no_features": 0,
+    "n_genuine": 160,
+    "n_test": 314,
+    "n_train": 475,
+    "tdr_at_far_1pct": 0.15,
+    "threshold": 0.5
+  },
+  "dmad_cross_method": {
+    "train_landmark_alpha__test_spliced_jpeg": {
+      "acer": 0.20296266233766233,
+      "apcer": 0.3246753246753247,
+      "auc_roc": 0.8842532467532467,
+      "bpcer": 0.08125,
+      "eer": 0.18125000000000002,
+      "eer_threshold": 0.00041465725129747943,
+      "far_achieved": 0.01,
+      "n_attack": 77,
+      "n_genuine": 160,
+      "tdr_at_far_1pct": 0.15625,
+      "threshold": 0.5
+    },
+    "train_spliced_jpeg__test_landmark_alpha": {
+      "acer": 0.10434253246753246,
+      "apcer": 0.06493506493506493,
+      "auc_roc": 0.9598214285714286,
+      "bpcer": 0.14375,
+      "eer": 0.09999999999999998,
+      "eer_threshold": 0.7528852890296254,
+      "far_achieved": 0.01,
+      "n_attack": 77,
+      "n_genuine": 160,
+      "tdr_at_far_1pct": 0.65625,
+      "threshold": 0.5
     }
+  },
+  "dmad_vs_smad": {
+    "acer_reduction": 0.10653409090909091,
+    "dmad_acer": 0.1395698051948052,
+    "note": "\u00a75.4 predicts D-MAD substantially outperforms S-MAD because a trusted live capture is available at verification time; this is that prediction measured on this corpus",
+    "smad_acer": 0.2461038961038961
   },
   "methods": [
     "landmark_alpha",
     "spliced_jpeg"
   ],
-  "threshold": 0.5,
   "mmpmr": {
-    "definition": "MMPMR = fraction of morphs whose MINIMUM similarity across contributing identities clears detect.thresholds.match_cosine_min -- i.e. the morph verifies as every contributor, which is the attack's success condition",
-    "match_cosine_min": 0.38,
     "by_method": {
       "landmark_alpha": {
-        "n_morphs": 195,
-        "mmpmr": 0.1076923076923077,
         "any_contributor_match_rate": 0.46153846153846156,
+        "min_similarity_max": 0.4835473895072937,
         "min_similarity_mean": 0.23411500696092843,
-        "min_similarity_max": 0.4835473895072937
+        "mmpmr": 0.1076923076923077,
+        "n_morphs": 195
       },
       "spliced_jpeg": {
-        "n_morphs": 195,
-        "mmpmr": 0.020512820512820513,
         "any_contributor_match_rate": 0.7230769230769231,
+        "min_similarity_max": 0.4025266170501709,
         "min_similarity_mean": 0.15748646433871144,
-        "min_similarity_max": 0.4025266170501709
+        "mmpmr": 0.020512820512820513,
+        "n_morphs": 195
       }
     },
+    "definition": "MMPMR = fraction of morphs whose MINIMUM similarity across contributing identities clears detect.thresholds.match_cosine_min -- i.e. the morph verifies as every contributor, which is the attack's success condition",
+    "match_cosine_min": 0.38,
     "overall": {
-      "n_morphs": 390,
+      "any_contributor_match_rate": 0.5923076923076923,
       "mmpmr": 0.0641025641025641,
-      "any_contributor_match_rate": 0.5923076923076923
+      "n_morphs": 390
     }
   },
+  "seed": 2026,
   "smad": {
-    "n_genuine": 160,
-    "n_attack": 154,
-    "threshold": 0.5,
-    "apcer": 0.2922077922077922,
-    "bpcer": 0.2,
     "acer": 0.2461038961038961,
+    "apcer": 0.2922077922077922,
+    "auc_roc": 0.8368912337662339,
+    "bpcer": 0.2,
     "eer": 0.24375000000000002,
     "eer_threshold": 0.40992054028307695,
-    "auc_roc": 0.8368912337662339,
-    "tdr_at_far_1pct": 0.04375,
     "far_achieved": 0.01,
-    "n_train": 475,
-    "n_test": 314,
+    "model_path": "morph_smad_gbm.txt",
+    "n_attack": 154,
     "n_dropped_no_features": 0,
-    "model_path": "morph_smad_gbm.txt"
+    "n_genuine": 160,
+    "n_test": 314,
+    "n_train": 475,
+    "tdr_at_far_1pct": 0.04375,
+    "threshold": 0.5
   },
   "smad_cross_method": {
     "train_landmark_alpha__test_spliced_jpeg": {
-      "n_genuine": 160,
-      "n_attack": 77,
-      "threshold": 0.5,
-      "apcer": 0.9090909090909091,
-      "bpcer": 0.04375,
       "acer": 0.4764204545454545,
+      "apcer": 0.9090909090909091,
+      "auc_roc": 0.5856331168831168,
+      "bpcer": 0.04375,
       "eer": 0.43125,
       "eer_threshold": 0.0018653737853725303,
-      "auc_roc": 0.5856331168831168,
+      "far_achieved": 0.01,
+      "n_attack": 77,
+      "n_genuine": 160,
       "tdr_at_far_1pct": 0.0125,
-      "far_achieved": 0.01
+      "threshold": 0.5
     },
     "train_spliced_jpeg__test_landmark_alpha": {
-      "n_genuine": 160,
-      "n_attack": 77,
-      "threshold": 0.5,
-      "apcer": 0.7272727272727273,
-      "bpcer": 0.06875,
       "acer": 0.39801136363636364,
+      "apcer": 0.7272727272727273,
+      "auc_roc": 0.7637987012987013,
+      "bpcer": 0.06875,
       "eer": 0.33766233766233766,
       "eer_threshold": 0.12965899760450694,
-      "auc_roc": 0.7637987012987013,
+      "far_achieved": 0.01,
+      "n_attack": 77,
+      "n_genuine": 160,
       "tdr_at_far_1pct": 0.15,
-      "far_achieved": 0.01
+      "threshold": 0.5
     }
   },
-  "dmad": {
-    "n_genuine": 160,
-    "n_attack": 154,
-    "threshold": 0.5,
-    "apcer": 0.11038961038961038,
-    "bpcer": 0.16875,
-    "acer": 0.1395698051948052,
-    "eer": 0.13749999999999996,
-    "eer_threshold": 0.6417689809764262,
-    "auc_roc": 0.9295454545454546,
-    "tdr_at_far_1pct": 0.15,
-    "far_achieved": 0.01,
-    "n_train": 475,
-    "n_test": 314,
-    "n_dropped_no_features": 0,
-    "model_path": "morph_dmad_gbm.txt"
-  },
-  "dmad_cross_method": {
-    "train_landmark_alpha__test_spliced_jpeg": {
-      "n_genuine": 160,
-      "n_attack": 77,
-      "threshold": 0.5,
-      "apcer": 0.3246753246753247,
-      "bpcer": 0.08125,
-      "acer": 0.20296266233766233,
-      "eer": 0.18125000000000002,
-      "eer_threshold": 0.00041465725129747943,
-      "auc_roc": 0.8842532467532467,
-      "tdr_at_far_1pct": 0.15625,
-      "far_achieved": 0.01
-    },
-    "train_spliced_jpeg__test_landmark_alpha": {
-      "n_genuine": 160,
-      "n_attack": 77,
-      "threshold": 0.5,
-      "apcer": 0.06493506493506493,
-      "bpcer": 0.14375,
-      "acer": 0.10434253246753246,
-      "eer": 0.09999999999999998,
-      "eer_threshold": 0.7528852890296254,
-      "auc_roc": 0.9598214285714286,
-      "tdr_at_far_1pct": 0.65625,
-      "far_achieved": 0.01
-    }
-  },
-  "dmad_vs_smad": {
-    "smad_acer": 0.2461038961038961,
-    "dmad_acer": 0.1395698051948052,
-    "acer_reduction": 0.10653409090909091,
-    "note": "\u00a75.4 predicts D-MAD substantially outperforms S-MAD because a trusted live capture is available at verification time; this is that prediction measured on this corpus"
-  }
+  "threshold": 0.5
 }

@@ -23,9 +23,97 @@
       "blocked": true,
       "blocker": "no labelled genuine/impostor pair dataset exists to compute match FAR/FRR (\u00a76)"
     },
-    "morph": {
-      "blocked": true,
-      "blocker": "no morph detector implemented -- pqbio/detect/morph.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md \u00a714)"
+    "morph_dmad": {
+      "acer": 0.1395698051948052,
+      "apcer": 0.11038961038961038,
+      "auc_roc": 0.9295454545454546,
+      "bpcer": 0.16875,
+      "cross_method_generalisation": {
+        "train_landmark_alpha__test_spliced_jpeg": {
+          "acer": 0.20296266233766233,
+          "apcer": 0.3246753246753247,
+          "auc_roc": 0.8842532467532467,
+          "bpcer": 0.08125,
+          "eer": 0.18125000000000002,
+          "eer_threshold": 0.00041465725129747943,
+          "far_achieved": 0.01,
+          "n_attack": 77,
+          "n_genuine": 160,
+          "tdr_at_far_1pct": 0.15625,
+          "threshold": 0.5
+        },
+        "train_spliced_jpeg__test_landmark_alpha": {
+          "acer": 0.10434253246753246,
+          "apcer": 0.06493506493506493,
+          "auc_roc": 0.9598214285714286,
+          "bpcer": 0.14375,
+          "eer": 0.09999999999999998,
+          "eer_threshold": 0.7528852890296254,
+          "far_achieved": 0.01,
+          "n_attack": 77,
+          "n_genuine": 160,
+          "tdr_at_far_1pct": 0.65625,
+          "threshold": 0.5
+        }
+      },
+      "eer": 0.13749999999999996,
+      "eer_threshold": 0.6417689809764262,
+      "far_achieved": 0.01,
+      "model_path": "morph_dmad_gbm.txt",
+      "n_attack": 154,
+      "n_dropped_no_features": 0,
+      "n_genuine": 160,
+      "n_test": 314,
+      "n_train": 475,
+      "setting": "dmad",
+      "tdr_at_far_1pct": 0.15,
+      "threshold": 0.5
+    },
+    "morph_smad": {
+      "acer": 0.2461038961038961,
+      "apcer": 0.2922077922077922,
+      "auc_roc": 0.8368912337662339,
+      "bpcer": 0.2,
+      "cross_method_generalisation": {
+        "train_landmark_alpha__test_spliced_jpeg": {
+          "acer": 0.4764204545454545,
+          "apcer": 0.9090909090909091,
+          "auc_roc": 0.5856331168831168,
+          "bpcer": 0.04375,
+          "eer": 0.43125,
+          "eer_threshold": 0.0018653737853725303,
+          "far_achieved": 0.01,
+          "n_attack": 77,
+          "n_genuine": 160,
+          "tdr_at_far_1pct": 0.0125,
+          "threshold": 0.5
+        },
+        "train_spliced_jpeg__test_landmark_alpha": {
+          "acer": 0.39801136363636364,
+          "apcer": 0.7272727272727273,
+          "auc_roc": 0.7637987012987013,
+          "bpcer": 0.06875,
+          "eer": 0.33766233766233766,
+          "eer_threshold": 0.12965899760450694,
+          "far_achieved": 0.01,
+          "n_attack": 77,
+          "n_genuine": 160,
+          "tdr_at_far_1pct": 0.15,
+          "threshold": 0.5
+        }
+      },
+      "eer": 0.24375000000000002,
+      "eer_threshold": 0.40992054028307695,
+      "far_achieved": 0.01,
+      "model_path": "morph_smad_gbm.txt",
+      "n_attack": 154,
+      "n_dropped_no_features": 0,
+      "n_genuine": 160,
+      "n_test": 314,
+      "n_train": 475,
+      "setting": "smad",
+      "tdr_at_far_1pct": 0.04375,
+      "threshold": 0.5
     },
     "pad": {
       "blocked": true,
@@ -49,7 +137,11 @@
       "blocked": true,
       "blocker": "only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (\u00a76)"
     },
-    "morph": {
+    "morph_dmad": {
+      "blocked": true,
+      "blocker": "only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (\u00a76)"
+    },
+    "morph_smad": {
       "blocked": true,
       "blocker": "only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (\u00a76)"
     },
@@ -74,9 +166,97 @@
       "blocker": "no deepfake detector implemented -- pqbio/detect/deepfake.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md \u00a714)"
     },
     "injection_tier1": 1.0,
-    "morph": {
-      "blocked": true,
-      "blocker": "no morph detector implemented -- pqbio/detect/morph.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md \u00a714)"
+    "morph_dmad": {
+      "acer": 0.1395698051948052,
+      "apcer": 0.11038961038961038,
+      "auc_roc": 0.9295454545454546,
+      "bpcer": 0.16875,
+      "cross_method_generalisation": {
+        "train_landmark_alpha__test_spliced_jpeg": {
+          "acer": 0.20296266233766233,
+          "apcer": 0.3246753246753247,
+          "auc_roc": 0.8842532467532467,
+          "bpcer": 0.08125,
+          "eer": 0.18125000000000002,
+          "eer_threshold": 0.00041465725129747943,
+          "far_achieved": 0.01,
+          "n_attack": 77,
+          "n_genuine": 160,
+          "tdr_at_far_1pct": 0.15625,
+          "threshold": 0.5
+        },
+        "train_spliced_jpeg__test_landmark_alpha": {
+          "acer": 0.10434253246753246,
+          "apcer": 0.06493506493506493,
+          "auc_roc": 0.9598214285714286,
+          "bpcer": 0.14375,
+          "eer": 0.09999999999999998,
+          "eer_threshold": 0.7528852890296254,
+          "far_achieved": 0.01,
+          "n_attack": 77,
+          "n_genuine": 160,
+          "tdr_at_far_1pct": 0.65625,
+          "threshold": 0.5
+        }
+      },
+      "eer": 0.13749999999999996,
+      "eer_threshold": 0.6417689809764262,
+      "far_achieved": 0.01,
+      "model_path": "morph_dmad_gbm.txt",
+      "n_attack": 154,
+      "n_dropped_no_features": 0,
+      "n_genuine": 160,
+      "n_test": 314,
+      "n_train": 475,
+      "setting": "dmad",
+      "tdr_at_far_1pct": 0.15,
+      "threshold": 0.5
+    },
+    "morph_smad": {
+      "acer": 0.2461038961038961,
+      "apcer": 0.2922077922077922,
+      "auc_roc": 0.8368912337662339,
+      "bpcer": 0.2,
+      "cross_method_generalisation": {
+        "train_landmark_alpha__test_spliced_jpeg": {
+          "acer": 0.4764204545454545,
+          "apcer": 0.9090909090909091,
+          "auc_roc": 0.5856331168831168,
+          "bpcer": 0.04375,
+          "eer": 0.43125,
+          "eer_threshold": 0.0018653737853725303,
+          "far_achieved": 0.01,
+          "n_attack": 77,
+          "n_genuine": 160,
+          "tdr_at_far_1pct": 0.0125,
+          "threshold": 0.5
+        },
+        "train_spliced_jpeg__test_landmark_alpha": {
+          "acer": 0.39801136363636364,
+          "apcer": 0.7272727272727273,
+          "auc_roc": 0.7637987012987013,
+          "bpcer": 0.06875,
+          "eer": 0.33766233766233766,
+          "eer_threshold": 0.12965899760450694,
+          "far_achieved": 0.01,
+          "n_attack": 77,
+          "n_genuine": 160,
+          "tdr_at_far_1pct": 0.15,
+          "threshold": 0.5
+        }
+      },
+      "eer": 0.24375000000000002,
+      "eer_threshold": 0.40992054028307695,
+      "far_achieved": 0.01,
+      "model_path": "morph_smad_gbm.txt",
+      "n_attack": 154,
+      "n_dropped_no_features": 0,
+      "n_genuine": 160,
+      "n_test": 314,
+      "n_train": 475,
+      "setting": "smad",
+      "tdr_at_far_1pct": 0.04375,
+      "threshold": 0.5
     },
     "presentation": {
       "blocked": true,
@@ -181,8 +361,8 @@
       ]
     }
   },
-  "generated_at_utc": "2026-09-06T10:26:43.376122+00:00",
-  "git_commit": "d07c40953ff9fd71b9cd1fe4b176689faa2dbc16",
+  "generated_at_utc": "2026-09-06T18:01:29.947559+00:00",
+  "git_commit": "241ed23b42c3c0ad54e4f99e77d6bafbfd7224ed",
   "hardware": {
     "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
     "processor": "x86_64",
@@ -190,8 +370,29 @@
     "python_version": "3.11.16"
   },
   "mmpmr": {
-    "blocked": true,
-    "blocker": "MMPMR is morph-only (\u00a78.1); no morph detector and no morph dataset exist (\u00a76/\u00a714)"
+    "by_method": {
+      "landmark_alpha": {
+        "any_contributor_match_rate": 0.46153846153846156,
+        "min_similarity_max": 0.4835473895072937,
+        "min_similarity_mean": 0.23411500696092843,
+        "mmpmr": 0.1076923076923077,
+        "n_morphs": 195
+      },
+      "spliced_jpeg": {
+        "any_contributor_match_rate": 0.7230769230769231,
+        "min_similarity_max": 0.4025266170501709,
+        "min_similarity_mean": 0.15748646433871144,
+        "mmpmr": 0.020512820512820513,
+        "n_morphs": 195
+      }
+    },
+    "definition": "MMPMR = fraction of morphs whose MINIMUM similarity across contributing identities clears detect.thresholds.match_cosine_min -- i.e. the morph verifies as every contributor, which is the attack's success condition",
+    "match_cosine_min": 0.38,
+    "overall": {
+      "any_contributor_match_rate": 0.5923076923076923,
+      "mmpmr": 0.0641025641025641,
+      "n_morphs": 390
+    }
   },
   "seed": 2026
 }

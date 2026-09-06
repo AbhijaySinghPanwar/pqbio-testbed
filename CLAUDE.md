@@ -68,15 +68,29 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   false-accept tail). `TestB6Semantics` in `tests/unit/test_binding_verify.py` covers the
   properties that solid-colour fixtures cannot.
 - **Implemented: parts of Module D — `pqbio/detect/`** (base.py, face.py, match.py,
-  injection.py, fusion.py) **and its injection corpus**
-  (`scripts/make_injection_corpus.py`). `pad.py`/`morph.py`/`deepfake.py`/`replay.py`
-  are dataset-blocked (§6) and were deliberately left **absent, not stubbed** — do not
-  add placeholder files for them without checking datasets have actually landed.
+  injection.py, **morph.py + morph_eval.py**, fusion.py) **and two corpora**
+  (`scripts/make_injection_corpus.py`, `scripts/make_morph_corpus.py`).
+  `pad.py`/`deepfake.py`/`replay.py` are dataset-blocked (§6) and were deliberately left
+  **absent, not stubbed** — do not add placeholder files for them without checking
+  datasets have actually landed. **Morph (D2) landed 2026-09-06**: S-MAD and D-MAD, on a
+  self-generated LFW-derived corpus (399 identities, 390 morphs, two methods). Read §12
+  items 8–9 before quoting any morph number. Two things to know first: **MMPMR is 0.064**
+  — only 6.4% of these morphs verify as both contributors, so most of the corpus is
+  failed attacks and the ACER largely measures detecting those; and **S-MAD does not
+  survive a change of generator** (AUC 0.837 → 0.586, near chance) while D-MAD does
+  (0.930 → 0.884). The corpus is never committed (LFW copyright — `data/LICENCES.md`);
+  the manifest is, so `python scripts/make_morph_corpus.py` rebuilds it. `morph_smad_gbm.txt`
+  and `morph_dmad_gbm.txt` are gitignored like `injection_gbm.txt` but **listed in
+  `models/checksums.txt`, so the server will refuse to start until they are regenerated**
+  on a fresh checkout — same convention as the injection model, now three files not one.
+  The pipeline runs morph in **S-MAD only**: `/v1/verify` has no document image, so
+  there is no suspect/reference pair for D-MAD (pipeline.py stage 6).
   SCRFD + ArcFace `buffalo_l` fetched once (`scripts/fetch_face_models.py`) and
-  verified end-to-end against a real photo (`skimage.data.astronaut()` — no licensed
-  face dataset exists yet, see §14). `fusion.py`'s input is missing 4 of 6 spec'd
-  detector slots (represented as `None`, never defaulted to benign) — see its module
-  docstring before trusting any fused number. Injection detector hits 100%
+  verified end-to-end against a real photo (`skimage.data.astronaut()`; LFW is now used
+  for the morph corpus but is not a *licensed* dataset in §6's sense — no EULA exists to
+  sign, and no redistribution right either, see `data/LICENCES.md`). `fusion.py`'s input
+  is missing **3 of 6** spec'd detector slots (represented as `None`, never defaulted to
+  benign) — see its module docstring before trusting any fused number. Injection detector hits 100%
   train/test accuracy on the synthetic corpus; §14 explains why that's expected and
   not a production claim. Tier 2 (virtual camera) injection is blocked in this
   environment (no OBS, no admin rights) — tier 1 only, reason recorded in every

@@ -39,6 +39,7 @@ import numpy as np
 from pqbio.bench import accuracy as acc
 from pqbio.bench._common import blocked
 from pqbio.config import settings
+from pqbio.detect.injection import _record_model_checksum
 from pqbio.detect.morph import (
     DEFAULT_DMAD_MODEL_PATH,
     DEFAULT_SMAD_MODEL_PATH,
@@ -337,6 +338,14 @@ def train_and_evaluate(
         if booster is not None and model_out is not None:
             model_out.parent.mkdir(parents=True, exist_ok=True)
             booster.save_model(str(model_out))
+            # Record the new SHA-256 immediately. The server verifies every
+            # checksums.txt entry at startup and refuses to run on a mismatch, so a
+            # retrain that writes the model without updating the checksum leaves the
+            # server unable to start -- which is exactly what happened on the first
+            # `make bench` after morph landed: the accuracy stage retrained, the latency
+            # stage could not boot the app. `injection.py` has always done this; morph
+            # has to as well.
+            _record_model_checksum(model_out)
             detection["model_path"] = str(model_out.name)
         result[setting] = detection
         result[f"{setting}_cross_method"] = evaluate_cross_method(
