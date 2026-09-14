@@ -68,10 +68,15 @@ class FusionConfig(BaseModel):
     operating_point: str
 
 
+class MorphReportingConfig(BaseModel):
+    min_verifying_attacks_reported: int
+
+
 class DetectConfig(BaseModel):
     quality: QualityConfig
     thresholds: DetectThresholds
     fusion: FusionConfig
+    morph: MorphReportingConfig
 
 
 class ServerConfig(BaseModel):

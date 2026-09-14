@@ -30,6 +30,7 @@ Three things are measured here, and only the first is about the detector:
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -44,7 +45,7 @@ from pqbio.detect.morph import (
     DEFAULT_DMAD_MODEL_PATH,
     DEFAULT_SMAD_MODEL_PATH,
     _embedding,
-    dmad_features,
+    dmad_features_from_embeddings,
     smad_features,
 )
 
@@ -93,19 +94,34 @@ def extract_features(manifest: dict[str, Any], corpus_dir: Path) -> dict[str, An
         if s["label"] == "live_reference"
     }
 
+    # Every image is embedded exactly once. SCRFD + ArcFace dominates the run, and the
+    # previous version paid it up to three times per sample (S-MAD features, D-MAD suspect,
+    # D-MAD reference) plus again per identity for MMPMR -- tolerable at 800 samples, the
+    # long pole at the full pool.
+    embedding_by_path: dict[str, np.ndarray | None] = {}
+
+    def embed(rel: str, image: np.ndarray | None = None) -> np.ndarray | None:
+        if rel not in embedding_by_path:
+            embedding_by_path[rel] = _embedding(
+                image if image is not None else _read(corpus_dir, rel)
+            )
+        return embedding_by_path[rel]
+
     rows: list[dict[str, Any]] = []
-    for sample in manifest["samples"]:
+    for index, sample in enumerate(manifest["samples"]):
         if sample["label"] == "live_reference":
             continue  # a reference, not a sample to be classified
+        if index % 500 == 0:
+            print(f"  features: {index}/{len(manifest['samples'])}", file=sys.stderr)
         image = _read(corpus_dir, sample["path"])
-        embedding = _embedding(image)
+        embedding = embed(sample["path"], image)
         row: dict[str, Any] = {
             "path": sample["path"],
             "label": sample["label"],
             "method": sample["method"],
             "split": sample["split"],
             "contributors": sample["contributors"],
-            "smad": smad_features(image),
+            "smad": smad_features(image, embedding=embedding),
             "embedding": embedding,
             "face_found": embedding is not None,
         }
@@ -113,11 +129,11 @@ def extract_features(manifest: dict[str, Any], corpus_dir: Path) -> dict[str, An
         # D-MAD's trusted live capture: for a morph, a genuine capture of the FIRST
         # contributor -- the person presenting the document at the desk. For a bona fide
         # sample, that identity's own live capture, which is the genuine-pair case D-MAD
-        # must not flag. Both come from the held-out live_reference image.
-        reference_identity = sample["contributors"][0]
-        reference_path = live_by_identity.get(reference_identity)
+        # must not flag. Identities without a third LFW image have no live reference, and
+        # their rows are excluded from D-MAD (counted in n_dropped_no_features).
+        reference_path = live_by_identity.get(sample["contributors"][0])
         if reference_path is not None and reference_path != sample["path"]:
-            row["dmad"] = dmad_features(image, _read(corpus_dir, reference_path))
+            row["dmad"] = dmad_features_from_embeddings(embedding, embed(reference_path))
         else:
             row["dmad"] = None
         rows.append(row)
@@ -126,6 +142,7 @@ def extract_features(manifest: dict[str, Any], corpus_dir: Path) -> dict[str, An
         "rows": rows,
         "bona_fide_by_identity": bona_fide_by_identity,
         "live_by_identity": live_by_identity,
+        "embedding_by_path": embedding_by_path,
     }
 
 
@@ -185,7 +202,73 @@ def evaluate_detection(features: dict[str, Any], setting: str, threshold: float)
     result["n_test"] = len(test)
     result["n_dropped_no_features"] = sum(1 for r in features["rows"] if r.get(key) is None)
     result["_booster"] = booster
+    test_rows = [r for r in usable if r["split"] == "test"]
+    result["_test_scores"] = [
+        {"path": r["path"], "label": r["label"], "method": r["method"], "score": sc}
+        for r, sc in zip(test_rows, scores, strict=True)
+    ]
     return result
+
+
+def _clopper_pearson(k: int, n: int, confidence: float = 0.95) -> tuple[float, float]:
+    """Exact two-sided binomial interval for k successes in n trials."""
+    from scipy.stats import beta
+
+    alpha = 1.0 - confidence
+    lower = 0.0 if k == 0 else float(beta.ppf(alpha / 2, k, n - k + 1))
+    upper = 1.0 if k == n else float(beta.ppf(1 - alpha / 2, k + 1, n - k))
+    return lower, upper
+
+
+def evaluate_verifying_subset(
+    detection: dict[str, Any], verifies_by_path: dict[str, bool], threshold: float
+) -> dict[str, Any]:
+    """Detection restricted to morphs that actually verify as both contributors.
+
+    MMPMR says most of the corpus is failed attacks, so the all-morphs ACER largely scores
+    the detection of morphs that would never have worked. This re-scores the *same* model
+    on the *same* test split with the attack class narrowed to verifying morphs -- the
+    genuine class is unchanged. It is the real number, and it is only reported when the
+    attack class is large enough to carry one: below
+    `detect.morph.min_verifying_attacks_reported`, the cell is BLOCKED with the count.
+
+    The model is still trained on all train-split morphs. Retraining on verifying morphs
+    alone would answer a different question (and on a much smaller training set); this one
+    asks how the deployed detector does on the attacks that matter.
+    """
+    if "_test_scores" not in detection:
+        return blocked("no detection scores to re-slice")
+    floor = int(settings.detect.morph.min_verifying_attacks_reported)
+    rows = detection["_test_scores"]
+    genuine = [r["score"] for r in rows if r["label"] == "bona_fide"]
+    morphs = [r for r in rows if r["label"] == "morph"]
+    verifying = [r for r in morphs if verifies_by_path.get(r["path"]) is True]
+    unknown = sum(1 for r in morphs if r["path"] not in verifies_by_path)
+
+    counts = {
+        "n_test_morphs": len(morphs),
+        "n_test_morphs_verifying": len(verifying),
+        "n_test_morphs_verification_unknown": unknown,
+        "n_test_bona_fide": len(genuine),
+        "verifying_by_method": {
+            m: sum(1 for r in verifying if r["method"] == m)
+            for m in sorted({r["method"] for r in morphs})
+        },
+        "min_verifying_attacks_reported": floor,
+    }
+    if len(verifying) < floor:
+        return blocked(
+            f"only {len(verifying)} of {len(morphs)} test-split morphs verify as both "
+            f"contributors, below the {floor}-attack floor "
+            "(detect.morph.min_verifying_attacks_reported); a figure on that few would "
+            "carry a confidence interval wider than the effects being reported",
+            **counts,
+        )
+
+    report = acc.detector_accuracy_report(genuine, [r["score"] for r in verifying], threshold)
+    missed = sum(1 for r in verifying if r["score"] < threshold)
+    lower, upper = _clopper_pearson(missed, len(verifying))
+    return {**dict(report), **counts, "apcer_ci95": [lower, upper]}
 
 
 def evaluate_cross_method(
@@ -228,6 +311,10 @@ def evaluate_cross_method(
 # ----------------------------------------------------------------------------------
 
 
+def all_rows_for_lookup(per_method: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    return [row for rows in per_method.values() for row in rows]
+
+
 def evaluate_mmpmr(features: dict[str, Any], corpus_dir: Path) -> dict[str, Any]:
     """MMPMR: does the morph verify as **every** contributing identity?
 
@@ -238,9 +325,10 @@ def evaluate_mmpmr(features: dict[str, Any], corpus_dir: Path) -> dict[str, Any]
     detector-specific one.
     """
     cosine_min = float(settings.detect.thresholds.match_cosine_min)
+    cache = features.get("embedding_by_path", {})
     reference: dict[str, np.ndarray] = {}
     for identity, rel in features["bona_fide_by_identity"].items():
-        embedding = _embedding(_read(corpus_dir, rel))
+        embedding = cache[rel] if rel in cache else _embedding(_read(corpus_dir, rel))
         if embedding is not None:
             reference[identity] = embedding
 
@@ -279,6 +367,7 @@ def evaluate_mmpmr(features: dict[str, Any], corpus_dir: Path) -> dict[str, Any]
         all_rows.extend(rows)
         summary["by_method"][method] = {
             "n_morphs": len(rows),
+            "n_verifying": int(sum(r["verifies_all_contributors"] for r in rows)),
             "mmpmr": float(np.mean([r["verifies_all_contributors"] for r in rows])),
             "any_contributor_match_rate": float(
                 np.mean([r["verifies_any_contributor"] for r in rows])
@@ -286,9 +375,20 @@ def evaluate_mmpmr(features: dict[str, Any], corpus_dir: Path) -> dict[str, Any]
             "min_similarity_mean": float(np.mean([r["min_similarity"] for r in rows])),
             "min_similarity_max": float(np.max([r["min_similarity"] for r in rows])),
         }
+    summary["_verifies_by_path"] = {
+        r["path"]: r["verifies_all_contributors"] for r in all_rows_for_lookup(per_method)
+    }
     if all_rows:
+        by_split: dict[str, list[bool]] = {}
+        split_of_path = {row["path"]: row["split"] for row in features["rows"]}
+        for r in all_rows:
+            by_split.setdefault(split_of_path.get(r["path"], "?"), []).append(
+                r["verifies_all_contributors"]
+            )
+        summary["verifying_count_by_split"] = {k: int(sum(v)) for k, v in by_split.items()}
         summary["overall"] = {
             "n_morphs": len(all_rows),
+            "n_verifying": int(sum(r["verifies_all_contributors"] for r in all_rows)),
             "mmpmr": float(np.mean([r["verifies_all_contributors"] for r in all_rows])),
             "any_contributor_match_rate": float(
                 np.mean([r["verifies_any_contributor"] for r in all_rows])
@@ -326,8 +426,10 @@ def train_and_evaluate(
         "corpus_counts": manifest.get("counts"),
         "methods": methods,
         "threshold": threshold,
-        "mmpmr": evaluate_mmpmr(features, corpus),
     }
+    mmpmr = evaluate_mmpmr(features, corpus)
+    verifies_by_path = mmpmr.pop("_verifies_by_path")
+    result["mmpmr"] = mmpmr
 
     for setting, model_out in (
         ("smad", smad_model_out or DEFAULT_SMAD_MODEL_PATH),
@@ -347,6 +449,13 @@ def train_and_evaluate(
             # has to as well.
             _record_model_checksum(model_out)
             detection["model_path"] = str(model_out.name)
+        # Two views of the same model on the same test split: every morph, and only the
+        # morphs that verify as both contributors. The second is the real number.
+        result[f"{setting}_verifying_morphs_only"] = evaluate_verifying_subset(
+            detection, verifies_by_path, threshold
+        )
+        detection.pop("_test_scores", None)
+        detection["attack_class"] = "all test-split morphs, verifying or not"
         result[setting] = detection
         result[f"{setting}_cross_method"] = evaluate_cross_method(
             features, setting, threshold, methods

@@ -187,7 +187,7 @@ class TestCorpusManifest:
         assert by_split["train"] & by_split["test"] == set()
 
     def test_at_least_two_morph_methods(self, manifest: dict) -> None:
-        """One generator means the detector can only learn that generator (§12 item 9)."""
+        """One generator means the detector can only learn that generator (§12 item 10)."""
         methods = {s["method"] for s in manifest["samples"] if s["label"] == "morph"}
         assert len(methods) >= 2
 
@@ -217,3 +217,112 @@ class TestCorpusManifest:
             timeout=60,
         )
         assert tracked.stdout.strip() == ""
+
+    def test_pool_census_explains_the_identity_count(self, manifest: dict) -> None:
+        """The pool size is a claim about LFW, so the manifest must carry the census that
+        backs it: how many identities exist, how many have enough images to be usable, and
+        why the floor sits where it does."""
+        pool = manifest["pool"]
+        assert pool["lfw_identities_total"] >= pool["lfw_identities_with_2plus_images"]
+        assert pool["identities_usable"] <= pool["lfw_identities_with_2plus_images"]
+        assert pool["min_faces_per_identity"] >= 2, (
+            "below 2 images an identity's enrolment image is its morph's source image, "
+            "and MMPMR would match a morph against its own photograph"
+        )
+        assert "why_this_pool" in pool
+
+    def test_chosen_pair_cosine_distribution_is_recorded(self, manifest: dict) -> None:
+        dist = manifest["pair_selection"]["chosen_pair_cosine"]
+        assert dist["min"] <= dist["p25"] <= dist["median"] <= dist["p75"] <= dist["max"]
+
+
+class TestVerifyingSubset:
+    """Detection restricted to morphs that actually verify as both contributors (§12 item 8).
+
+    Synthetic score rows with hand-computed expectations -- the logic is what is under test,
+    not the corpus.
+    """
+
+    @staticmethod
+    def _detection(n_genuine: int, verifying_scores: list[float], failed_scores: list[float]):  # type: ignore[no-untyped-def]
+        rows = [
+            {"path": f"g{i}", "label": "bona_fide", "method": None, "score": 0.1}
+            for i in range(n_genuine)
+        ]
+        rows += [
+            {"path": f"v{i}", "label": "morph", "method": "landmark_alpha", "score": sc}
+            for i, sc in enumerate(verifying_scores)
+        ]
+        rows += [
+            {"path": f"f{i}", "label": "morph", "method": "spliced_jpeg", "score": sc}
+            for i, sc in enumerate(failed_scores)
+        ]
+        verifies = {f"v{i}": True for i in range(len(verifying_scores))}
+        verifies.update({f"f{i}": False for i in range(len(failed_scores))})
+        return {"_test_scores": rows}, verifies
+
+    def test_blocks_below_the_floor_and_reports_the_count(self) -> None:
+        from pqbio.detect.morph_eval import evaluate_verifying_subset
+
+        floor = settings.detect.morph.min_verifying_attacks_reported
+        detection, verifies = self._detection(40, [0.9] * (floor - 1), [0.9] * 50)
+        cell = evaluate_verifying_subset(detection, verifies, threshold=0.5)
+
+        assert cell.get("blocked") is True
+        assert cell["n_test_morphs_verifying"] == floor - 1
+        assert cell["n_test_morphs"] == floor - 1 + 50
+        assert str(floor - 1) in cell["blocker"], "the count must be in the blocker text itself"
+
+    def test_reports_metrics_at_the_floor_over_verifying_attacks_only(self) -> None:
+        """30 verifying attacks, 6 missed (score below 0.5) -> APCER 0.2 exactly; the 50
+        non-verifying morphs, all missed, must not move it."""
+        from pqbio.detect.morph_eval import evaluate_verifying_subset
+
+        floor = settings.detect.morph.min_verifying_attacks_reported
+        verifying = [0.9] * (floor - 6) + [0.2] * 6
+        detection, verifies = self._detection(40, verifying, [0.1] * 50)
+        cell = evaluate_verifying_subset(detection, verifies, threshold=0.5)
+
+        assert cell.get("blocked") is not True
+        assert cell["n_attack"] == floor
+        assert cell["n_genuine"] == 40
+        assert cell["apcer"] == pytest.approx(6 / floor)
+        lower, upper = cell["apcer_ci95"]
+        assert lower < 6 / floor < upper
+
+    def test_morphs_without_a_verification_result_are_counted_not_assumed(self) -> None:
+        from pqbio.detect.morph_eval import evaluate_verifying_subset
+
+        detection, verifies = self._detection(10, [0.9] * 5, [])
+        del verifies["v0"]
+        cell = evaluate_verifying_subset(detection, verifies, threshold=0.5)
+        assert cell["n_test_morphs_verification_unknown"] == 1
+        assert cell["n_test_morphs_verifying"] == 4
+
+
+class TestPrecomputedEmbeddings:
+    """The evaluation embeds each image once and passes the result in; that must not change
+    a single feature value."""
+
+    def test_smad_features_identical_with_precomputed_embedding(self) -> None:
+        from pqbio.detect.morph import _embedding
+
+        image = _face_image()
+        assert np.array_equal(
+            smad_features(image), smad_features(image, embedding=_embedding(image))
+        )
+
+    def test_smad_features_accept_an_explicit_no_face(self) -> None:
+        """`None` means "no face found" and must zero the embedding block, distinct from
+        "not supplied"."""
+        features = smad_features(_face_image(), embedding=None)
+        assert not features[-512:].any()
+
+    def test_dmad_from_embeddings_matches_dmad(self) -> None:
+        from pqbio.detect.morph import _embedding, dmad_features_from_embeddings
+
+        image, flipped = _face_image(), cv2.flip(_face_image(), 1)
+        direct = dmad_features(image, flipped)
+        cached = dmad_features_from_embeddings(_embedding(image), _embedding(flipped))
+        assert direct is not None and cached is not None
+        assert np.array_equal(direct, cached)

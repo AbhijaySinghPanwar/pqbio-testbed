@@ -334,7 +334,9 @@ class DetectorResult:
 
 **D1 Presentation** — Krish. DeepPixBiS (pixel-wise binary supervision) on aligned crops; EfficientNet-B0 binary classifier as the baseline. Auxiliary features for fusion: LBP histogram, HSV/YCbCr colour statistics. Datasets: CASIA-FASD, Replay-Attack, OULU-NPU, CelebA-Spoof.
 
-**D2 Morphing** — Krish. Two settings: S-MAD (single image, texture + CNN) and D-MAD (differential — classifier over the ArcFace embedding difference between the suspect image and a trusted live capture). D-MAD matches our threat model since a live capture is always available at verification. Datasets: FRLL-Morphs, SMDD. Report MMPMR alongside APCER/BPCER.
+**D2 Morphing** — Krish. Two settings: S-MAD (single image, texture + CNN) and D-MAD (differential — classifier over the ArcFace embedding difference between the suspect image and a trusted live capture). Datasets: FRLL-Morphs, SMDD. Report MMPMR alongside APCER/BPCER.
+
+*Where each setting runs — an architectural fact, not a gap.* D-MAD needs two images: a suspect **document** image and a trusted live capture. That pair exists at **enrolment**, where a document photo is submitted and checked against the person presenting it; it is the moment a morph is actually introduced into the system, and it is where D-MAD belongs. `/v1/verify` receives a live capture bundle and nothing else, so there is no suspect document to difference against — running D-MAD there would compare an image with itself. The verification pipeline therefore runs **S-MAD** (stage 6), which can score the one image it has, e.g. an injected morphed frame. The earlier wording here ("D-MAD matches our threat model since a live capture is always available at verification") conflated the two moments: a live capture is available at verification, but the suspect image is not. The enrolment route does not yet run D-MAD — `/v1/enroll` accepts a face image without a separate document image — and that is recorded as a limitation of the enrolment flow, not of the detector.
 
 **D3 Deepfake** — Krish. EfficientNet-B4 or XceptionNet on face crops, with temporal aggregation over the frame burst (mean vs top-k mean — report which wins). Datasets: FaceForensics++ (c23, c40), Celeb-DF-v2.
 
@@ -621,6 +623,8 @@ detect:
   fusion:
     strategy: cascade       # rule | cascade
     operating_point: bpcer_at_apcer_5
+  morph:
+    min_verifying_attacks_reported: 30   # below this, verifying-subset cells BLOCK with the count
 
 server:
   workers: 4

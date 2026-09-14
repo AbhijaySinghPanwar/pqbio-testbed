@@ -146,13 +146,30 @@ def run_accuracy_stage() -> dict[str, Any]:
         cell["setting"] = setting
         return cell
 
+    def morph_detection_rate(setting: str) -> Any:
+        """T4's per-attack rate for one morph cell: 1 - APCER, or the cell's BLOCKED marker
+        (which carries the verifying-morph count when that is why it is blocked)."""
+        cell = morph_cell(setting)
+        if is_blocked(cell):
+            return cell
+        apcer = cell.get("apcer")
+        if not isinstance(apcer, (int, float)):
+            return blocked(f"morph {setting}: no APCER to derive a detection rate from")
+        return 1.0 - float(apcer)
+
     detector_names = ["pad", "deepfake", "replay"]
     return {
         **run_metadata(seed=SEED),
         "T1_per_detector_accuracy_intra_dataset": {
             "injection": injection_report,
-            "morph_smad": morph_cell("smad"),
-            "morph_dmad": morph_cell("dmad"),
+            # All morphs, then only the morphs that verify as both contributors. MMPMR says
+            # most of the corpus is failed attacks, so the second pair is the real number;
+            # its n_attack column is the verifying count, and below the configured floor
+            # the cell BLOCKS with that count instead of reporting a figure.
+            "morph_smad (all morphs)": morph_cell("smad"),
+            "morph_smad (verifying morphs only)": morph_cell("smad_verifying_morphs_only"),
+            "morph_dmad (all morphs)": morph_cell("dmad"),
+            "morph_dmad (verifying morphs only)": morph_cell("dmad_verifying_morphs_only"),
             **{name: no_detector(name, name) for name in detector_names},
             "match": blocked(
                 "no labelled genuine/impostor pair dataset exists to compute match FAR/FRR (§6)"
@@ -171,8 +188,17 @@ def run_accuracy_stage() -> dict[str, Any]:
         "T4_per_attack_detection_rate": {
             **per_attack,
             "presentation": no_detector("presentation", "pad"),
-            "morph_smad": morph_cell("smad"),
-            "morph_dmad": morph_cell("dmad"),
+            # One number per row: detection rate = 1 - APCER at the deployed threshold.
+            # These were whole metric dicts until 2026-09-14, which report.py rendered as
+            # raw Python in the committed report.md.
+            "morph_smad (all morphs)": morph_detection_rate("smad"),
+            "morph_smad (verifying morphs only)": morph_detection_rate(
+                "smad_verifying_morphs_only"
+            ),
+            "morph_dmad (all morphs)": morph_detection_rate("dmad"),
+            "morph_dmad (verifying morphs only)": morph_detection_rate(
+                "dmad_verifying_morphs_only"
+            ),
             "deepfake": no_detector("deepfake", "deepfake"),
             "replay": no_detector("replay", "replay"),
         },

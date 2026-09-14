@@ -163,6 +163,7 @@ def render_t4b_mmpmr(accuracy: dict[str, Any] | None) -> str:
             [
                 method,
                 str(stats.get("n_morphs", "")),
+                str(stats.get("n_verifying", "")),
                 _fmt(stats.get("mmpmr")),
                 _fmt(stats.get("any_contributor_match_rate")),
                 _fmt(stats.get("min_similarity_mean")),
@@ -174,6 +175,7 @@ def render_t4b_mmpmr(accuracy: dict[str, Any] | None) -> str:
             [
                 "**all methods**",
                 str(overall.get("n_morphs", "")),
+                f"**{overall.get('n_verifying', '')}**",
                 f"**{_fmt(overall.get('mmpmr'))}**",
                 _fmt(overall.get("any_contributor_match_rate")),
                 "",
@@ -184,6 +186,7 @@ def render_t4b_mmpmr(accuracy: dict[str, Any] | None) -> str:
         [
             "Morph method",
             "n",
+            "n verifying",
             "MMPMR (verifies as ALL contributors)",
             "Verifies as ANY contributor",
             "Mean min similarity",
@@ -237,7 +240,7 @@ def render_morph_cross_method(accuracy: dict[str, Any] | None) -> str:
     return (
         f"{title}\nAUC near 0.5 means the detector learned the *generator*, not morphing. "
         "Compare against the within-corpus rows of T1: the gap is the honest number "
-        "(§12 item 9).\n\n"
+        "(§12 item 10).\n\n"
         f"{table}\n"
     )
 

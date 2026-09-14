@@ -149,15 +149,26 @@ def _embedding(bgr: npt.NDArray[Any]) -> npt.NDArray[np.float32] | None:
     return np.asarray(face.normed_embedding, dtype=np.float32)
 
 
-def smad_features(bgr: npt.NDArray[Any]) -> npt.NDArray[np.float64]:
-    """Single-image feature vector: texture + blend residuals + deep embedding."""
+_NOT_COMPUTED: Any = object()
+
+
+def smad_features(
+    bgr: npt.NDArray[Any], embedding: npt.NDArray[np.float32] | None = _NOT_COMPUTED
+) -> npt.NDArray[np.float64]:
+    """Single-image feature vector: texture + blend residuals + deep embedding.
+
+    `embedding` may be passed in when the caller already has it (the corpus evaluation
+    embeds every image once and reuses it). `None` is a real value -- "SCRFD found no face"
+    -- so the sentinel for "not supplied" is a separate object.
+    """
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     parts = [
         _lbp_histogram(gray),
         _bsif_like_histogram(gray),
         _blend_residual_features(bgr),
     ]
-    embedding = _embedding(bgr)
+    if embedding is _NOT_COMPUTED:
+        embedding = _embedding(bgr)
     parts.append(
         embedding.astype(np.float64) if embedding is not None else np.zeros(512, dtype=np.float64)
     )
@@ -175,8 +186,14 @@ def dmad_features(
     sits *between* two identities, which shows up as a moderate cosine to each contributor
     rather than the high cosine a genuine pair produces or the near-zero an impostor does.
     """
-    suspect_embedding = _embedding(suspect)
-    live_embedding = _embedding(live)
+    return dmad_features_from_embeddings(_embedding(suspect), _embedding(live))
+
+
+def dmad_features_from_embeddings(
+    suspect_embedding: npt.NDArray[np.float32] | None,
+    live_embedding: npt.NDArray[np.float32] | None,
+) -> npt.NDArray[np.float64] | None:
+    """`dmad_features` for callers that already hold both embeddings."""
     if suspect_embedding is None or live_embedding is None:
         return None
     difference = (suspect_embedding - live_embedding).astype(np.float64)

@@ -80,6 +80,8 @@ BLEND_PLAIN = 0.5
 BLEND_SPLICED = 0.6
 SPLICED_JPEG_QUALITY = 75
 METHODS = ("landmark_alpha", "spliced_jpeg")
+# Contributing image, enrolment (bona fide) image, D-MAD live reference -- one each.
+IMAGES_PER_IDENTITY = 3
 
 
 # ----------------------------------------------------------------------------------
@@ -143,13 +145,13 @@ def _delaunay_triangles(points: np.ndarray, shape: tuple[int, int]) -> list[tupl
 
 def _warp_triangle(src: np.ndarray, dst: np.ndarray, t_src: np.ndarray, t_dst: np.ndarray) -> None:
     """Piecewise-affine warp of one triangle from `src` into `dst`, in place."""
-    r_src = cv2.boundingRect(np.float32([t_src]))
-    r_dst = cv2.boundingRect(np.float32([t_dst]))
+    r_src = cv2.boundingRect(np.asarray([t_src], dtype=np.float32))
+    r_dst = cv2.boundingRect(np.asarray([t_dst], dtype=np.float32))
     if r_src[2] <= 0 or r_src[3] <= 0 or r_dst[2] <= 0 or r_dst[3] <= 0:
         return
 
-    t_src_off = np.float32([[p[0] - r_src[0], p[1] - r_src[1]] for p in t_src])
-    t_dst_off = np.float32([[p[0] - r_dst[0], p[1] - r_dst[1]] for p in t_dst])
+    t_src_off = np.asarray([[p[0] - r_src[0], p[1] - r_src[1]] for p in t_src], dtype=np.float32)
+    t_dst_off = np.asarray([[p[0] - r_dst[0], p[1] - r_dst[1]] for p in t_dst], dtype=np.float32)
 
     src_patch = src[r_src[1] : r_src[1] + r_src[3], r_src[0] : r_src[0] + r_src[2]]
     if src_patch.size == 0:
@@ -163,7 +165,7 @@ def _warp_triangle(src: np.ndarray, dst: np.ndarray, t_src: np.ndarray, t_dst: n
         borderMode=cv2.BORDER_REFLECT_101,
     )
     mask = np.zeros((r_dst[3], r_dst[2], 3), dtype=np.float32)
-    cv2.fillConvexPoly(mask, np.int32(t_dst_off), (1.0, 1.0, 1.0), 16, 0)
+    cv2.fillConvexPoly(mask, t_dst_off.astype(np.int32), (1.0, 1.0, 1.0), 16, 0)
 
     region = dst[r_dst[1] : r_dst[1] + r_dst[3], r_dst[0] : r_dst[0] + r_dst[2]]
     if region.shape[:2] != mask.shape[:2]:
@@ -214,7 +216,7 @@ def splice_into_background(
     """
     hull = cv2.convexHull(kps_host.astype(np.int32))
     centre = tuple(int(v) for v in np.mean(kps_host, axis=0))
-    mask = np.zeros(host.shape[:2], dtype=np.uint8)
+    mask: np.ndarray = np.zeros(host.shape[:2], dtype=np.uint8)
     # Dilate beyond the 5-point hull, which is tight around eyes/nose/mouth, so the
     # spliced region actually covers the face rather than a small central patch.
     cv2.fillConvexPoly(mask, hull, 255)
@@ -238,20 +240,61 @@ def splice_into_background(
 # ----------------------------------------------------------------------------------
 
 
-def _load_lfw(max_identities: int, min_faces: int) -> tuple[list[str], dict[str, list[np.ndarray]]]:
-    from sklearn.datasets import fetch_lfw_people
+def _lfw_root() -> Path:
+    """sklearn's LFW funneled cache, downloading the archive once if it is absent.
 
-    data = fetch_lfw_people(
-        min_faces_per_person=min_faces, resize=None, color=True, funneled=True, slice_=None
-    )
+    The download goes through `fetch_lfw_people` with a filter that admits almost nothing
+    (`min_faces_per_person=70`, `resize=0.1`): the archive is fetched and extracted whole,
+    but only a few hundred thumbnails are decoded into memory. Loading the pool itself
+    through that API is what this replaced -- it materialises every selected image as
+    float32 at once, ~6.9 GB for the >=2-image pool.
+    """
+    from sklearn.datasets import fetch_lfw_people, get_data_home
+
+    root = Path(get_data_home()) / "lfw_home" / "lfw_funneled"
+    if not root.is_dir():
+        fetch_lfw_people(min_faces_per_person=70, resize=0.1, funneled=True)
+    if not root.is_dir():
+        raise FileNotFoundError(f"LFW funneled cache not found at {root} after download")
+    return root
+
+
+def _load_lfw(
+    max_identities: int | None, min_faces: int
+) -> tuple[list[str], dict[str, list[np.ndarray]], dict[str, int]]:
+    """Up to `IMAGES_PER_IDENTITY` images for every identity with >= `min_faces` images.
+
+    Returns the identities, their images (BGR uint8, 250x250), and a census of the source
+    so the manifest can state how much of LFW the pool actually covers.
+    """
+    root = _lfw_root()
+    per_identity: dict[str, list[Path]] = {}
+    for directory in sorted(d for d in root.iterdir() if d.is_dir()):
+        files = sorted(directory.glob("*.jpg"))
+        if files:
+            per_identity[directory.name.replace("_", " ")] = files
+
+    census = {
+        "lfw_identities_total": len(per_identity),
+        "lfw_images_total": sum(len(f) for f in per_identity.values()),
+        "lfw_identities_with_1_image": sum(len(f) == 1 for f in per_identity.values()),
+        "lfw_identities_with_2plus_images": sum(len(f) >= 2 for f in per_identity.values()),
+        "lfw_identities_with_3plus_images": sum(len(f) >= 3 for f in per_identity.values()),
+    }
+
+    names = [n for n, files in per_identity.items() if len(files) >= min_faces]
+    if max_identities is not None:
+        names = names[:max_identities]
+
     by_identity: dict[str, list[np.ndarray]] = {}
-    for image, target in zip(data.images, data.target, strict=True):
-        name = str(data.target_names[target])
-        bgr = (image * 255).astype(np.uint8)[:, :, ::-1].copy()
-        by_identity.setdefault(name, []).append(bgr)
-
-    names = sorted(by_identity)[:max_identities]
-    return names, {n: by_identity[n] for n in names}
+    for name in names:
+        images = []
+        for path in per_identity[name][:IMAGES_PER_IDENTITY]:
+            image = cv2.imread(str(path), cv2.IMREAD_COLOR)
+            if image is not None:
+                images.append(np.asarray(image, dtype=np.uint8))
+        by_identity[name] = images
+    return names, by_identity, census
 
 
 def _detect(image: np.ndarray) -> tuple[np.ndarray, tuple[int, int, int, int], np.ndarray] | None:
@@ -269,37 +312,50 @@ def _detect(image: np.ndarray) -> tuple[np.ndarray, tuple[int, int, int, int], n
     return np.asarray(face.kps, dtype=np.float32), box, np.asarray(face.normed_embedding)
 
 
-def build_corpus(out_dir: Path, max_identities: int, min_faces: int) -> dict[str, Any]:
+def build_corpus(out_dir: Path, max_identities: int | None, min_faces: int) -> dict[str, Any]:
     rng = np.random.default_rng(SEED)
-    names, by_identity = _load_lfw(max_identities, min_faces)
-    print(f"loaded {len(names)} identities", file=sys.stderr)
+    names, by_identity, census = _load_lfw(max_identities, min_faces)
+    print(f"loaded {len(names)} identities (of {census['lfw_identities_total']})", file=sys.stderr)
 
-    # THREE distinct images per identity, and the third is not optional: D-MAD needs a
-    # trusted live capture that is neither the image the morph was built from nor the bona
-    # fide document image. With only two, every bona fide sample's "live reference" was
-    # itself, D-MAD scored None across the whole genuine class, and the setting could not
-    # be evaluated at all.
+    # Roles per identity, and why the pool floor is two images rather than one:
+    #
+    #   reference       the image the morph is built from
+    #   bona_fide       a DIFFERENT genuine image: the enrolment template for MMPMR, and
+    #                   the genuine sample the detectors must not flag
+    #   live_reference  a third image, D-MAD's trusted live capture -- optional
+    #
+    # A one-image identity cannot supply `bona_fide` without reusing `reference`, and then
+    # MMPMR would ask whether a morph matches the very photograph it was made from, which
+    # inflates exactly the number this corpus exists to measure. 4,069 of LFW's 5,749
+    # identities have a single image, so that -- not compute -- is what bounds the pool.
+    #
+    # `live_reference` is optional because requiring it would halve the pool (901 of LFW's
+    # identities have >=3 images). D-MAD is evaluated only on rows whose presenting
+    # identity has one; `morph_eval` records how many rows that drops.
     profiles: dict[str, dict[str, Any]] = {}
-    for name in names:
-        images = by_identity[name]
-        detected = [(img, _detect(img)) for img in images[:4]]
+    for index, name in enumerate(names):
+        if index % 200 == 0:
+            print(f"  detecting: {index}/{len(names)}", file=sys.stderr)
+        detected = [(img, _detect(img)) for img in by_identity[name]]
         usable = [(img, d) for img, d in detected if d is not None]
-        if len(usable) < 3:
+        if len(usable) < 2:
             continue
         ref_img, (ref_kps, ref_box, ref_emb) = usable[0]
         bona_img, _ = usable[1]
-        live_img, _ = usable[2]
         profiles[name] = {
             "reference": ref_img,
             "kps": ref_kps,
             "box": ref_box,
             "embedding": ref_emb,
             "bona_fide": bona_img,
-            "live_reference": live_img,
+            "live_reference": usable[2][0] if len(usable) >= 3 else None,
         }
     usable_names = sorted(profiles)
+    with_live = sum(1 for n in usable_names if profiles[n]["live_reference"] is not None)
     print(
-        f"{len(usable_names)} identities usable (face + embedding on >=3 images)", file=sys.stderr
+        f"{len(usable_names)} identities usable (>=2 detected faces); {with_live} also have a "
+        "live reference",
+        file=sys.stderr,
     )
 
     # --- subject-disjoint partition, BEFORE any pairing --------------------------------
@@ -308,26 +364,37 @@ def build_corpus(out_dir: Path, max_identities: int, min_faces: int) -> dict[str
     cut = int(0.6 * len(shuffled))
     split_of = {n: ("train" if i < cut else "test") for i, n in enumerate(shuffled)}
 
-    # --- pair selection: nearest neighbour in ArcFace space, within a split -------------
-    embeddings = {n: profiles[n]["embedding"] for n in usable_names}
-    sims: list[float] = []
-    for i, a in enumerate(usable_names):
-        for b in usable_names[i + 1 :]:
-            sims.append(float(np.dot(embeddings[a], embeddings[b])))
-    pair_floor = float(np.percentile(sims, PAIR_PERCENTILE))
+    # --- pair selection: highest ArcFace cosine, within a split ------------------------
+    # Cosine is between the two CONTRIBUTING images' embeddings -- the images that actually
+    # get blended -- not identity means. Vectorised: 1.4M pairs at the full >=2-image pool.
+    matrix = np.stack([profiles[n]["embedding"] for n in usable_names]).astype(np.float32)
+    all_sims = matrix @ matrix.T
+    upper = np.triu_indices(len(usable_names), k=1)
+    between_identity = all_sims[upper]
+    pair_floor = float(np.percentile(between_identity, PAIR_PERCENTILE))
+    index_of = {n: i for i, n in enumerate(usable_names)}
 
     pairs: list[tuple[str, str, float]] = []
     used: set[str] = set()
     for split in ("train", "test"):
         members = [n for n in usable_names if split_of[n] == split]
-        candidates = []
-        for i, a in enumerate(members):
-            for b in members[i + 1 :]:
-                candidates.append((float(np.dot(embeddings[a], embeddings[b])), a, b))
-        candidates.sort(reverse=True)
-        for sim, a, b in candidates:
-            if sim < pair_floor or a in used or b in used:
+        idx = np.array([index_of[n] for n in members])
+        sub = all_sims[np.ix_(idx, idx)]
+        rows_i, cols_i = np.triu_indices(len(members), k=1)
+        values = sub[rows_i, cols_i]
+        order = np.argsort(-values, kind="stable")
+        for k in order:
+            sim = float(values[k])
+            if sim < pair_floor:
+                break
+            a, b = members[rows_i[k]], members[cols_i[k]]
+            if a in used or b in used:
                 continue
+            # The first contributor is the one presenting at the desk: their background is
+            # kept by `spliced_jpeg`, and D-MAD compares against their live capture. Put
+            # the identity that has one first whenever only one of the two does.
+            if profiles[a]["live_reference"] is None and profiles[b]["live_reference"] is not None:
+                a, b = b, a
             pairs.append((a, b, sim))
             used.update({a, b})
 
@@ -371,6 +438,8 @@ def build_corpus(out_dir: Path, max_identities: int, min_faces: int) -> dict[str
         # reference rather than something to be classified -- morph_eval excludes it from
         # the detection pool and uses it only as D-MAD's trusted capture.
         for kind in ("bona_fide", "live_reference"):
+            if profiles[name][kind] is None:
+                continue
             rel = f"{split}/{kind}/{name.replace(' ', '_')}.png"
             path = out_dir / rel
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -397,7 +466,23 @@ def build_corpus(out_dir: Path, max_identities: int, min_faces: int) -> dict[str
 
     return {
         **run_metadata(seed=SEED),
-        "source_dataset": "LFW (funneled, 250x250) via sklearn.datasets.fetch_lfw_people",
+        "source_dataset": "LFW (funneled, 250x250), read from sklearn's cache "
+        "(sklearn.datasets.get_data_home()/lfw_home/lfw_funneled)",
+        "pool": {
+            **census,
+            "min_faces_per_identity": min_faces,
+            "max_identities": max_identities,
+            "images_read_per_identity": IMAGES_PER_IDENTITY,
+            "identities_usable": len(usable_names),
+            "identities_with_live_reference": with_live,
+            "why_this_pool": (
+                "every LFW identity with >=2 images. The bound is LFW's structure, not "
+                "compute: a one-image identity cannot supply an enrolment image distinct "
+                "from the image its morph is built from, so MMPMR on it would match a "
+                "morph against its own source photograph. Identities with >=2 images but "
+                "no detectable face on two of them are dropped by SCRFD"
+            ),
+        },
         "source_licence": "see data/LICENCES.md -- no EULA; images NOT redistributable, "
         "so this corpus is regenerated, never committed",
         "landmark_source": "pqbio.detect.face SCRFD 5-point keypoints (no second detector)",
@@ -406,16 +491,29 @@ def build_corpus(out_dir: Path, max_identities: int, min_faces: int) -> dict[str
         "blend_spliced": BLEND_SPLICED,
         "spliced_jpeg_quality": SPLICED_JPEG_QUALITY,
         "pair_selection": {
-            "criterion": "highest ArcFace cosine between identity mean embeddings, "
-            "greedily matched within a split, each identity used at most once",
+            "criterion": "highest ArcFace cosine between the two contributing images' "
+            "embeddings (the images that are blended, not identity means), greedily "
+            "matched within a split, each identity used at most once",
             "rationale": "a morph is only a threat if it plausibly passes for both "
             "contributors; embedding similarity is what an attacker optimises when "
             "choosing an accomplice, is measurable, and needs no demographic labels this "
             "corpus does not have",
             "percentile_floor": PAIR_PERCENTILE,
             "cosine_floor": pair_floor,
-            "between_identity_cosine_median": float(np.median(sims)),
+            "between_identity_cosine_median": float(np.median(between_identity)),
             "n_pairs": len(pairs),
+            "chosen_pair_cosine": (
+                {
+                    "max": float(np.max([c for _, _, c in pairs])),
+                    "p90": float(np.percentile([c for _, _, c in pairs], 90)),
+                    "p75": float(np.percentile([c for _, _, c in pairs], 75)),
+                    "median": float(np.median([c for _, _, c in pairs])),
+                    "p25": float(np.percentile([c for _, _, c in pairs], 25)),
+                    "min": float(np.min([c for _, _, c in pairs])),
+                }
+                if pairs
+                else None
+            ),
         },
         "splits": {
             "policy": "identities partitioned before pairing; pairs and bona fide drawn "
@@ -444,8 +542,18 @@ def main() -> None:
         type=Path,
         default=REPO_ROOT / "data" / "manifests" / "morph_corpus_manifest.json",
     )
-    parser.add_argument("--max-identities", type=int, default=400)
-    parser.add_argument("--min-faces", type=int, default=5)
+    parser.add_argument(
+        "--max-identities",
+        type=int,
+        default=None,
+        help="cap the pool (default: every eligible LFW identity)",
+    )
+    parser.add_argument(
+        "--min-faces",
+        type=int,
+        default=2,
+        help="minimum LFW images per identity; below 2 MMPMR self-matches",
+    )
     args = parser.parse_args()
 
     manifest = build_corpus(args.out, args.max_identities, args.min_faces)

@@ -51,6 +51,8 @@ detect:
   fusion:
     strategy: cascade
     operating_point: bpcer_at_apcer_5
+  morph:
+    min_verifying_attacks_reported: 30
 server:
   workers: 4
   max_concurrency: 64

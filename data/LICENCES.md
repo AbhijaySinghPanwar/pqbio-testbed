@@ -4,7 +4,7 @@ Required by PROJECT_SPEC.md §6 ("Record licence status in `data/LICENCES.md`").
 per dataset the project uses or intends to use, with what was actually verified and what
 was not.
 
-_Last reviewed: 2026-09-06._
+_Last reviewed: 2026-09-14._
 
 ---
 
@@ -12,11 +12,20 @@ _Last reviewed: 2026-09-06._
 
 ### LFW — Labeled Faces in the Wild (contributing faces for the morph corpus)
 
+> **⚠ OUTSTANDING — terms not verified from the primary source.** Everything below about
+> LFW's terms comes from secondary sources. The canonical page
+> (`http://vis-www.cs.umass.edu/lfw/`) could not be read: that host does not resolve from
+> the environment this was written in, while the rest of the network does. This entry is
+> **not settled** and should be closed by someone who can reach the primary page and
+> replace the "Terms" paragraph with its verbatim notice. The commit policy is set
+> conservatively *because* this is open.
+
 | | |
 |---|---|
-| **Signed EULA / agreement required** | **No** |
-| **Fees or access request** | None |
-| **Obtained via** | `sklearn.datasets.fetch_lfw_people(funneled=True, slice_=None)` — figshare mirror |
+| **Terms verified from primary source** | **No — outstanding** (primary host unreachable; see banner) |
+| **Signed EULA / agreement required** | No, per every secondary source consulted — unconfirmed at source |
+| **Fees or access request** | None, per the same sources |
+| **Obtained via** | Archive downloaded once by `sklearn.datasets.fetch_lfw_people` (figshare mirror) into sklearn's data home, **outside this repository**; `scripts/make_morph_corpus.py` reads the extracted files from there |
 | **Used for** | Contributing face images for the self-generated morph corpus (§5.4 D2) |
 | **Committed to this repo** | **No — script and manifest only.** See "Commit policy" below. |
 | **Citation** | Huang, Ramesh, Berg & Learned-Miller, *Labeled Faces in the Wild: A Database for Studying Face Recognition in Unconstrained Environments*, UMass Amherst Technical Report 07-49, October 2007. |
@@ -53,7 +62,9 @@ Concretely:
 - `data/manifests/morph_corpus_manifest.json` — **committed** (identities, pair
   assignments, split membership, per-sample SHA-256, generation parameters). It records
   provenance and makes the corpus reproducible; it contains no image data.
-- `data/raw/lfw/`, `data/processed/morph_corpus/` — **gitignored**, regenerated on demand.
+- `data/processed/morph_corpus/` — **gitignored**, regenerated on demand.
+- The LFW source images never enter the repository at all: they stay in sklearn's data
+  home (`sklearn.datasets.get_data_home()/lfw_home/`).
 
 A reader who wants the corpus runs the script; a reviewer who wants to check what we did
 reads the manifest.

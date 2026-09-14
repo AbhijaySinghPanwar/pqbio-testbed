@@ -97,6 +97,12 @@ detect:
   fusion:
     strategy: cascade       # rule | cascade
     operating_point: bpcer_at_apcer_5
+  morph:
+    # Minimum verifying test-split morphs before a verifying-subset detection figure is
+    # reported rather than BLOCKED with its count. At 30 attacks the 95% Clopper-Pearson
+    # interval on an APCER near 0.5 is roughly +/-0.19 -- already wide; below that the
+    # interval is wider than the differences the table exists to show.
+    min_verifying_attacks_reported: 30
 
 server:
   workers: 4
