@@ -121,6 +121,7 @@ def extract_features(manifest: dict[str, Any], corpus_dir: Path) -> dict[str, An
             "method": sample["method"],
             "split": sample["split"],
             "contributors": sample["contributors"],
+            "pair_cosine": sample.get("pair_cosine"),
             "smad": smad_features(image, embedding=embedding),
             "embedding": embedding,
             "face_found": embedding is not None,
@@ -315,6 +316,61 @@ def all_rows_for_lookup(per_method: dict[str, list[dict[str, Any]]]) -> list[dic
     return [row for rows in per_method.values() for row in rows]
 
 
+MMPMR_BANDS = 5
+
+
+def _mmpmr_by_pair_cosine(per_method: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
+    """MMPMR per quintile of contributing-pair ArcFace cosine, per method.
+
+    Separates two explanations for a low MMPMR that the headline rate cannot tell apart.
+    If the *pool* is the limit, MMPMR climbs steeply with pair similarity and the closest
+    look-alikes verify at a high rate. If the *method* is the limit, MMPMR stays low even
+    in the most similar band. Quintile edges come from the data rather than chosen cut
+    points, and the top decile is reported on its own because the pool question is really
+    about the closest pairs available. Costs nothing: every embedding is already computed.
+    """
+    rows = [r for rs in per_method.values() for r in rs if r.get("pair_cosine") is not None]
+    if not rows:
+        return blocked("no morph rows carry a pair cosine")
+    cosines = np.array([r["pair_cosine"] for r in rows], dtype=float)
+    edges = [float(np.quantile(cosines, q)) for q in np.linspace(0.0, 1.0, MMPMR_BANDS + 1)]
+    top_cut = float(np.quantile(cosines, 0.9))
+
+    def band_of(value: float) -> int:
+        for band in range(MMPMR_BANDS):
+            if value <= edges[band + 1]:
+                return band
+        return MMPMR_BANDS - 1
+
+    out: dict[str, Any] = {"band_edges": edges, "top_decile_pair_cosine_min": top_cut}
+    for method, method_rows in per_method.items():
+        usable = [r for r in method_rows if r.get("pair_cosine") is not None]
+        bands = []
+        for band in range(MMPMR_BANDS):
+            members = [r for r in usable if band_of(r["pair_cosine"]) == band]
+            n_verifying = int(sum(r["verifies_all_contributors"] for r in members))
+            bands.append(
+                {
+                    "pair_cosine_range": [edges[band], edges[band + 1]],
+                    "n_morphs": len(members),
+                    "n_verifying": n_verifying,
+                    "mmpmr": float(n_verifying / len(members)) if members else None,
+                }
+            )
+        top = [r for r in usable if r["pair_cosine"] >= top_cut]
+        out[method] = {
+            "bands": bands,
+            "top_decile": {
+                "n_morphs": len(top),
+                "n_verifying": int(sum(r["verifies_all_contributors"] for r in top)),
+                "mmpmr": (
+                    float(np.mean([r["verifies_all_contributors"] for r in top])) if top else None
+                ),
+            },
+        }
+    return out
+
+
 def evaluate_mmpmr(features: dict[str, Any], corpus_dir: Path) -> dict[str, Any]:
     """MMPMR: does the morph verify as **every** contributing identity?
 
@@ -346,6 +402,7 @@ def evaluate_mmpmr(features: dict[str, Any], corpus_dir: Path) -> dict[str, Any]
         per_method.setdefault(row["method"], []).append(
             {
                 "path": row["path"],
+                "pair_cosine": row.get("pair_cosine"),
                 "contributor_similarities": sims,
                 "min_similarity": min(sims),
                 "verifies_all_contributors": bool(min(sims) >= cosine_min),
@@ -386,6 +443,7 @@ def evaluate_mmpmr(features: dict[str, Any], corpus_dir: Path) -> dict[str, Any]
                 r["verifies_all_contributors"]
             )
         summary["verifying_count_by_split"] = {k: int(sum(v)) for k, v in by_split.items()}
+        summary["by_pair_cosine_quintile"] = _mmpmr_by_pair_cosine(per_method)
         summary["overall"] = {
             "n_morphs": len(all_rows),
             "n_verifying": int(sum(r["verifies_all_contributors"] for r in all_rows)),

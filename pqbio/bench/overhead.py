@@ -31,6 +31,7 @@ are exercised exactly as in production, only face *detection* is skipped.
 
 from __future__ import annotations
 
+import statistics
 import sys
 import tempfile
 import time
@@ -306,6 +307,7 @@ def run_crypto_binding_config(
         "isolates": "conventional crypto cost" if config == "C1" else "marginal PQ cost",
         "n_iterations": n_iterations,
         "latency": latency_stats(samples),
+        "samples_ms": samples,
     }
 
 
@@ -326,7 +328,44 @@ def run_c3(n_iterations: int = 200) -> dict[str, Any]:
         "isolates": "total system cost",
         "n_iterations": n_iterations,
         "latency": latency_result["end_to_end_client_observed"],
+        "samples_ms": latency_result["end_to_end_client_observed_samples_ms"],
         "stage_breakdown": latency_result["stage_breakdown"],
+    }
+
+
+def _difference_of_means(
+    treatment: list[float], baseline: list[float], confidence: float = 0.95
+) -> dict[str, Any]:
+    """Mean(treatment) - mean(baseline) with a Welch confidence interval.
+
+    **Why this replaced a bare subtraction.** The PQ term C2-C1 is a sub-millisecond effect
+    measured as the difference of two ~10-15 ms request latencies, each with a few ms of
+    spread. Across three committed bench runs it came out 0.88, 0.34 and -4.30 ms, which
+    sent the AI:PQ ratio from 798x to 2327x to -191x. That history is the ratio tracking
+    the noise in its own denominator. A point difference cannot show that; an interval
+    does.
+
+    The interval covers within-run sampling noise only. The C1 baseline mean itself moved
+    by ~7 ms between runs (10.84, 8.98, 15.80 ms), so between-run drift is larger still
+    and is not in this number -- which makes an interval spanning zero an *understatement*
+    of how unresolved the PQ term is, not an overstatement.
+    """
+    from scipy import stats
+
+    t_mean = statistics.fmean(treatment)
+    b_mean = statistics.fmean(baseline)
+    t_var = statistics.variance(treatment) / len(treatment)
+    b_var = statistics.variance(baseline) / len(baseline)
+    se = (t_var + b_var) ** 0.5
+    dof = (t_var + b_var) ** 2 / (t_var**2 / (len(treatment) - 1) + b_var**2 / (len(baseline) - 1))
+    half = float(stats.t.ppf(0.5 + confidence / 2, dof)) * se
+    diff = t_mean - b_mean
+    low, high = diff - half, diff + half
+    return {
+        "absolute_ms": diff,
+        "ci95_ms": [low, high],
+        "resolvable_from_noise": bool(low > 0 or high < 0),
+        "welch_dof": dof,
     }
 
 
@@ -347,6 +386,7 @@ def run_overhead_ablation(n_iterations: int = 200) -> dict[str, Any]:
     pq_overhead: dict[str, Any]
     ai_overhead: dict[str, Any]
     ratio: dict[str, Any] | float
+    ratio_lower_bound: dict[str, Any] | float
 
     try:
         guard_against_fallback_backend()
@@ -358,6 +398,7 @@ def run_overhead_ablation(n_iterations: int = 200) -> dict[str, Any]:
         pq_overhead = blocked("requires C1 and C2, both blocked by the fallback backend")
         ai_overhead = blocked("requires C2 and C3, both blocked by the fallback backend")
         ratio = blocked("requires pq_overhead_ms and ai_overhead_ms, both blocked")
+        ratio_lower_bound = blocked("requires pq_overhead_ms and ai_overhead_ms, both blocked")
     else:
         print_progress("overhead: C1 (classical crypto, no AI)...")
         c1 = run_crypto_binding_config("C1", "classical", n_iterations)
@@ -366,21 +407,39 @@ def run_overhead_ablation(n_iterations: int = 200) -> dict[str, Any]:
         print_progress("overhead: C3 (PQ crypto, full AI)...")
         c3 = run_c3(n_iterations)
 
-        pq_overhead_ms = c2["latency"]["mean_ms"] - c1["latency"]["mean_ms"]
-        pq_overhead_pct = (
-            (pq_overhead_ms / c1["latency"]["mean_ms"] * 100.0)
+        pq_overhead = _difference_of_means(c2["samples_ms"], c1["samples_ms"])
+        pq_overhead["percent_of_c1"] = (
+            pq_overhead["absolute_ms"] / c1["latency"]["mean_ms"] * 100.0
             if c1["latency"]["mean_ms"]
             else float("inf")
         )
-        ai_overhead_ms = c3["latency"]["mean_ms"] - c2["latency"]["mean_ms"]
-        ai_overhead_pct = (
-            (ai_overhead_ms / c2["latency"]["mean_ms"] * 100.0)
+        ai_overhead = _difference_of_means(c3["samples_ms"], c2["samples_ms"])
+        ai_overhead["percent_of_c2"] = (
+            ai_overhead["absolute_ms"] / c2["latency"]["mean_ms"] * 100.0
             if c2["latency"]["mean_ms"]
             else float("inf")
         )
-        pq_overhead = {"absolute_ms": pq_overhead_ms, "percent_of_c1": pq_overhead_pct}
-        ai_overhead = {"absolute_ms": ai_overhead_ms, "percent_of_c2": ai_overhead_pct}
-        ratio = (ai_overhead_ms / pq_overhead_ms) if pq_overhead_ms else float("inf")
+
+        pq_low, pq_high = pq_overhead["ci95_ms"]
+        ai_low, _ai_high = ai_overhead["ci95_ms"]
+        if pq_overhead["resolvable_from_noise"] and pq_overhead["absolute_ms"] > 0:
+            ratio = ai_overhead["absolute_ms"] / pq_overhead["absolute_ms"]
+        else:
+            ratio = blocked(
+                f"the PQ overhead is not resolvable from run noise: C2-C1 = "
+                f"{pq_overhead['absolute_ms']:.2f} ms with a 95% interval of "
+                f"[{pq_low:.2f}, {pq_high:.2f}] ms, which spans zero, so a point ratio "
+                "would be dividing by noise (the three committed runs gave 798x, 2327x and "
+                "-191x). The defensible statement is the lower bound in "
+                "ai_to_pq_overhead_ratio_lower_bound"
+            )
+        # AI overhead's lower 95% limit over PQ overhead's upper 95% limit: the smallest
+        # ratio consistent with both intervals. Stable where the point ratio is not.
+        ratio_lower_bound = (
+            ai_low / pq_high
+            if pq_high > 0 and ai_low > 0
+            else blocked("PQ upper limit or AI lower limit is not positive")
+        )
 
     return {
         **run_metadata(extra={"n_iterations": n_iterations}),
@@ -391,10 +450,14 @@ def run_overhead_ablation(n_iterations: int = 200) -> dict[str, Any]:
         "pq_overhead_ms": pq_overhead,
         "ai_overhead_ms": ai_overhead,
         "ai_to_pq_overhead_ratio": ratio,
+        "ai_to_pq_overhead_ratio_lower_bound": ratio_lower_bound,
         "note": (
             "pq_overhead_ms = C2.mean - C1.mean (marginal PQ cost over conventional "
             "crypto); ai_overhead_ms = C3.mean - C2.mean (marginal AI/detection cost "
-            "over PQ-crypto-only). §8.3: state these explicitly, do not write the "
+            "over PQ-crypto-only), each with a Welch 95% interval over within-run "
+            "samples. The point ratio is published only when the PQ interval excludes "
+            "zero; otherwise ai_to_pq_overhead_ratio_lower_bound (AI lower limit over PQ "
+            "upper limit) is the claim. §8.3: state these explicitly, do not write the "
             "conclusion before the harness prints it."
         ),
     }

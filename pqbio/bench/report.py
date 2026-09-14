@@ -202,7 +202,33 @@ def render_t4b_mmpmr(accuracy: dict[str, Any] | None) -> str:
             "matcher in the first place and the detection metrics largely describe the "
             "detection of failed attacks. Cause and consequences in §12 item 8.\n"
         )
-    return f"{title}\n_Threshold: `match_cosine_min` = {threshold}._\n\n{table}\n{caveat}"
+    banding = ""
+    by_band = section.get("by_pair_cosine_quintile")
+    if isinstance(by_band, dict) and not is_blocked(by_band):
+        methods = [m for m in by_band if isinstance(by_band[m], dict) and "bands" in by_band[m]]
+        edges = by_band["band_edges"]
+        band_rows = []
+        for i in range(len(edges) - 1):
+            row = [f"{_fmt(edges[i], 3)}–{_fmt(edges[i + 1], 3)}"]
+            for m in methods:
+                b = by_band[m]["bands"][i]
+                row.append(f"{_fmt(b['mmpmr'])} ({b['n_verifying']}/{b['n_morphs']})")
+            band_rows.append(row)
+        top_row = [f"top decile (≥{_fmt(by_band['top_decile_pair_cosine_min'], 3)})"]
+        for m in methods:
+            t = by_band[m]["top_decile"]
+            top_row.append(f"**{_fmt(t['mmpmr'])}** ({t['n_verifying']}/{t['n_morphs']})")
+        band_rows.append(top_row)
+        banding = (
+            "\n**MMPMR by contributing-pair ArcFace cosine (quintiles).** Separates a pool "
+            "limit (MMPMR climbs with pair similarity) from a method limit (it stays low even "
+            "for the closest pairs). Read with §12 item 8.\n\n"
+            + _markdown_table(["Pair cosine", *methods], band_rows)
+            + "\n"
+        )
+    return (
+        f"{title}\n_Threshold: `match_cosine_min` = {threshold}._\n\n{table}\n{caveat}" f"{banding}"
+    )
 
 
 def render_morph_cross_method(accuracy: dict[str, Any] | None) -> str:
@@ -304,19 +330,39 @@ def render_t6(overhead: dict[str, Any] | None) -> str:
     pq = overhead.get("pq_overhead_ms", {})
     ai = overhead.get("ai_overhead_ms", {})
     ratio = overhead.get("ai_to_pq_overhead_ratio")
+    bound = overhead.get("ai_to_pq_overhead_ratio_lower_bound")
+
+    def term(cell: Any, pct_key: str) -> str:
+        if is_blocked(cell):
+            return f"BLOCKED — {cell['blocker']}"
+        text = f"{_fmt(cell.get('absolute_ms'))} ms ({_fmt(cell.get(pct_key), 1)}%)"
+        ci = cell.get("ci95_ms")
+        if ci:
+            text += f", 95% CI [{_fmt(ci[0])}, {_fmt(ci[1])}] ms"
+            if not cell.get("resolvable_from_noise", True):
+                text += " — **spans zero: not resolvable from run noise**"
+        return text
+
     derived = (
-        f"\n\n**PQ overhead (C2-C1):** {_fmt(pq) if is_blocked(pq) else _fmt(pq.get('absolute_ms')) + ' ms (' + _fmt(pq.get('percent_of_c1'), 1) + '%)'}\n\n"
-        f"**AI overhead (C3-C2):** {_fmt(ai) if is_blocked(ai) else _fmt(ai.get('absolute_ms')) + ' ms (' + _fmt(ai.get('percent_of_c2'), 1) + '%)'}\n\n"
-        f"**AI:PQ overhead ratio:** {_fmt(ratio) if is_blocked(ratio) else _fmt(ratio, 2)}"
+        f"\n\n**PQ overhead (C2−C1):** {term(pq, 'percent_of_c1')}\n\n"
+        f"**AI overhead (C3−C2):** {term(ai, 'percent_of_c2')}\n\n"
+        f"**AI:PQ overhead ratio:** "
+        f"{('BLOCKED — ' + str(ratio['blocker'])) if is_blocked(ratio) and ratio else _fmt(ratio, 2)}"
     )
-    if not is_blocked(ratio):
+    if bound is not None:
         derived += (
-            "\n\n_The AI:PQ ratio is **provisional and a lower bound on the AI side**: "
-            "C3 runs only one of the six spec'd detectors (injection). pad/morph/deepfake/"
-            "replay are absent (§6/§14), so the AI term is missing four of its five "
-            "attack-detection components. Adding them can only increase C3, pushing the "
-            "ratio further in the same direction — nothing about them could shrink it. "
-            "The PQ term (C2−C1) is not provisional; both configs are complete._"
+            f"\n\n**AI:PQ ratio, 95% lower bound:** "
+            f"{('BLOCKED — ' + bound['blocker']) if is_blocked(bound) else _fmt(bound, 0) + 'x'} "
+            "(AI overhead's lower limit over PQ overhead's upper limit — the smallest ratio "
+            "consistent with both intervals, and the figure that survives rerunning)"
+        )
+    if not is_blocked(ai):
+        derived += (
+            "\n\n_The AI side is **a lower bound**: C3 runs two of the five attack detectors "
+            "— injection, and morph in its S-MAD setting (§5.4, pipeline stage 6). pad, "
+            "deepfake and replay are absent (§6/§14). Adding them can only increase C3. The "
+            "intervals cover within-run sampling noise only; the C1 baseline mean has moved "
+            "by ~7 ms between committed runs, so between-run drift is larger still._"
         )
     return f"{title}\n{body}{derived}\n"
 

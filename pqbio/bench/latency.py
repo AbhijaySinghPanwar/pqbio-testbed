@@ -156,6 +156,9 @@ def measure_latency(
             seed=None, extra={"n_requests": n_requests, "n_frames_per_bundle": n_frames}
         ),
         "end_to_end_client_observed": latency_stats(client_latencies),
+        # Raw samples, so a caller can put an interval on a difference of means rather
+        # than subtract two point estimates (overhead.py's C3-C2 term).
+        "end_to_end_client_observed_samples_ms": list(client_latencies),
         "decision_outcomes": decision_counts,
         "stage_breakdown": _stage_breakdown_summary(breakdowns),
         "ml_dsa_signing_cost": _ml_dsa_signing_cost_ms(),

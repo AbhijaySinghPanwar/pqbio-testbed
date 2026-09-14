@@ -176,8 +176,19 @@ def run_accuracy_stage() -> dict[str, Any]:
             ),
         },
         "T2_per_detector_accuracy_cross_dataset": {
-            name: only_one_dataset
-            for name in [*detector_names, "injection", "match", "morph_smad", "morph_dmad"]
+            **{name: only_one_dataset for name in [*detector_names, "injection", "match"]},
+            # Morph's own blocker: the shared one names the injection corpus, which was
+            # simply wrong for these two rows in every report since morph landed.
+            **{
+                name: blocked(
+                    "only one morph corpus exists (self-generated from LFW, "
+                    "scripts/make_morph_corpus.py) -- cross-dataset evaluation needs an "
+                    "independent morph dataset such as FRLL-Morphs or SMDD, neither "
+                    "licensed (§6, data/LICENCES.md). Cross-METHOD generalisation within "
+                    "the one corpus is the available proxy: T4c"
+                )
+                for name in ("morph_smad", "morph_dmad")
+            },
         },
         "T3_fusion_strategy_comparison": {
             "rule_accuracy": fusion_comparison["rule_accuracy"],
