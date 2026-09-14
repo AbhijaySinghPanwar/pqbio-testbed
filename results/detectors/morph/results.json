@@ -1,65 +1,92 @@
 {
   "corpus_counts": {
-    "bona_fide": 399,
+    "bona_fide": 1672,
     "by_method": {
-      "landmark_alpha": 195,
-      "spliced_jpeg": 195
+      "landmark_alpha": 833,
+      "spliced_jpeg": 833
     },
-    "identities_usable": 399,
-    "live_reference": 399,
-    "morphs": 390
+    "identities_usable": 1672,
+    "live_reference": 893,
+    "morphs": 1666
   },
   "corpus_manifest": "morph_corpus_manifest.json",
   "dmad": {
-    "acer": 0.1395698051948052,
-    "apcer": 0.11038961038961038,
-    "auc_roc": 0.9295454545454546,
-    "bpcer": 0.16875,
-    "eer": 0.13749999999999996,
-    "eer_threshold": 0.6417689809764262,
+    "acer": 0.11938830943068232,
+    "apcer": 0.11730769230769231,
+    "attack_class": "all test-split morphs, verifying or not",
+    "auc_roc": 0.9522707518470229,
+    "bpcer": 0.12146892655367232,
+    "eer": 0.11730769230769231,
+    "eer_threshold": 0.5056119082038429,
     "far_achieved": 0.01,
     "model_path": "morph_dmad_gbm.txt",
-    "n_attack": 154,
-    "n_dropped_no_features": 0,
-    "n_genuine": 160,
-    "n_test": 314,
-    "n_train": 475,
-    "tdr_at_far_1pct": 0.15,
+    "n_attack": 520,
+    "n_dropped_no_features": 1145,
+    "n_genuine": 354,
+    "n_test": 874,
+    "n_train": 1319,
+    "tdr_at_far_1pct": 0.3418079096045198,
     "threshold": 0.5
   },
   "dmad_cross_method": {
     "train_landmark_alpha__test_spliced_jpeg": {
-      "acer": 0.20296266233766233,
-      "apcer": 0.3246753246753247,
-      "auc_roc": 0.8842532467532467,
-      "bpcer": 0.08125,
-      "eer": 0.18125000000000002,
-      "eer_threshold": 0.00041465725129747943,
+      "acer": 0.2224793568013907,
+      "apcer": 0.38846153846153847,
+      "auc_roc": 0.9122881355932204,
+      "bpcer": 0.05649717514124294,
+      "eer": 0.1694915254237288,
+      "eer_threshold": 0.016428774910413706,
       "far_achieved": 0.01,
-      "n_attack": 77,
-      "n_genuine": 160,
-      "tdr_at_far_1pct": 0.15625,
+      "n_attack": 260,
+      "n_genuine": 354,
+      "tdr_at_far_1pct": 0.08757062146892655,
       "threshold": 0.5
     },
     "train_spliced_jpeg__test_landmark_alpha": {
-      "acer": 0.10434253246753246,
-      "apcer": 0.06493506493506493,
-      "auc_roc": 0.9598214285714286,
-      "bpcer": 0.14375,
-      "eer": 0.09999999999999998,
-      "eer_threshold": 0.7528852890296254,
+      "acer": 0.08726640591047372,
+      "apcer": 0.06153846153846154,
+      "auc_roc": 0.9766188613646241,
+      "bpcer": 0.11299435028248588,
+      "eer": 0.08076923076923077,
+      "eer_threshold": 0.6329285670995882,
       "far_achieved": 0.01,
-      "n_attack": 77,
-      "n_genuine": 160,
-      "tdr_at_far_1pct": 0.65625,
+      "n_attack": 260,
+      "n_genuine": 354,
+      "tdr_at_far_1pct": 0.6751412429378532,
       "threshold": 0.5
     }
   },
+  "dmad_verifying_morphs_only": {
+    "acer": 0.11392595263853829,
+    "apcer": 0.10638297872340426,
+    "apcer_ci95": [
+      0.035456300807215554,
+      0.23104762675098328
+    ],
+    "auc_roc": 0.9665825219377329,
+    "bpcer": 0.12146892655367232,
+    "eer": 0.10734463276836159,
+    "eer_threshold": 0.530142246079235,
+    "far_achieved": 0.01,
+    "min_verifying_attacks_reported": 30,
+    "n_attack": 47,
+    "n_genuine": 354,
+    "n_test_bona_fide": 354,
+    "n_test_morphs": 520,
+    "n_test_morphs_verification_unknown": 0,
+    "n_test_morphs_verifying": 47,
+    "tdr_at_far_1pct": 0.6807909604519774,
+    "threshold": 0.5,
+    "verifying_by_method": {
+      "landmark_alpha": 43,
+      "spliced_jpeg": 4
+    }
+  },
   "dmad_vs_smad": {
-    "acer_reduction": 0.10653409090909091,
-    "dmad_acer": 0.1395698051948052,
+    "acer_reduction": 0.05514609044004043,
+    "dmad_acer": 0.11938830943068232,
     "note": "\u00a75.4 predicts D-MAD substantially outperforms S-MAD because a trusted live capture is available at verification time; this is that prediction measured on this corpus",
-    "smad_acer": 0.2461038961038961
+    "smad_acer": 0.17453439987072275
   },
   "methods": [
     "landmark_alpha",
@@ -68,72 +95,225 @@
   "mmpmr": {
     "by_method": {
       "landmark_alpha": {
-        "any_contributor_match_rate": 0.46153846153846156,
-        "min_similarity_max": 0.4835473895072937,
-        "min_similarity_mean": 0.23411500696092843,
-        "mmpmr": 0.1076923076923077,
-        "n_morphs": 195
+        "any_contributor_match_rate": 0.5918367346938775,
+        "min_similarity_max": 0.6281766891479492,
+        "min_similarity_mean": 0.26611714656011953,
+        "mmpmr": 0.17286914765906364,
+        "n_morphs": 833,
+        "n_verifying": 144
       },
       "spliced_jpeg": {
-        "any_contributor_match_rate": 0.7230769230769231,
-        "min_similarity_max": 0.4025266170501709,
-        "min_similarity_mean": 0.15748646433871144,
-        "mmpmr": 0.020512820512820513,
-        "n_morphs": 195
+        "any_contributor_match_rate": 0.7647058823529411,
+        "min_similarity_max": 0.43291425704956055,
+        "min_similarity_mean": 0.1860549943588701,
+        "mmpmr": 0.01920768307322929,
+        "n_morphs": 833,
+        "n_verifying": 16
       }
+    },
+    "by_pair_cosine_quintile": {
+      "band_edges": [
+        0.0459422692656517,
+        0.15929476916790009,
+        0.18702363967895508,
+        0.20604312419891357,
+        0.23326852917671204,
+        0.5617965459823608
+      ],
+      "landmark_alpha": {
+        "bands": [
+          {
+            "mmpmr": 0.041916167664670656,
+            "n_morphs": 167,
+            "n_verifying": 7,
+            "pair_cosine_range": [
+              0.0459422692656517,
+              0.15929476916790009
+            ]
+          },
+          {
+            "mmpmr": 0.08383233532934131,
+            "n_morphs": 167,
+            "n_verifying": 14,
+            "pair_cosine_range": [
+              0.15929476916790009,
+              0.18702363967895508
+            ]
+          },
+          {
+            "mmpmr": 0.21084337349397592,
+            "n_morphs": 166,
+            "n_verifying": 35,
+            "pair_cosine_range": [
+              0.18702363967895508,
+              0.20604312419891357
+            ]
+          },
+          {
+            "mmpmr": 0.2155688622754491,
+            "n_morphs": 167,
+            "n_verifying": 36,
+            "pair_cosine_range": [
+              0.20604312419891357,
+              0.23326852917671204
+            ]
+          },
+          {
+            "mmpmr": 0.3132530120481928,
+            "n_morphs": 166,
+            "n_verifying": 52,
+            "pair_cosine_range": [
+              0.23326852917671204,
+              0.5617965459823608
+            ]
+          }
+        ],
+        "top_decile": {
+          "mmpmr": 0.3333333333333333,
+          "n_morphs": 84,
+          "n_verifying": 28
+        }
+      },
+      "spliced_jpeg": {
+        "bands": [
+          {
+            "mmpmr": 0.0,
+            "n_morphs": 167,
+            "n_verifying": 0,
+            "pair_cosine_range": [
+              0.0459422692656517,
+              0.15929476916790009
+            ]
+          },
+          {
+            "mmpmr": 0.011976047904191617,
+            "n_morphs": 167,
+            "n_verifying": 2,
+            "pair_cosine_range": [
+              0.15929476916790009,
+              0.18702363967895508
+            ]
+          },
+          {
+            "mmpmr": 0.012048192771084338,
+            "n_morphs": 166,
+            "n_verifying": 2,
+            "pair_cosine_range": [
+              0.18702363967895508,
+              0.20604312419891357
+            ]
+          },
+          {
+            "mmpmr": 0.017964071856287425,
+            "n_morphs": 167,
+            "n_verifying": 3,
+            "pair_cosine_range": [
+              0.20604312419891357,
+              0.23326852917671204
+            ]
+          },
+          {
+            "mmpmr": 0.05421686746987952,
+            "n_morphs": 166,
+            "n_verifying": 9,
+            "pair_cosine_range": [
+              0.23326852917671204,
+              0.5617965459823608
+            ]
+          }
+        ],
+        "top_decile": {
+          "mmpmr": 0.07142857142857142,
+          "n_morphs": 84,
+          "n_verifying": 6
+        }
+      },
+      "top_decile_pair_cosine_min": 0.25316503643989563
     },
     "definition": "MMPMR = fraction of morphs whose MINIMUM similarity across contributing identities clears detect.thresholds.match_cosine_min -- i.e. the morph verifies as every contributor, which is the attack's success condition",
     "match_cosine_min": 0.38,
     "overall": {
-      "any_contributor_match_rate": 0.5923076923076923,
-      "mmpmr": 0.0641025641025641,
-      "n_morphs": 390
+      "any_contributor_match_rate": 0.6782713085234093,
+      "mmpmr": 0.09603841536614646,
+      "n_morphs": 1666,
+      "n_verifying": 160
+    },
+    "verifying_count_by_split": {
+      "test": 60,
+      "train": 100
     }
   },
   "seed": 2026,
   "smad": {
-    "acer": 0.2461038961038961,
-    "apcer": 0.2922077922077922,
-    "auc_roc": 0.8368912337662339,
-    "bpcer": 0.2,
-    "eer": 0.24375000000000002,
-    "eer_threshold": 0.40992054028307695,
+    "acer": 0.17453439987072275,
+    "apcer": 0.17567567567567569,
+    "attack_class": "all test-split morphs, verifying or not",
+    "auc_roc": 0.9049408152547165,
+    "bpcer": 0.17339312406576982,
+    "eer": 0.17488789237668156,
+    "eer_threshold": 0.49882954838124627,
     "far_achieved": 0.01,
     "model_path": "morph_smad_gbm.txt",
-    "n_attack": 154,
+    "n_attack": 666,
     "n_dropped_no_features": 0,
-    "n_genuine": 160,
-    "n_test": 314,
-    "n_train": 475,
-    "tdr_at_far_1pct": 0.04375,
+    "n_genuine": 669,
+    "n_test": 1335,
+    "n_train": 2003,
+    "tdr_at_far_1pct": 0.3423019431988042,
     "threshold": 0.5
   },
   "smad_cross_method": {
     "train_landmark_alpha__test_spliced_jpeg": {
-      "acer": 0.4764204545454545,
-      "apcer": 0.9090909090909091,
-      "auc_roc": 0.5856331168831168,
-      "bpcer": 0.04375,
-      "eer": 0.43125,
-      "eer_threshold": 0.0018653737853725303,
+      "acer": 0.4796118988944101,
+      "apcer": 0.9069069069069069,
+      "auc_roc": 0.6027956207328404,
+      "bpcer": 0.052316890881913304,
+      "eer": 0.4264264264264264,
+      "eer_threshold": 0.011944351760957619,
       "far_achieved": 0.01,
-      "n_attack": 77,
-      "n_genuine": 160,
-      "tdr_at_far_1pct": 0.0125,
+      "n_attack": 333,
+      "n_genuine": 669,
+      "tdr_at_far_1pct": 0.03139013452914798,
       "threshold": 0.5
     },
     "train_spliced_jpeg__test_landmark_alpha": {
-      "acer": 0.39801136363636364,
-      "apcer": 0.7272727272727273,
-      "auc_roc": 0.7637987012987013,
-      "bpcer": 0.06875,
-      "eer": 0.33766233766233766,
-      "eer_threshold": 0.12965899760450694,
+      "acer": 0.3813073162848948,
+      "apcer": 0.7297297297297297,
+      "auc_roc": 0.7912666029257958,
+      "bpcer": 0.03288490284005979,
+      "eer": 0.2912912912912913,
+      "eer_threshold": 0.22836995014716926,
       "far_achieved": 0.01,
-      "n_attack": 77,
-      "n_genuine": 160,
-      "tdr_at_far_1pct": 0.15,
+      "n_attack": 333,
+      "n_genuine": 669,
+      "tdr_at_far_1pct": 0.11808669656203288,
       "threshold": 0.5
+    }
+  },
+  "smad_verifying_morphs_only": {
+    "acer": 0.15336322869955157,
+    "apcer": 0.13333333333333333,
+    "apcer_ci95": [
+      0.0593644227053572,
+      0.24592222113041984
+    ],
+    "auc_roc": 0.9201793721973094,
+    "bpcer": 0.17339312406576982,
+    "eer": 0.13333333333333333,
+    "eer_threshold": 0.5534827741808085,
+    "far_achieved": 0.01,
+    "min_verifying_attacks_reported": 30,
+    "n_attack": 60,
+    "n_genuine": 669,
+    "n_test_bona_fide": 669,
+    "n_test_morphs": 666,
+    "n_test_morphs_verification_unknown": 0,
+    "n_test_morphs_verifying": 60,
+    "tdr_at_far_1pct": 0.3423019431988042,
+    "threshold": 0.5,
+    "verifying_by_method": {
+      "landmark_alpha": 54,
+      "spliced_jpeg": 6
     }
   },
   "threshold": 0.5

@@ -73,12 +73,16 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   `pad.py`/`deepfake.py`/`replay.py` are dataset-blocked (§6) and were deliberately left
   **absent, not stubbed** — do not add placeholder files for them without checking
   datasets have actually landed. **Morph (D2) landed 2026-09-06**: S-MAD and D-MAD, on a
-  self-generated LFW-derived corpus (399 identities, 390 morphs, two methods). Read §12
-  items 8–9 before quoting any morph number. Two things to know first: **MMPMR is 0.064**
-  — only 6.4% of these morphs verify as both contributors, so most of the corpus is
-  failed attacks and the ACER largely measures detecting those; and **S-MAD does not
-  survive a change of generator** (AUC 0.837 → 0.586, near chance) while D-MAD does
-  (0.930 → 0.884). The corpus is never committed (LFW copyright — `data/LICENCES.md`);
+  self-generated LFW-derived corpus, scaled on 2026-09-14 to every LFW identity with ≥2
+  images (1,672 usable, 1,666 morphs, two methods). Read §12 items 8–10 before quoting
+  any morph number. Three things to know first: **MMPMR is 0.096** (160 of 1,666) — the
+  pool is at its ceiling, and MMPMR-by-pair-cosine shows `landmark_alpha` caps at ~1/3
+  even for the closest look-alikes while `spliced_jpeg` stays near zero, so the next lever
+  is the *morphing method*, not the pool; **detection on verifying morphs rests on 60
+  (S-MAD) / 47 (D-MAD) attacks, ~90% `landmark_alpha`**, so working spliced morphs are
+  effectively unmeasured; and **S-MAD does not survive a change of generator** (AUC 0.905
+  → 0.603) while D-MAD does (0.952 → 0.912). Generating the full corpus takes ~2 h on this
+  host and `make bench`'s morph evaluation ~1 h in Docker. The corpus is never committed (LFW copyright — `data/LICENCES.md`);
   the manifest is, so `python scripts/make_morph_corpus.py` rebuilds it. `morph_smad_gbm.txt`
   and `morph_dmad_gbm.txt` are gitignored like `injection_gbm.txt` but **listed in
   `models/checksums.txt`, so the server will refuse to start until they are regenerated**
@@ -121,8 +125,13 @@ of truth; this file is the terse, imperative version of its §11 for day-to-day 
   in-process over HTTP (`pqbio.bench._common.AsyncBenchClient`), concurrency swept to
   64. **§8.3's C0-C3 ablation is complete as of 2026-09-01** (run it with `make
   docker-bench`; on a fallback-only host `overhead.py`'s guard correctly re-blocks
-  C1/C2/C3): PQ overhead = C2−C1 = 0.88 ms (+8.1%), AI overhead = C3−C2 = 703.8 ms,
-  ratio 798x — provisional on the AI side only, since C3 runs one of six detectors.
+  C1/C2/C3). **Do not quote a point AI:PQ ratio.** The PQ term is a sub-millisecond
+  difference of two ~10 ms latencies and is not resolvable from run noise: four runs gave
+  0.88, 0.34, −4.30 and 0.10 ms (ratios 798x, 2327x, −191x, then BLOCKED). Since
+  2026-09-14 `overhead.py` puts Welch 95% intervals on both terms and publishes the point
+  ratio only when the PQ interval excludes zero; the claim that survives rerunning is the
+  **lower bound, 802x** (AI 784 ms [718, 851] over PQ's upper limit 0.90 ms). C3 runs two
+  of five attack detectors (injection + morph S-MAD), so the AI side is itself a floor.
   `report.py` renders `results/report.md` (T1-T8, F1-F4) and `results/BLOCKERS.md` from
   JSON only — never hand-assembled, including a generated backend-provenance table.
   See §14's Module F and liboqs amendments for two real bench-harness bugs found this

@@ -9,18 +9,18 @@
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 497.88761400009207,
-        "mean_ms": 497.88761400009207,
-        "min_ms": 497.88761400009207,
+        "max_ms": 557.5936519999232,
+        "mean_ms": 557.5936519999232,
+        "min_ms": 557.5936519999232,
         "n": 1,
-        "p50_ms": 497.88761400009207,
-        "p95_ms": 497.88761400009207,
-        "p99_ms": 497.88761400009207
+        "p50_ms": 557.5936519999232,
+        "p95_ms": 557.5936519999232,
+        "p99_ms": 557.5936519999232
       },
       "requested": 1,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 2.0066882115407845,
-      "wall_time_s": 0.4983335200001875
+      "throughput_per_s": 1.7915382117341214,
+      "wall_time_s": 0.5581795540001622
     },
     {
       "concurrency": 2,
@@ -30,18 +30,18 @@
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 1090.2569970000968,
-        "mean_ms": 878.2617980000396,
-        "min_ms": 666.2665989999823,
+        "max_ms": 1289.257651999833,
+        "mean_ms": 1082.614032499805,
+        "min_ms": 875.9704129997772,
         "n": 2,
-        "p50_ms": 878.2617980000396,
-        "p95_ms": 1069.057477100091,
-        "p99_ms": 1086.0170930200957
+        "p50_ms": 1082.614032499805,
+        "p95_ms": 1268.59329004983,
+        "p99_ms": 1285.1247796098323
       },
       "requested": 2,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 1.807091838493469,
-      "wall_time_s": 1.106750613000031
+      "throughput_per_s": 1.5345819912407221,
+      "wall_time_s": 1.30328650499996
     },
     {
       "concurrency": 4,
@@ -51,18 +51,18 @@
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 1533.7410859999636,
-        "mean_ms": 1186.9326782499456,
-        "min_ms": 840.717462999919,
+        "max_ms": 1657.1020170003976,
+        "mean_ms": 1352.8143810001438,
+        "min_ms": 1112.9919819995848,
         "n": 4,
-        "p50_ms": 1186.63608199995,
-        "p95_ms": 1523.3107812499838,
-        "p99_ms": 1531.6550250499677
+        "p50_ms": 1320.5817625002965,
+        "p95_ms": 1633.873657350432,
+        "p99_ms": 1652.4563450704045
       },
       "requested": 4,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 2.5664931850517347,
-      "wall_time_s": 1.5585469009999997
+      "throughput_per_s": 2.371194926532806,
+      "wall_time_s": 1.6869131909998032
     },
     {
       "concurrency": 8,
@@ -72,18 +72,18 @@
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 2624.322855000173,
-        "mean_ms": 2468.358073250016,
-        "min_ms": 2255.2098460000707,
+        "max_ms": 2726.1263480004345,
+        "mean_ms": 2252.229837374898,
+        "min_ms": 1807.012020000002,
         "n": 8,
-        "p50_ms": 2487.347535500021,
-        "p95_ms": 2624.013793450081,
-        "p99_ms": 2624.2610426901547
+        "p50_ms": 2237.5174494995917,
+        "p95_ms": 2700.1728043002004,
+        "p99_ms": 2720.9356392603877
       },
       "requested": 8,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 3.006494719335982,
-      "wall_time_s": 2.660906053999952
+      "throughput_per_s": 2.895927684625416,
+      "wall_time_s": 2.762499921000199
     },
     {
       "concurrency": 16,
@@ -93,18 +93,18 @@
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 5473.067984000181,
-        "mean_ms": 4882.207201562494,
-        "min_ms": 4451.8963559999065,
+        "max_ms": 5769.010285000149,
+        "mean_ms": 5301.849542749892,
+        "min_ms": 4901.402036999571,
         "n": 16,
-        "p50_ms": 4982.724016999896,
-        "p95_ms": 5327.653421749972,
-        "p99_ms": 5443.985071550139
+        "p50_ms": 5405.294973500077,
+        "p95_ms": 5534.579283999619,
+        "p99_ms": 5722.124084800043
       },
       "requested": 16,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 2.9023433976260624,
-      "wall_time_s": 5.512786671999947
+      "throughput_per_s": 2.767939702188557,
+      "wall_time_s": 5.780472741999802
     },
     {
       "concurrency": 32,
@@ -114,18 +114,18 @@
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 10385.55812300001,
-        "mean_ms": 10112.259077062503,
-        "min_ms": 9686.766151000029,
+        "max_ms": 11149.027145000218,
+        "mean_ms": 10820.769400406192,
+        "min_ms": 10446.967454000514,
         "n": 32,
-        "p50_ms": 10238.469516500118,
-        "p95_ms": 10357.101593049969,
-        "p99_ms": 10380.847696249992
+        "p50_ms": 10873.329003499748,
+        "p95_ms": 11143.702053499783,
+        "p99_ms": 11147.826362170108
       },
       "requested": 32,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 3.0450268507713525,
-      "wall_time_s": 10.508938530999785
+      "throughput_per_s": 2.8415477696378137,
+      "wall_time_s": 11.261468253999737
     },
     {
       "concurrency": 64,
@@ -135,21 +135,21 @@
       },
       "expired_before_verify": 0,
       "latency": {
-        "max_ms": 21339.144560000022,
-        "mean_ms": 20791.081533078126,
-        "min_ms": 20136.093748000123,
+        "max_ms": 24388.155171999642,
+        "mean_ms": 23676.74968292191,
+        "min_ms": 22615.462088999266,
         "n": 64,
-        "p50_ms": 20928.141145500034,
-        "p95_ms": 21279.41973749978,
-        "p99_ms": 21332.828192599936
+        "p50_ms": 23891.139430000294,
+        "p95_ms": 24237.510888850327,
+        "p99_ms": 24326.979000579977
       },
       "requested": 64,
       "setup_failed_before_verify": 0,
-      "throughput_per_s": 2.9853606757989217,
-      "wall_time_s": 21.437945678999995
+      "throughput_per_s": 2.6144711743744558,
+      "wall_time_s": 24.479137741999693
     }
   ],
-  "config_hash_sha256": "ff38ecf4326769b20cc45d5fb2861d49ecf434334c087d5e176b166fb4273714",
+  "config_hash_sha256": "66991fa0bd3e48ada7d69329ad2970c63470cc876b0e25131ddc54ea33182810",
   "dataset_versions": {
     "deepfake": "BLOCKED -- unlicensed (FaceForensics++/Celeb-DF-v2, \u00a76)",
     "injection_corpus": "self-generated, scripts/make_injection_corpus.py (see its manifest for its own git_commit)",
@@ -157,19 +157,19 @@
     "presentation": "BLOCKED -- unlicensed (CASIA-FASD/Replay-Attack/OULU-NPU/CelebA-Spoof, \u00a76)"
   },
   "degradation_finding": {
-    "finding": "Below saturation, p99 grew 20.85x while concurrency grew 32x (concurrency=1->32, peak throughput 3.05/s). That is at or above proportional growth.  Past the peak, p99 rises to 21333ms at concurrency=64 (from 498ms at 1) while throughput stays flat \u2014 expected queueing against a saturated worker pool (`server.workers` in config), not a separate defect. NOTE: latency growth alone cannot separate a blocked event loop from ordinary worker-pool/CPU saturation on a CPU-bound workload, so do not read the ratio above as a verdict on its own. The direct discriminator is tests/integration/test_server_happy_path.py::test_event_loop_stays_responsive_while_verify_is_in_flight, which polls GET /v1/health while concurrent /v1/verify calls are in flight and requires it to stay responsive \u2014 a blocked loop would stall those health checks behind the CPU-bound work, whatever the latency curve looks like.",
+    "finding": "Below saturation, p99 grew 4.88x while concurrency grew 8x (concurrency=1->8, peak throughput 2.90/s). That is at or above proportional growth.  Past the peak, p99 rises to 24327ms at concurrency=64 (from 558ms at 1) while throughput stays flat \u2014 expected queueing against a saturated worker pool (`server.workers` in config), not a separate defect. NOTE: latency growth alone cannot separate a blocked event loop from ordinary worker-pool/CPU saturation on a CPU-bound workload, so do not read the ratio above as a verdict on its own. The direct discriminator is tests/integration/test_server_happy_path.py::test_event_loop_stays_responsive_while_verify_is_in_flight, which polls GET /v1/health while concurrent /v1/verify calls are in flight and requires it to stay responsive \u2014 a blocked loop would stall those health checks behind the CPU-bound work, whatever the latency curve looks like.",
     "linear_degradation_detected": true,
-    "p99_growth_ratio_full_sweep": 42.84667381301032,
-    "p99_ms_high_concurrency": 21332.828192599936,
-    "p99_ms_low_concurrency": 497.88761400009207,
-    "peak_throughput_concurrency": 32,
-    "peak_throughput_per_s": 3.0450268507713525,
-    "unsaturated_concurrency_growth_ratio": 32.0,
-    "unsaturated_p99_growth_ratio": 20.849780963316096,
+    "p99_growth_ratio_full_sweep": 43.62850780909415,
+    "p99_ms_high_concurrency": 24326.979000579977,
+    "p99_ms_low_concurrency": 557.5936519999232,
+    "peak_throughput_concurrency": 8,
+    "peak_throughput_per_s": 2.895927684625416,
+    "unsaturated_concurrency_growth_ratio": 8.0,
+    "unsaturated_p99_growth_ratio": 4.879782310112746,
     "zero_completion_levels": []
   },
-  "generated_at_utc": "2026-09-06T18:44:34.134824+00:00",
-  "git_commit": "4cee4683e1f59c3e38aa572c24d30dcded2188a4",
+  "generated_at_utc": "2026-09-14T16:34:33.159163+00:00",
+  "git_commit": "5772950b57b601a67e549f40bc2ec6822d942374",
   "hardware": {
     "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
     "processor": "x86_64",
@@ -178,7 +178,7 @@
   },
   "knee": {
     "concurrency": 1,
-    "reason": "throughput gain from concurrency=1 to 2 was -9.9%, below the 10% threshold"
+    "reason": "throughput gain from concurrency=1 to 2 was -14.3%, below the 10% threshold"
   },
   "n_frames_per_bundle": 8,
   "requests_per_worker": 1,

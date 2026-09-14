@@ -1,6 +1,6 @@
 # Evaluation report (PROJECT_SPEC.md §8)
 
-*git `2b0008a8b489` · config `ff38ecf43267` · Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41 / x86_64 · KEM=liboqs SIG=liboqs · seed=2026 · generated 2026-09-06T19:24:19.445967+00:00*
+*git `5772950b57b6` · config `66991fa0bd3e` · Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41 / x86_64 · KEM=liboqs SIG=liboqs · seed=2026 · generated 2026-09-14T16:31:21.773255+00:00*
 
 ---
 
@@ -11,8 +11,10 @@
 | deepfake | BLOCKED — no deepfake detector implemented -- pqbio/detect/deepfake.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14) |  |  |  |  |  |  |  |
 | injection | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | 1.0000 | 6 | 6 |
 | match | BLOCKED — no labelled genuine/impostor pair dataset exists to compute match FAR/FRR (§6) |  |  |  |  |  |  |  |
-| morph_dmad | 0.1104 | 0.1688 | 0.1396 | 0.1375 | 0.9295 | 0.1500 | 160 | 154 |
-| morph_smad | 0.2922 | 0.2000 | 0.2461 | 0.2438 | 0.8369 | 0.0437 | 160 | 154 |
+| morph_dmad (all morphs) | 0.1173 | 0.1215 | 0.1194 | 0.1173 | 0.9523 | 0.3418 | 354 | 520 |
+| morph_dmad (verifying morphs only) | 0.1064 | 0.1215 | 0.1139 | 0.1073 | 0.9666 | 0.6808 | 354 | 47 |
+| morph_smad (all morphs) | 0.1757 | 0.1734 | 0.1745 | 0.1749 | 0.9049 | 0.3423 | 669 | 666 |
+| morph_smad (verifying morphs only) | 0.1333 | 0.1734 | 0.1534 | 0.1333 | 0.9202 | 0.3423 | 669 | 60 |
 | pad | BLOCKED — no pad detector implemented -- pqbio/detect/pad.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14) |  |  |  |  |  |  |  |
 | replay | BLOCKED — no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed. Replay-Attack/MSU-MFSD are unlicensed (§6), and the self-recorded alternative is blocked on human subjects rather than hardware: §6 requires written consent and supervisor approval to record anyone, and a subject-disjoint split needs at least two consenting subjects. The capture rig itself is verified working (camera, display, WB/exposure lock -- PROJECT_SPEC.md §14, 2026-09-01) |  |  |  |  |  |  |  |
 
@@ -23,8 +25,8 @@
 | deepfake | BLOCKED — only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6) |  |  |  |  |  |  |  |
 | injection | BLOCKED — only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6) |  |  |  |  |  |  |  |
 | match | BLOCKED — only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6) |  |  |  |  |  |  |  |
-| morph_dmad | BLOCKED — only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6) |  |  |  |  |  |  |  |
-| morph_smad | BLOCKED — only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6) |  |  |  |  |  |  |  |
+| morph_dmad | BLOCKED — only one morph corpus exists (self-generated from LFW, scripts/make_morph_corpus.py) -- cross-dataset evaluation needs an independent morph dataset such as FRLL-Morphs or SMDD, neither licensed (§6, data/LICENCES.md). Cross-METHOD generalisation within the one corpus is the available proxy: T4c |  |  |  |  |  |  |  |
+| morph_smad | BLOCKED — only one morph corpus exists (self-generated from LFW, scripts/make_morph_corpus.py) -- cross-dataset evaluation needs an independent morph dataset such as FRLL-Morphs or SMDD, neither licensed (§6, data/LICENCES.md). Cross-METHOD generalisation within the one corpus is the available proxy: T4c |  |  |  |  |  |  |  |
 | pad | BLOCKED — only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6) |  |  |  |  |  |  |  |
 | replay | BLOCKED — only one dataset exists in this environment (the self-generated injection corpus) -- cross-dataset evaluation needs a second, independent dataset (§6) |  |  |  |  |  |  |  |
 
@@ -43,8 +45,10 @@ _n=40 — Only match/injection/binding/quality signals exist this session — pa
 |---|---|
 | deepfake | BLOCKED — no deepfake detector implemented -- pqbio/detect/deepfake.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14) |
 | injection_tier1 | 1.0000 |
-| morph_dmad | {'acer': 0.1395698051948052, 'apcer': 0.11038961038961038, 'auc_roc': 0.9295454545454546, 'bpcer': 0.16875, 'eer': 0.13749999999999996, 'eer_threshold': 0.6417689809764262, 'far_achieved': 0.01, 'model_path': 'morph_dmad_gbm.txt', 'n_attack': 154, 'n_dropped_no_features': 0, 'n_genuine': 160, 'n_test': 314, 'n_train': 475, 'setting': 'dmad', 'tdr_at_far_1pct': 0.15, 'threshold': 0.5} |
-| morph_smad | {'acer': 0.2461038961038961, 'apcer': 0.2922077922077922, 'auc_roc': 0.8368912337662339, 'bpcer': 0.2, 'eer': 0.24375000000000002, 'eer_threshold': 0.40992054028307695, 'far_achieved': 0.01, 'model_path': 'morph_smad_gbm.txt', 'n_attack': 154, 'n_dropped_no_features': 0, 'n_genuine': 160, 'n_test': 314, 'n_train': 475, 'setting': 'smad', 'tdr_at_far_1pct': 0.04375, 'threshold': 0.5} |
+| morph_dmad (all morphs) | 0.8827 |
+| morph_dmad (verifying morphs only) | 0.8936 |
+| morph_smad (all morphs) | 0.8243 |
+| morph_smad (verifying morphs only) | 0.8667 |
 | presentation | BLOCKED — no presentation detector implemented -- pqbio/detect/pad.py is deliberately absent, not stubbed (dataset-blocked, see CLAUDE.md 'Current state' / PROJECT_SPEC.md §14) |
 | replay | BLOCKED — no replay detector implemented -- pqbio/detect/replay.py is deliberately absent, not stubbed. Replay-Attack/MSU-MFSD are unlicensed (§6), and the self-recorded alternative is blocked on human subjects rather than hardware: §6 requires written consent and supervisor approval to record anyone, and a subject-disjoint split needs at least two consenting subjects. The capture rig itself is verified working (camera, display, WB/exposure lock -- PROJECT_SPEC.md §14, 2026-09-01) |
 
@@ -52,78 +56,91 @@ _n=40 — Only match/injection/binding/quality signals exist this session — pa
 
 _Threshold: `match_cosine_min` = 0.38._
 
-| Morph method | n | MMPMR (verifies as ALL contributors) | Verifies as ANY contributor | Mean min similarity |
-|---|---|---|---|---|
-| landmark_alpha | 195 | 0.1077 | 0.4615 | 0.2341 |
-| spliced_jpeg | 195 | 0.0205 | 0.7231 | 0.1575 |
-| **all methods** | 390 | **0.0641** | 0.5923 |  |
+| Morph method | n | n verifying | MMPMR (verifies as ALL contributors) | Verifies as ANY contributor | Mean min similarity |
+|---|---|---|---|---|---|
+| landmark_alpha | 833 | 144 | 0.1729 | 0.5918 | 0.2661 |
+| spliced_jpeg | 833 | 16 | 0.0192 | 0.7647 | 0.1861 |
+| **all methods** | 1666 | **160** | **0.0960** | 0.6783 |  |
 
-**Read this before the morph rows of T1/T4.** MMPMR is 0.0641 at `match_cosine_min` = 0.38: most of these morphs do not verify as both contributors, so they would not have fooled the matcher in the first place and the detection metrics largely describe the detection of failed attacks. Cause and consequences in §12 item 8.
+**Read this before the morph rows of T1/T4.** MMPMR is 0.0960 at `match_cosine_min` = 0.38: most of these morphs do not verify as both contributors, so they would not have fooled the matcher in the first place and the detection metrics largely describe the detection of failed attacks. Cause and consequences in §12 item 8.
+
+**MMPMR by contributing-pair ArcFace cosine (quintiles).** Separates a pool limit (MMPMR climbs with pair similarity) from a method limit (it stays low even for the closest pairs). Read with §12 item 8.
+
+| Pair cosine | landmark_alpha | spliced_jpeg |
+|---|---|---|
+| 0.046–0.159 | 0.0419 (7/167) | 0.0000 (0/167) |
+| 0.159–0.187 | 0.0838 (14/167) | 0.0120 (2/167) |
+| 0.187–0.206 | 0.2108 (35/166) | 0.0120 (2/166) |
+| 0.206–0.233 | 0.2156 (36/167) | 0.0180 (3/167) |
+| 0.233–0.562 | 0.3133 (52/166) | 0.0542 (9/166) |
+| top decile (≥0.253) | **0.3333** (28/84) | **0.0714** (6/84) |
 
 ### T4c — Morph cross-method generalisation
 
-AUC near 0.5 means the detector learned the *generator*, not morphing. Compare against the within-corpus rows of T1: the gap is the honest number (§12 item 9).
+AUC near 0.5 means the detector learned the *generator*, not morphing. Compare against the within-corpus rows of T1: the gap is the honest number (§12 item 10).
 
 | Setting | Train → test | ACER | EER | AUC-ROC | APCER |
 |---|---|---|---|---|---|
-| DMAD | train landmark_alpha → test spliced_jpeg | 0.2030 | 0.1813 | 0.8843 | 0.3247 |
-| DMAD | train spliced_jpeg → test landmark_alpha | 0.1043 | 0.1000 | 0.9598 | 0.0649 |
-| SMAD | train landmark_alpha → test spliced_jpeg | 0.4764 | 0.4313 | 0.5856 | 0.9091 |
-| SMAD | train spliced_jpeg → test landmark_alpha | 0.3980 | 0.3377 | 0.7638 | 0.7273 |
+| DMAD | train landmark_alpha → test spliced_jpeg | 0.2225 | 0.1695 | 0.9123 | 0.3885 |
+| DMAD | train spliced_jpeg → test landmark_alpha | 0.0873 | 0.0808 | 0.9766 | 0.0615 |
+| SMAD | train landmark_alpha → test spliced_jpeg | 0.4796 | 0.4264 | 0.6028 | 0.9069 |
+| SMAD | train spliced_jpeg → test landmark_alpha | 0.3813 | 0.2913 | 0.7913 | 0.7297 |
 
 ### T5 — Crypto micro-benchmarks and artefact sizes
 
 | Operation | Backend | Mean (ms) | p95 (ms) | Iterations |
 |---|---|---|---|---|
-| kem/classical/keygen | x25519 | 0.0527 | 0.0634 | 1000 |
-| kem/classical/encaps | x25519 | 0.1189 | 0.1604 | 1000 |
-| kem/classical/decaps | x25519 | 0.0935 | 0.1362 | 1000 |
+| kem/classical/keygen | x25519 | 0.0544 | 0.0696 | 1000 |
+| kem/classical/encaps | x25519 | 0.1347 | 0.2170 | 1000 |
+| kem/classical/decaps | x25519 | 0.1206 | 0.1826 | 1000 |
 | kem/classical/artefact_sizes_bytes | x25519 | {"ct": 32, "pk": 32, "sk": 32, "ss": 32} |  |  |
-| kem/pq/keygen | liboqs | 0.0340 | 0.0531 | 1000 |
-| kem/pq/encaps | liboqs | 0.0219 | 0.0269 | 1000 |
-| kem/pq/decaps | liboqs | 0.0255 | 0.0307 | 1000 |
+| kem/pq/keygen | liboqs | 0.0345 | 0.0607 | 1000 |
+| kem/pq/encaps | liboqs | 0.0290 | 0.0500 | 1000 |
+| kem/pq/decaps | liboqs | 0.0289 | 0.0348 | 1000 |
 | kem/pq/artefact_sizes_bytes | liboqs | {"ct": 1088, "pk": 1184, "sk": 2400, "ss": 32} |  |  |
-| signer/classical/keygen | ed25519 | 0.0340 | 0.0368 | 1000 |
-| signer/classical/sign | ed25519 | 0.0589 | 0.0654 | 1000 |
-| signer/classical/verify | ed25519 | 0.0852 | 0.0914 | 1000 |
+| signer/classical/keygen | ed25519 | 0.0457 | 0.0618 | 1000 |
+| signer/classical/sign | ed25519 | 0.0677 | 0.0923 | 1000 |
+| signer/classical/verify | ed25519 | 0.1040 | 0.1402 | 1000 |
 | signer/classical/artefact_sizes_bytes | ed25519 | {"pk": 32, "sig": 64, "sk": 32} |  |  |
-| signer/pq/keygen | liboqs | 0.0424 | 0.0486 | 1000 |
-| signer/pq/sign | liboqs | 0.1038 | 0.2242 | 1000 |
-| signer/pq/verify | liboqs | 0.0406 | 0.0470 | 1000 |
+| signer/pq/keygen | liboqs | 0.0510 | 0.0649 | 1000 |
+| signer/pq/sign | liboqs | 0.1326 | 0.2930 | 1000 |
+| signer/pq/verify | liboqs | 0.0472 | 0.0557 | 1000 |
 | signer/pq/artefact_sizes_bytes | liboqs | {"pk": 1952, "sig": 3309, "sk": 4032} |  |  |
 
 ### T6 — Four-configuration overhead ablation
 
 | Config | Crypto | AI | Isolates | Mean latency (ms) |
 |---|---|---|---|---|
-| C0 | none | none | framework/transport floor | 1.3242 |
-| C1 | X25519 + Ed25519 | none | conventional crypto cost | 8.9787 |
-| C2 | ML-KEM-768 + ML-DSA-65 | none | marginal PQ cost | 9.3158 |
-| C3 | ML-KEM-768 + ML-DSA-65 | full | total system cost | 793.8619 |
+| C0 | none | none | framework/transport floor | 1.5650 |
+| C1 | X25519 + Ed25519 | none | conventional crypto cost | 12.9404 |
+| C2 | ML-KEM-768 + ML-DSA-65 | none | marginal PQ cost | 13.0389 |
+| C3 | ML-KEM-768 + ML-DSA-65 | full | total system cost | 797.4182 |
 
-**PQ overhead (C2-C1):** 0.3371 ms (3.8%)
+**PQ overhead (C2−C1):** 0.0985 ms (0.8%), 95% CI [-0.6986, 0.8956] ms — **spans zero: not resolvable from run noise**
 
-**AI overhead (C3-C2):** 784.5461 ms (8421.6%)
+**AI overhead (C3−C2):** 784.3794 ms (6015.7%), 95% CI [717.9744, 850.7844] ms
 
-**AI:PQ overhead ratio:** 2327.18
+**AI:PQ overhead ratio:** BLOCKED — the PQ overhead is not resolvable from run noise: C2-C1 = 0.10 ms with a 95% interval of [-0.70, 0.90] ms, which spans zero, so a point ratio would be dividing by noise (the three committed runs gave 798x, 2327x and -191x). The defensible statement is the lower bound in ai_to_pq_overhead_ratio_lower_bound
 
-_The AI:PQ ratio is **provisional and a lower bound on the AI side**: C3 runs only one of the six spec'd detectors (injection). pad/morph/deepfake/replay are absent (§6/§14), so the AI term is missing four of its five attack-detection components. Adding them can only increase C3, pushing the ratio further in the same direction — nothing about them could shrink it. The PQ term (C2−C1) is not provisional; both configs are complete._
+**AI:PQ ratio, 95% lower bound:** 802x (AI overhead's lower limit over PQ overhead's upper limit — the smallest ratio consistent with both intervals, and the figure that survives rerunning)
+
+_The AI side is **a lower bound**: C3 runs two of the five attack detectors — injection, and morph in its S-MAD setting (§5.4, pipeline stage 6). pad, deepfake and replay are absent (§6/§14). Adding them can only increase C3. The intervals cover within-run sampling noise only; the C1 baseline mean has moved by ~7 ms between committed runs, so between-run drift is larger still._
 
 ### T7 — Throughput vs concurrency
 
 | Concurrency | Throughput (verif/s) | p50 (ms) | p95 (ms) | p99 (ms) | Setup failed (409) | Expired before verify (409) |
 |---|---|---|---|---|---|---|
-| 1 | 2.007 | 497.8876 | 497.8876 | 497.8876 | 0 | 0 |
-| 2 | 1.807 | 878.2618 | 1069.0575 | 1086.0171 | 0 | 0 |
-| 4 | 2.566 | 1186.6361 | 1523.3108 | 1531.6550 | 0 | 0 |
-| 8 | 3.006 | 2487.3475 | 2624.0138 | 2624.2610 | 0 | 0 |
-| 16 | 2.902 | 4982.7240 | 5327.6534 | 5443.9851 | 0 | 0 |
-| 32 | 3.045 | 10238.4695 | 10357.1016 | 10380.8477 | 0 | 0 |
-| 64 | 2.985 | 20928.1411 | 21279.4197 | 21332.8282 | 0 | 0 |
+| 1 | 1.792 | 557.5937 | 557.5937 | 557.5937 | 0 | 0 |
+| 2 | 1.535 | 1082.6140 | 1268.5933 | 1285.1248 | 0 | 0 |
+| 4 | 2.371 | 1320.5818 | 1633.8737 | 1652.4563 | 0 | 0 |
+| 8 | 2.896 | 2237.5174 | 2700.1728 | 2720.9356 | 0 | 0 |
+| 16 | 2.768 | 5405.2950 | 5534.5793 | 5722.1241 | 0 | 0 |
+| 32 | 2.842 | 10873.3290 | 11143.7021 | 11147.8264 | 0 | 0 |
+| 64 | 2.614 | 23891.1394 | 24237.5109 | 24326.9790 | 0 | 0 |
 
-**Knee:** concurrency=1 — throughput gain from concurrency=1 to 2 was -9.9%, below the 10% threshold
+**Knee:** concurrency=1 — throughput gain from concurrency=1 to 2 was -14.3%, below the 10% threshold
 
-**Event-loop-blocking finding:** Below saturation, p99 grew 20.85x while concurrency grew 32x (concurrency=1->32, peak throughput 3.05/s). That is at or above proportional growth.  Past the peak, p99 rises to 21333ms at concurrency=64 (from 498ms at 1) while throughput stays flat — expected queueing against a saturated worker pool (`server.workers` in config), not a separate defect. NOTE: latency growth alone cannot separate a blocked event loop from ordinary worker-pool/CPU saturation on a CPU-bound workload, so do not read the ratio above as a verdict on its own. The direct discriminator is tests/integration/test_server_happy_path.py::test_event_loop_stays_responsive_while_verify_is_in_flight, which polls GET /v1/health while concurrent /v1/verify calls are in flight and requires it to stay responsive — a blocked loop would stall those health checks behind the CPU-bound work, whatever the latency curve looks like.
+**Event-loop-blocking finding:** Below saturation, p99 grew 4.88x while concurrency grew 8x (concurrency=1->8, peak throughput 2.90/s). That is at or above proportional growth.  Past the peak, p99 rises to 24327ms at concurrency=64 (from 558ms at 1) while throughput stays flat — expected queueing against a saturated worker pool (`server.workers` in config), not a separate defect. NOTE: latency growth alone cannot separate a blocked event loop from ordinary worker-pool/CPU saturation on a CPU-bound workload, so do not read the ratio above as a verdict on its own. The direct discriminator is tests/integration/test_server_happy_path.py::test_event_loop_stays_responsive_while_verify_is_in_flight, which polls GET /v1/health while concurrent /v1/verify calls are in flight and requires it to stay responsive — a blocked loop would stall those health checks behind the CPU-bound work, whatever the latency curve looks like.
 
 ### T8 — Deployment recommendation matrix
 
@@ -131,9 +148,9 @@ _The AI:PQ ratio is **provisional and a lower bound on the AI side**: C3 runs on
 
 | Scenario | Recommendation (latency/crypto-only) |
 |---|---|
-| High-security, low-volume (bank onboarding) | Maximise detection strength once available; the system's own p95 (1013.6619 ms) is not the binding constraint at low volume. Crypto choice is not the trade-off axis here at all. |
-| Balanced (mobile login) | PQ is affordable on these numbers: the measured PQ overhead is 0.34 ms per session (T6), 0.03% of end-to-end p95. The cost that matters for this scenario is inference, not crypto. |
-| High-volume, low-latency (access control) | T7's knee bounds this scenario. Throughput saturates against `server.workers` running per-request ONNX inference, so scale that (or move inference to a GPU) — dropping PQ for classical crypto would buy back only 0.34 ms per session and is not the lever. |
+| High-security, low-volume (bank onboarding) | Maximise detection strength once available; the system's own p95 (1062.1391 ms) is not the binding constraint at low volume. Crypto choice is not the trade-off axis here at all. |
+| Balanced (mobile login) | PQ is affordable on these numbers: the measured PQ overhead is 0.10 ms per session (T6), 0.01% of end-to-end p95. The cost that matters for this scenario is inference, not crypto. |
+| High-volume, low-latency (access control) | T7's knee bounds this scenario. Throughput saturates against `server.workers` running per-request ONNX inference, so scale that (or move inference to a GPU) — dropping PQ for classical crypto would buy back only 0.10 ms per session and is not the lever. |
 
 ---
 
